@@ -1,7 +1,16 @@
+import React, { useState } from 'react';
 import logo from '../assets/logo.svg';
 import './App.css';
+import Onboarding from '../components/Onboarding/Onboarding';
 
 function App() {
+  // Temporary state to toggle between Onboarding and Home screens
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  if (!isLoggedIn) {
+    return <Onboarding />;
+  }
+
   return (
     <div className="App">
       <header className="App-header">
