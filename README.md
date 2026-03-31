@@ -111,7 +111,7 @@ docker-compose up -d
 ### 3. 서버리스(Serverless) API 서버 구동
 인프라가 준비되었다면 API 서버를 켭니다.
 ```bash
-npm start
+npx start
 ```
 * 터미널에 POST | http://localhost:3000/dev/rooms 주소가 뜨면 서버가 정상적으로 실행된 것입니다.
 
