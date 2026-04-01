@@ -22,8 +22,7 @@ const Register = () => {
 
   const handleRegister = (e) => {
     e.preventDefault();
-    // Form processing and API call here.
-    // On success, redirect to login or home.
+    // 테스트용: 바로 로그인 페이지로 이동
     navigate('/login');
   };
 

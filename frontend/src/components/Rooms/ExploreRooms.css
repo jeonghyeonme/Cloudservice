@@ -12,62 +12,7 @@
   overflow: hidden;
 }
 
-/* ── 극좌측 서버 네비 (ChatLayout과 동일) ── */
-.server-nav {
-  width: 72px;
-  background-color: #000000;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 12px 0;
-  gap: 10px;
-  flex-shrink: 0;
-}
-.server-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background-color: #27272a;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  cursor: pointer;
-  font-size: 20px;
-  transition: all 0.2s;
-  position: relative;
-  flex-shrink: 0;
-}
-.server-icon:hover {
-  border-radius: 16px;
-  background-color: #00ff66;
-  color: #000;
-}
-.home-icon {
-  background-color: #00ff66;
-  color: #000;
-  border-radius: 16px;
-}
-.home-icon.active::before {
-  content: '';
-  position: absolute;
-  left: -12px;
-  width: 4px;
-  height: 32px;
-  background-color: #ffffff;
-  border-radius: 0 4px 4px 0;
-}
-.server-separator {
-  width: 32px;
-  height: 2px;
-  background-color: #27272a;
-  border-radius: 1px;
-}
-.add-btn { color: #00ff66; font-size: 26px; font-weight: 300; }
-.add-btn:hover { color: #000; }
-.spacer { flex: 1; }
-.dummy-bg-1 { background-color: #14532d; }
-.dummy-bg-2 { background-color: #064e3b; }
-.dummy-profile { background-color: #3f3f46; }
+/* ── (기존 server-nav 스타일 제거됨 - ServerSidebar.css 참조) ── */
 
 /* ── 메인 영역 ── */
 .explore-main {

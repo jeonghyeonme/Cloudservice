@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 import './Auth.css';
 
 const TerminalIcon = () => (
@@ -28,12 +29,13 @@ const GoogleIcon = () => (
 
 const Login = () => {
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleLogin = (e) => {
     e.preventDefault();
-    // In a real app, perform auth logic here.
-    // Assuming successful login, redirect to Home:
-    navigate('/');
+    // 테스트용: 입력값 확인 없이 바로 로그인 처리
+    login(); // AuthContext의 login 함수 호출
+    navigate('/rooms');
   };
 
   return (
