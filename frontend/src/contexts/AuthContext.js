@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 
 // 전역에서 사용할 Auth Context 생성
 const AuthContext = createContext();
