@@ -49,7 +49,7 @@ const CreateRoomModal = ({ onClose }) => {
             <div className="form-group">
               <label>PRIVACY LEVEL</label>
               <div className="toggle-group">
-                {/* 선택된 값에 따라 'active' 클래스를 붙여줍니다 */}
+                {/* 선택된 값에 따라 'active' 클래스를 붙여 */}
                 <button 
                   type="button" 
                   className={privacy === 'Public' ? 'active' : ''}
@@ -83,13 +83,13 @@ const CreateRoomModal = ({ onClose }) => {
           <div className="form-group">
             <label>UPLOAD COVER IMAGE</label>
             <div className="upload-box">
-              {/* 진짜 input은 CSS로 숨기고 id를 부여합니다 */}
+              {/* 진짜 input은 CSS로 숨기고 id를 부여 */}
               <input 
                 type="file" 
                 id="fileUpload"
                 onChange={(e) => setCoverImage(e.target.files[0])}
               />
-              {/* label의 htmlFor 속성을 input의 id와 연결하면, label을 클릭해도 파일 창이 뜹니다 */}
+              {/* label의 htmlFor 속성을 input의 id와 연결하면, label을 클릭해도 파일 창이 뜸 */}
               <label htmlFor="fileUpload">
                 {coverImage ? (
                   <span className="file-name">{coverImage.name}</span>
