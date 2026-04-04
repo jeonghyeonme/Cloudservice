@@ -1,6 +1,3 @@
-// backend/src/auth/userLogin.js
-// Python: @router.post("/userLogin")
-
 const { QueryCommand } = require("@aws-sdk/lib-dynamodb");
 
 const dynamoDb = require("../dynamodbClient");
@@ -20,14 +17,12 @@ const HEADERS = {
 
 // =========================
 // 로그인
-// Python: async def login(user: User)
 // =========================
 module.exports.handler = async (event) => {
   try {
     const body = JSON.parse(event.body || "{}");
     const { email, password } = body;
 
-    // Python: if not user.email or not user.password
     if (!email || !password) {
       return {
         statusCode: 422,
@@ -36,7 +31,6 @@ module.exports.handler = async (event) => {
       };
     }
 
-    // Python: table.query(IndexName='email-index', KeyConditionExpression=Key('email').eq(user.email))
     const response = await dynamoDb.send(new QueryCommand({
       TableName:                 USERS_TABLE,
       IndexName:                 "email-index",
@@ -46,7 +40,6 @@ module.exports.handler = async (event) => {
 
     const items = response.Items;
 
-    // Python: if not items
     if (!items || items.length === 0) {
       return {
         statusCode: 404,
@@ -57,7 +50,6 @@ module.exports.handler = async (event) => {
 
     const userData = items[0];
 
-    // Python: if not check_password(user.password, user_data['password'])
     const isValid = await checkPassword(password, userData.password);
     if (!isValid) {
       return {
@@ -70,7 +62,6 @@ module.exports.handler = async (event) => {
     const accessToken  = createAccessToken({ sub: userData.userId });
     const refreshToken = createRefreshToken({ sub: userData.userId });
 
-    // Python: save_refresh_token(user_data['userId'], refresh_token)
     await saveRefreshToken(userData.userId, refreshToken);
 
     return {

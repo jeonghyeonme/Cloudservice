@@ -1,7 +1,3 @@
-// backend/src/auth/userRegister.js
-// Python: @router.post("/userRegister")
-// FastAPI + Pydantic → serverless Lambda handler
-
 const { PutCommand } = require("@aws-sdk/lib-dynamodb");
 const { v4: uuidv4 } = require("uuid");
 
@@ -22,7 +18,6 @@ const HEADERS = {
 
 // =========================
 // 회원가입
-// Python: async def register(user: User)
 // =========================
 module.exports.handler = async (event) => {
   try {
@@ -38,7 +33,6 @@ module.exports.handler = async (event) => {
       };
     }
 
-    // Python: if '@' not in user.email
     if (!email.includes("@")) {
       return {
         statusCode: 422,
@@ -47,20 +41,19 @@ module.exports.handler = async (event) => {
       };
     }
 
-    const userId    = uuidv4();              // Python: str(uuid.uuid4())
-    const createdAt = new Date().toISOString(); // Python: datetime.utcnow().isoformat()
+    const userId    = uuidv4();
+    const createdAt = new Date().toISOString();
 
     const item = {
       userId,
       email,
-      password:        await hashPassword(password), // Python: hash_password(user.password)
+      password:        await hashPassword(password),
       nickname,
       profileImageUrl: profileImageUrl || null,
       status:          "ACTIVE",
       createdAt,
     };
 
-    // Python: table.put_item(Item=item)
     await dynamoDb.send(new PutCommand({
       TableName: USERS_TABLE,
       Item:      item,
@@ -69,7 +62,6 @@ module.exports.handler = async (event) => {
     const accessToken  = createAccessToken({ sub: userId });
     const refreshToken = createRefreshToken({ sub: userId });
 
-    // Python: save_refresh_token(user_id, refresh_token)
     await saveRefreshToken(userId, refreshToken);
 
     return {

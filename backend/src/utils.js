@@ -1,6 +1,3 @@
-// backend/src/utils.js
-// Python의 utils.py 역할
-//
 // Python 라이브러리 → Node.js 대응표
 // passlib.pbkdf2_sha256  →  bcrypt  (단방향 해시)
 // python-jose jwt        →  jsonwebtoken
@@ -22,7 +19,6 @@ const REFRESH_TOKENS_TABLE = "RefreshTokens";
 
 // =========================
 // 비밀번호 처리
-// Python: pbkdf2_sha256.hash(password + SALT)
 // =========================
 async function hashPassword(originalPassword) {
   const password = originalPassword + config.SALT;
@@ -38,7 +34,6 @@ async function checkPassword(originalPassword, hashedPassword) {
 
 // =========================
 // JWT 생성
-// Python: jwt.encode(to_encode, JWT_SECRET_KEY, algorithm=HASHING_ALGORITHM)
 // =========================
 function createAccessToken(data) {
   return jwt.sign(
@@ -46,7 +41,7 @@ function createAccessToken(data) {
     config.JWT_SECRET_KEY,
     {
       algorithm: config.HASHING_ALGORITHM,
-      expiresIn: "7d",   // Python: timedelta(days=7)  ← 추후 15m으로 변경 권장
+      expiresIn: "7d",  // ← 추후 15m으로 변경 권장
     }
   );
 }

@@ -10,7 +10,6 @@ const HEADERS = {
 
 // =========================
 // Access Token 재발급
-// Python: async def refresh_access_token(refresh_token: str = Depends(oauth2_scheme_refresh))
 // =========================
 module.exports.handler = async (event) => {
   try {
@@ -26,7 +25,6 @@ module.exports.handler = async (event) => {
       };
     }
 
-    // Python: new_access_token = validate_refresh_token_and_generate_access_token(refresh_token)
     const result = await validateRefreshTokenAndGenerateAccessToken(refreshToken);
 
     if (result.error) {

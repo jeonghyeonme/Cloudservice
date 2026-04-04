@@ -1,6 +1,3 @@
-// backend/src/auth/userLogout.js
-// Python: @router.delete("/userLogout")
-
 const jwt = require("jsonwebtoken");
 
 const config = require("../config");
@@ -13,7 +10,6 @@ const HEADERS = {
 
 // =========================
 // 로그아웃
-// Python: async def logout(refresh_token: str = Depends(oauth2_scheme_refresh))
 // FastAPI는 Authorization 헤더에서 자동 추출 → 여기선 직접 파싱
 // =========================
 module.exports.handler = async (event) => {
@@ -30,13 +26,11 @@ module.exports.handler = async (event) => {
       };
     }
 
-    // Python: payload = jwt.decode(refresh_token, ...) → user_id = payload.get("sub")
     const payload = jwt.verify(refreshToken, config.JWT_SECRET_KEY, {
       algorithms: [config.HASHING_ALGORITHM],
     });
     const userId = payload.sub;
 
-    // Python: delete_refresh_token(user_id, refresh_token)
     await deleteRefreshToken(userId, refreshToken);
 
     return {
