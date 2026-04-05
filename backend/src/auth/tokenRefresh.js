@@ -1,6 +1,3 @@
-// backend/src/auth/tokenRefresh.js
-// Python: @router.post("/token/refresh")
-
 const { validateRefreshTokenAndGenerateAccessToken } = require("../utils");
 
 const HEADERS = {

@@ -143,11 +143,11 @@ node infra/createTable.js
 #### 첫 API 통신 테스트 (Postman)
 백엔드 서버가 켜지면 아래 주소로 테스트 요청을 보낼 수 있습니다.
 
+**스터디룸 API**
+
 - **Method**: POST
-
-- **URL**: http://localhost:4000/dev/rooms
-
-- **Body** (JSON):
+- **URL**: `http://localhost:4000/dev/rooms`
+- **Body** > raw > JSON:
 ```json
 {
     "roomName": "정처기 스터디",
@@ -155,9 +155,10 @@ node infra/createTable.js
     "maxCapacity": 10
 }
 ```
-- **Method**: GET
 
-- **URL**: http://localhost:4000/dev/rooms
+- **Method**: GET
+- **URL**: `http://localhost:4000/dev/rooms`
+- **응답 예시**:
 ```json
 {
     "createdAt": "2026-04-01T07:46:21.482Z",
@@ -168,16 +169,88 @@ node infra/createTable.js
 }
 ```
 
-#### 인증 API 테스트 (Postman)
+---
 
-| Method | URL | 설명 |
-| :----- | :-- | :--- |
-| POST | `http://localhost:4000/dev/userRegister` | 회원가입 |
-| POST | `http://localhost:4000/dev/userLogin` | 로그인 |
-| POST | `http://localhost:4000/dev/token/refresh` | Access Token 재발급 |
-| DELETE | `http://localhost:4000/dev/userLogout` | 로그아웃 |
+**인증 API**
 
-> ⚠️ `token/refresh`, `userLogout`은 Postman **Headers 탭**에 `Authorization: Bearer {refresh_token}` 을 입력해야 합니다.
+**회원가입**
+- **Method**: POST
+- **URL**: `http://localhost:4000/dev/userRegister`
+- **Body** > raw > JSON:
+```json
+{
+    "email": "test@test.com",
+    "password": "1234",
+    "nickname": "테스터"
+}
+```
+- **응답 예시**:
+```json
+{
+    "result": "success",
+    "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+**로그인**
+- **Method**: POST
+- **URL**: `http://localhost:4000/dev/userLogin`
+- **Body** > raw > JSON:
+```json
+{
+    "email": "test@test.com",
+    "password": "1234"
+}
+```
+- **응답 예시**:
+```json
+{
+    "result": "success",
+    "nickname": "테스터",
+    "profileImageUrl": null,
+    "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+**Access Token 재발급**
+- **Method**: POST
+- **URL**: `http://localhost:4000/dev/token/refresh`
+- **Body**: 없음
+- **Headers**:
+
+| Key | Value |
+| :--- | :--- |
+| Authorization | Bearer {로그인에서 받은 refresh_token} |
+
+- **응답 예시**:
+```json
+{
+    "result": "success",
+    "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "token_type": "bearer"
+}
+```
+
+**로그아웃**
+- **Method**: DELETE
+- **URL**: `http://localhost:4000/dev/userLogout`
+- **Body**: 없음
+- **Headers**:
+
+| Key | Value |
+| :--- | :--- |
+| Authorization | Bearer {로그인에서 받은 refresh_token} |
+
+- **응답 예시**:
+```json
+{
+    "result": "success"
+}
+```
+
+> ⚠️ `token/refresh`, `userLogout`은 Postman **Params가 아닌 Headers 탭**에 `Authorization` 키를 입력해야 합니다.
 
 ---
 

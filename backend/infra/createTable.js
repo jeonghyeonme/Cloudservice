@@ -1,7 +1,3 @@
-// backend/infra/createTable.js
-// Python: test/create_table.py 변환
-// 실행: node infra/createTable.js
-
 const {
   DynamoDBClient,
   CreateTableCommand,
@@ -10,7 +6,7 @@ const {
   DescribeTableCommand,
 } = require("@aws-sdk/client-dynamodb");
 
-// LocalStack 연결 (Python: boto3.client('dynamodb', endpoint_url=...))
+// LocalStack 연결
 const client = new DynamoDBClient({
   region:   "ap-northeast-1",
   endpoint: "http://localhost:4566",
@@ -158,7 +154,6 @@ async function createRefreshTokensTable() {
 
 // =========================
 // 6. Users GSI 추가 (email-index)
-// Python: dynamodb.update_table(...) + while 루프로 ACTIVE 대기
 // =========================
 async function addEmailGSI() {
   await client.send(new UpdateTableCommand({
@@ -181,7 +176,6 @@ async function addEmailGSI() {
 
   console.log("⏳ Users GSI (email-index) 생성 중...");
 
-  // Python: while True: time.sleep(2) → status == 'ACTIVE'이면 break
   while (true) {
     const desc   = await client.send(new DescribeTableCommand({ TableName: "Users" }));
     const gsiList = desc.Table.GlobalSecondaryIndexes || [];

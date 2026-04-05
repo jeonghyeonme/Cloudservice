@@ -1,9 +1,3 @@
-// backend/src/chat/chatHandler.js
-// Python: resources/chat.py lambda_handler
-// WebSocket API Gateway 라우팅 처리
-//
-// Python boto3.resource('dynamodb').Table() → DynamoDBDocumentClient + Command 방식
-
 const {
   PutCommand,
   DeleteCommand,
@@ -25,7 +19,6 @@ const MESSAGES_TABLE    = "Messages";
 
 // =========================
 // WebSocket으로 메시지 보내기
-// Python: get_apigw_client() + send_to_connection()
 // =========================
 function getApigwClient(domain, stage) {
   return new ApiGatewayManagementApiClient({
@@ -40,7 +33,6 @@ async function sendToConnection(apigw, connectionId, data) {
       Data:         Buffer.from(JSON.stringify(data)),
     }));
   } catch {
-    // Python: connections_table.delete_item(Key={'connectionId': connection_id})
     // 연결 끊기면 DB에서 삭제
     await dynamoDb.send(new DeleteCommand({
       TableName: CONNECTIONS_TABLE,
@@ -52,7 +44,6 @@ async function sendToConnection(apigw, connectionId, data) {
 
 // =========================
 // $connect
-// Python: def on_connect(event)
 // =========================
 async function onConnect(event) {
   const connectionId = event.requestContext.connectionId;
@@ -72,7 +63,6 @@ async function onConnect(event) {
 
 // =========================
 // $disconnect
-// Python: def on_disconnect(event)
 // =========================
 async function onDisconnect(event) {
   const connectionId = event.requestContext.connectionId;
@@ -88,7 +78,6 @@ async function onDisconnect(event) {
 
 // =========================
 // 방 생성
-// Python: def create_room(body)
 // =========================
 async function createRoom(body) {
   const roomId    = uuidv4();
@@ -117,7 +106,6 @@ async function createRoom(body) {
 
 // =========================
 // 방 입장
-// Python: def join_room(connection_id, body)
 // =========================
 async function joinRoom(connectionId, body) {
   const { roomId, userId } = body;
@@ -147,7 +135,6 @@ async function joinRoom(connectionId, body) {
 
 // =========================
 // 메시지 전송
-// Python: def send_message(event, body)
 // =========================
 async function sendMessage(event, body) {
   const connectionId = event.requestContext.connectionId;
@@ -169,18 +156,15 @@ async function sendMessage(event, body) {
     createdAt,
   };
 
-  // Python: if body['messageType'] == 'TEXT': item['content'] = body['content']
   if (body.messageType === "TEXT") {
     item.content = body.content;
   }
 
-  // Python: messages_table.put_item(Item=item)
   await dynamoDb.send(new PutCommand({
     TableName: MESSAGES_TABLE,
     Item:      item,
   }));
 
-  // Python: connections_table.query(IndexName='roomId-index', ...)
   const response = await dynamoDb.send(new QueryCommand({
     TableName:                 CONNECTIONS_TABLE,
     IndexName:                 "roomId-index",
@@ -190,7 +174,6 @@ async function sendMessage(event, body) {
 
   const connections = response.Items || [];
 
-  // Python: for conn in connections: send_to_connection(apigw, conn['connectionId'], ...)
   await Promise.all(
     connections.map((conn) =>
       sendToConnection(apigw, conn.connectionId, {
@@ -206,17 +189,14 @@ async function sendMessage(event, body) {
 
 // =========================
 // 메인 핸들러
-// Python: def lambda_handler(event, context)
 // =========================
 module.exports.handler = async (event) => {
   const routeKey = event.requestContext.routeKey;
 
   try {
-    // Python: if route_key == "$connect"
     if (routeKey === "$connect")    return await onConnect(event);
     if (routeKey === "$disconnect") return await onDisconnect(event);
 
-    // Python: body = json.loads(event.get('body', '{}'))
     const body = JSON.parse(event.body || "{}");
 
     if (routeKey === "createRoom")  return await createRoom(body);

@@ -1,9 +1,3 @@
-// Python 라이브러리 → Node.js 대응표
-// passlib.pbkdf2_sha256  →  bcrypt  (단방향 해시)
-// python-jose jwt        →  jsonwebtoken
-// datetime.utcnow()      →  new Date()
-// timedelta(days=7)      →  7 * 24 * 60 * 60  (초 단위)
-
 const bcrypt = require("bcryptjs");
 const jwt    = require("jsonwebtoken");
 const {
@@ -60,7 +54,6 @@ function createRefreshToken(data) {
 
 // =========================
 // Access Token 검증
-// Python: jwt.decode() + scope 체크 + sub 추출
 // =========================
 function verifyAccessToken(token) {
   // Authorization: Bearer <token> 헤더에서 토큰 추출
@@ -85,7 +78,6 @@ function verifyAccessToken(token) {
 
 // =========================
 // Refresh Token DB 처리
-// Python: table.put_item / get_item / delete_item
 // =========================
 async function saveRefreshToken(userId, refreshToken) {
   const expiresAt = Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60; // 7일 TTL
@@ -120,7 +112,6 @@ async function deleteRefreshToken(userId, refreshToken) {
 
 // =========================
 // Refresh 검증 + Access 재발급
-// Python: validate_refresh_token_and_generate_access_token()
 // =========================
 async function validateRefreshTokenAndGenerateAccessToken(refreshToken) {
   try {
@@ -137,7 +128,7 @@ async function validateRefreshTokenAndGenerateAccessToken(refreshToken) {
       return { error: "리프레시 토큰이 유효하지 않습니다." };
     }
 
-    // DB 검증 (Python: stored = get_refresh_token(user_id, refresh_token))
+    // DB 검증
     const stored = await getRefreshToken(userId, refreshToken);
     if (!stored) {
       return { error: "리프레시 토큰이 유효하지 않습니다." };
