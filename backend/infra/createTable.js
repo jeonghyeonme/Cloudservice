@@ -9,7 +9,7 @@ const {
 // LocalStack 연결
 // Python: boto3.client('dynamodb', endpoint_url='http://localhost:4566')
 const client = new DynamoDBClient({
-  region:   "ap-northeast-1",
+  region:   "us-east-1",
   endpoint: "http://localhost:4566",
   credentials: { accessKeyId: "test", secretAccessKey: "test" },
 });

@@ -18,7 +18,7 @@ const dynamoDb = DynamoDBDocumentClient.from(client);
 exports.handler = async (event) => {
   try {
     const params = {
-      TableName: process.env.ROOMS_TABLE,
+      TableName: "Rooms",
     };
 
     // ScanCommand: 테이블 전체 조회

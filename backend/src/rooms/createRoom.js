@@ -24,7 +24,7 @@ module.exports.handler = async (event) => {
     const createdAt = new Date().toISOString();
 
     const params = {
-      TableName: process.env.ROOMS_TABLE,
+      TableName: "Rooms",
       Item: {
         roomId: roomId,
         status: "ACTIVE",                           // GSI 키 (String)
