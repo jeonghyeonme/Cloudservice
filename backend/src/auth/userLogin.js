@@ -23,6 +23,7 @@ module.exports.handler = async (event) => {
     const body = JSON.parse(event.body || "{}");
     const { email, password } = body;
 
+    // 필수값 검증
     if (!email || !password) {
       return {
         statusCode: 422,
@@ -31,6 +32,9 @@ module.exports.handler = async (event) => {
       };
     }
 
+    // email-index GSI로 이메일 조회
+    // Python: table.query(IndexName='email-index', KeyConditionExpression=Key('email').eq(user.email))
+    // Scan 대신 Query + GSI를 써야 효율적 (전체 테이블 탐색 방지)
     const response = await dynamoDb.send(new QueryCommand({
       TableName:                 USERS_TABLE,
       IndexName:                 "email-index",
@@ -40,6 +44,7 @@ module.exports.handler = async (event) => {
 
     const items = response.Items;
 
+    // 가입되지 않은 이메일
     if (!items || items.length === 0) {
       return {
         statusCode: 404,
@@ -50,6 +55,7 @@ module.exports.handler = async (event) => {
 
     const userData = items[0];
 
+    // 비밀번호 검증 (bcrypt.compare 사용)
     const isValid = await checkPassword(password, userData.password);
     if (!isValid) {
       return {
@@ -59,6 +65,7 @@ module.exports.handler = async (event) => {
       };
     }
 
+    // 로그인 성공 시 토큰 발급 및 DB 저장
     const accessToken  = createAccessToken({ sub: userData.userId });
     const refreshToken = createRefreshToken({ sub: userData.userId });
 

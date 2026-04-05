@@ -22,6 +22,8 @@ module.exports.handler = async (event) => {
       };
     }
 
+    // utils.js에서 검증 + 재발급 처리
+    // 1) JWT 서명 검증 → 2) scope 확인 → 3) DB 존재 여부 확인 → 4) 새 Access Token 발급
     const result = await validateRefreshTokenAndGenerateAccessToken(refreshToken);
 
     if (result.error) {

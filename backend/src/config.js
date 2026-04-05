@@ -14,7 +14,8 @@ const config = {
     return `https://${this.S3_BUCKET}.s3.amazonaws.com/`;
   },
 
-  // 로컬/운영 분기 플래그 (serverless-offline 실행 시 자동으로 true)
+  // serverless-offline 실행 시 자동으로 "true" 주입됨
+  // 로컬이면 LocalStack, 운영이면 실제 AWS로 연결 분기
   IS_OFFLINE: !!process.env.IS_OFFLINE,
 };
 

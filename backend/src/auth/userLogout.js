@@ -14,7 +14,8 @@ const HEADERS = {
 // =========================
 module.exports.handler = async (event) => {
   try {
-    // Authorization: Bearer <refresh_token> 헤더에서 추출
+    // Authorization: Bearer <refresh_token> 헤더에서 토큰 추출
+    // Postman Headers 탭에서 Key=Authorization, Value=Bearer {token} 형태로 전달
     const authHeader   = event.headers?.Authorization || event.headers?.authorization || "";
     const refreshToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
 
@@ -26,11 +27,15 @@ module.exports.handler = async (event) => {
       };
     }
 
+    // 토큰 디코딩으로 userId 추출
+    // Python: payload = jwt.decode(refresh_token, ...) → user_id = payload.get("sub")
     const payload = jwt.verify(refreshToken, config.JWT_SECRET_KEY, {
       algorithms: [config.HASHING_ALGORITHM],
     });
     const userId = payload.sub;
 
+    // RefreshTokens 테이블에서 해당 토큰 삭제
+    // 같은 유저의 다른 기기 토큰은 유지됨 (멀티 기기 로그아웃 미지원)
     await deleteRefreshToken(userId, refreshToken);
 
     return {
