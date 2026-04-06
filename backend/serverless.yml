@@ -20,7 +20,7 @@ provider:
 
   environment:
     IS_OFFLINE:        "true"    # serverless-offline 실행 시 LocalStack 연결
-    REGION:            ap-northeast-1
+    REGION:            us-east-1
     DB_ENDPOINT:       http://localhost:4566
     # 암호화 관련 (실제 배포 시 AWS SSM Parameter Store로 교체 권장)
     SALT:              ${env:SALT, "InhatcCloudProjectVfwdkYlgtdftyKHKJhjgdewqxKLPHGJVBdjhfJUfRhjjhgD"}

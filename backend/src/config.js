@@ -1,7 +1,7 @@
 const config = {
   // DynamoDB 관련
   DB_ENDPOINT: process.env.DB_ENDPOINT || "http://localhost:4566",
-  REGION:      process.env.REGION      || "ap-northeast-1",
+  REGION:      process.env.REGION      || "us-east-1",
 
   // 암호화 관련
   SALT:               process.env.SALT               || "",

@@ -133,12 +133,23 @@ npm start
 | **Backend** | `http://localhost:4000` | Serverless Offline API |
 | **LocalStack** | `http://localhost:4566` | AWS 가상 인프라 (S3, DB 등) |
 
-#### 🛠️ 데이터베이스 테이블 생성 (Local Only)
-LocalStack을 처음 실행했거나 인프라를 초기화한 경우, 아래 명령어를 실행하여 로컬 DynamoDB 테이블을 생성해야 합니다.
+#### 🛠️ 데이터베이스 관리 (Local Only)
+LocalStack 인프라가 실행 중인 상태에서 `backend` 디렉토리로 이동하여 아래 명령어들을 실행할 수 있습니다.
+
 ```bash
 cd backend
+
+# 1. 테이블 생성 (최초 1회 또는 초기화 후)
 node infra/createTable.js
+
+# 2. 샘플 데이터 삽입 (테스트용 유저, 방, 메시지)
+node infra/seedData.js
+
+# 3. 테이블 삭제 (데이터 초기화가 필요한 경우)
+node infra/deleteTable.js
 ```
+
+> **Tip:** 데이터를 완전히 초기화하고 싶다면 `deleteTable.js` -> `createTable.js` -> `seedData.js` 순서로 실행하세요.
 
 #### 첫 API 통신 테스트 (Postman)
 백엔드 서버가 켜지면 아래 주소로 테스트 요청을 보낼 수 있습니다.
