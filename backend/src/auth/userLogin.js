@@ -8,7 +8,7 @@ const {
   saveRefreshToken,
 } = require("../utils");
 
-const USERS_TABLE = "Users";
+const USERS_TABLE = process.env.USERS_TABLE;
 
 const HEADERS = {
   "Access-Control-Allow-Origin":      "*",

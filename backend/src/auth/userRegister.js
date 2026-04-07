@@ -9,7 +9,7 @@ const {
   saveRefreshToken,
 } = require("../utils");
 
-const USERS_TABLE = "Users";
+const USERS_TABLE = process.env.USERS_TABLE;
 
 // CORS 헤더 (API Gateway 연동 시 필수)
 const HEADERS = {
