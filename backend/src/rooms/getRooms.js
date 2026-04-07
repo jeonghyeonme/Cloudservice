@@ -17,21 +17,34 @@ const dynamoDb = DynamoDBDocumentClient.from(client);
 
 exports.handler = async (event) => {
   try {
+    const { limit = "20", lastKey } = event.queryStringParameters || {};
+
     const params = {
-      TableName: "Rooms",
+      TableName: process.env.ROOMS_TABLE,
+      IndexName: "status-createdAt-index",       // GSI 사용
+      KeyConditionExpression: "#st = :status",
+      ExpressionAttributeNames:  { "#st": "status" },
+      ExpressionAttributeValues: { ":status": "ACTIVE" },
+      ScanIndexForward: false,   // createdAt 내림차순 (최신순)
+      Limit: parseInt(limit),
     };
 
-    // ScanCommand: 테이블 전체 조회
-    // ⚠️ 데이터가 많아지면 성능 저하 → status-createdAt-index GSI + QueryCommand로 교체 권장
-    const result = await dynamoDb.send(new ScanCommand(params));
+    // 페이지네이션 지원
+    if (lastKey) {
+      params.ExclusiveStartKey = JSON.parse(decodeURIComponent(lastKey));
+    }
+
+    const result = await dynamoDb.send(new QueryCommand(params));
 
     return {
       statusCode: 200,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Credentials": true,
-      },
-      body: JSON.stringify(result.Items),
+      headers: { "Access-Control-Allow-Origin": "*" },
+      body: JSON.stringify({
+        items: result.Items,
+        lastKey: result.LastEvaluatedKey
+          ? encodeURIComponent(JSON.stringify(result.LastEvaluatedKey))
+          : null,
+      }),
     };
   } catch (error) {
     console.error("DynamoDB Scan Error:", error);

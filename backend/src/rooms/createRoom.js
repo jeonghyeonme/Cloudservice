@@ -1,5 +1,6 @@
 const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
 const { DynamoDBDocumentClient, PutCommand } = require("@aws-sdk/lib-dynamodb");
+const { v4: uuidv4 } = require("uuid");
 
 // 로컬(LocalStack) / 운영(AWS) 환경 분기
 const client = process.env.IS_OFFLINE
@@ -19,12 +20,12 @@ module.exports.handler = async (event) => {
   try {
     const body = JSON.parse(event.body || "{}");
     
-    // roomId: uuid 대신 랜덤 문자열 사용
-    const roomId = "room_" + Math.random().toString(36).substr(2, 9);
+    // roomId: uuid
+    const roomId = uuidv4();
     const createdAt = new Date().toISOString();
 
     const params = {
-      TableName: "Rooms",
+      TableName: process.env.ROOMS_TABLE,
       Item: {
         roomId: roomId,
         status: "ACTIVE",                           // GSI 키 (String)
