@@ -20,9 +20,7 @@ provider:
   stage: dev
 
   environment:
-    IS_OFFLINE:        "true"    # serverless-offline 실행 시 LocalStack 연결
     REGION:            us-east-1
-    DB_ENDPOINT:       http://localhost:4566
     # 암호화 관련
     JWT_SECRET_KEY:    ${ssm:/smartstudy/dev/jwt-secret-key}
     SALT:              ${ssm:/smartstudy/dev/salt}
@@ -124,7 +122,8 @@ provider:
         - cognito-idp:ListUsers
         - cognito-idp:GlobalSignOut
         - cognito-idp:RevokeToken
-      Resource: "*"
+      Resource:
+        - "arn:aws:cognito-idp:us-east-1:*:userpool/smartstudy-*"
 
 
 # -------------------------------------------------------

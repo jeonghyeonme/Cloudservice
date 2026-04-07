@@ -32,6 +32,9 @@ module.exports.handler = async (event) => {
         createdAt: createdAt,
         roomName: body.roomName || "기본 스터디룸",
         description: body.description || "열공합시다!",
+        hostId: userId,                          // 방장 ID (인증 미들웨어에서 추출)
+        maxCapacity: body.maxCapacity || 10,     // 최대 인원 (기본값 10)
+        currentCount: 0,                         // 현재 인원 (생성 시 0)
       },
     };
 
