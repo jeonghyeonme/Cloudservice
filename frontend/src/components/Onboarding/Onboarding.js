@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import './Onboarding.css';
+import AuthActionButton from '../common/AuthActionButton';
 
 const slides = [
   {
@@ -71,9 +71,8 @@ const ChartIcon = () => (
   </svg>
 );
 
-const Onboarding = () => {
+const Onboarding = ({ onLogin, onRegister }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
-  const navigate = useNavigate();
 
   const nextSlide = useCallback(() => {
     setCurrentSlide((prev) => (prev === slides.length - 1 ? 0 : prev + 1));
@@ -100,7 +99,7 @@ const Onboarding = () => {
         <div className="navbar-logo">
           {/* Logo placeholder if needed */}
         </div>
-        <button className="signup-btn" onClick={() => navigate('/register')}>회원가입</button>
+        <AuthActionButton onClick={onRegister}>회원가입</AuthActionButton>
       </nav>
 
       {/* Main Slider Area */}
@@ -150,7 +149,7 @@ const Onboarding = () => {
                     <span className="slide-badge">{slide.badge}</span>
                     <h1 className="slide-title">{slide.title}</h1>
                     <p className="slide-description">{slide.description}</p>
-                    <button className="start-btn" onClick={() => navigate('/login')}>
+                    <button className="start-btn" onClick={onLogin}>
                       {slide.buttonText} <ArrowRightIcon />
                     </button>
                   </div>
