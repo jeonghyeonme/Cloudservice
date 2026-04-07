@@ -9,7 +9,7 @@ const CreateRoomModal = ({ onClose }) => {
   const [coverImage, setCoverImage] = useState(null);
 
   const handleSubmit = async (e) => {
-    const now = new Date();
+    // const now = new Date();
     e.preventDefault();
 
     // 서버가 기대하는 이름표(title)로 데이터를 포장합니다.
