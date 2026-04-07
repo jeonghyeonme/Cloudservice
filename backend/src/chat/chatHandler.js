@@ -13,8 +13,8 @@ const { v4: uuidv4 } = require("uuid");
 const dynamoDb = require("../dynamodbClient");
 
 const ROOMS_TABLE       = process.env.ROOMS_TABLE;
-const CONNECTIONS_TABLE = "Connections";
-const MESSAGES_TABLE    = "Messages";
+const CONNECTIONS_TABLE = process.env.CONNECTIONS_TABLE;
+const MESSAGES_TABLE    = process.env.MESSAGES_TABLE;
 
 
 // =========================

@@ -26,7 +26,7 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 async function createUsersTable() {
   // Python: dynamodb.create_table(TableName='Users', ...)
   await client.send(new CreateTableCommand({
-    TableName: "Users",
+    TableName: "smartstudy-Users",
     KeySchema: [
       { AttributeName: "userId", KeyType: "HASH" },
     ],
@@ -47,7 +47,7 @@ async function createUsersTable() {
 // =========================
 async function createRoomsTable() {
   await client.send(new CreateTableCommand({
-    TableName: "Rooms",
+    TableName: "smartstudy-Rooms",
     KeySchema: [
       { AttributeName: "roomId", KeyType: "HASH" },
     ],
@@ -72,7 +72,7 @@ async function createRoomsTable() {
 
   // TTL 활성화 — Python: update_time_to_live(...)
   await client.send(new UpdateTimeToLiveCommand({
-    TableName: "Rooms",
+    TableName: "smartstudy-Rooms",
     TimeToLiveSpecification: { Enabled: true, AttributeName: "expiresAt" },
   }));
 
@@ -87,7 +87,7 @@ async function createRoomsTable() {
 // =========================
 async function createConnectionsTable() {
   await client.send(new CreateTableCommand({
-    TableName: "Connections",
+    TableName: "smartstudy-Connections",
     KeySchema: [
       { AttributeName: "connectionId", KeyType: "HASH" },
     ],
@@ -108,7 +108,7 @@ async function createConnectionsTable() {
   }));
 
   await client.send(new UpdateTimeToLiveCommand({
-    TableName: "Connections",
+    TableName: "smartstudy-Connections",
     TimeToLiveSpecification: { Enabled: true, AttributeName: "expiresAt" },
   }));
 
@@ -122,7 +122,7 @@ async function createConnectionsTable() {
 // =========================
 async function createMessagesTable() {
   await client.send(new CreateTableCommand({
-    TableName: "Messages",
+    TableName: "smartstudy-Messages",
     KeySchema: [
       { AttributeName: "roomId",    KeyType: "HASH"  },
       { AttributeName: "messageId", KeyType: "RANGE" },
@@ -146,7 +146,7 @@ async function createMessagesTable() {
 // =========================
 async function createRefreshTokensTable() {
   await client.send(new CreateTableCommand({
-    TableName: "RefreshTokens",
+    TableName: "smartstudy-RefreshTokens",
     KeySchema: [
       { AttributeName: "userId",       KeyType: "HASH"  },
       { AttributeName: "refreshToken", KeyType: "RANGE" },
@@ -159,7 +159,7 @@ async function createRefreshTokensTable() {
   }));
 
   await client.send(new UpdateTimeToLiveCommand({
-    TableName: "RefreshTokens",
+    TableName: "smartstudy-RefreshTokens",
     TimeToLiveSpecification: { Enabled: true, AttributeName: "expiresAt" },
   }));
 
@@ -174,7 +174,7 @@ async function createRefreshTokensTable() {
 // =========================
 async function addEmailGSI() {
   await client.send(new UpdateTableCommand({
-    TableName: "Users",
+    TableName: "smartstudy-Users",
     AttributeDefinitions: [
       { AttributeName: "email", AttributeType: "S" },
     ],
@@ -195,7 +195,7 @@ async function addEmailGSI() {
 
   // GSI 생성 완료까지 폴링 (Python: while True: time.sleep(2))
   while (true) {
-    const desc   = await client.send(new DescribeTableCommand({ TableName: "Users" }));
+    const desc   = await client.send(new DescribeTableCommand({ TableName: "smartstudy-Users" }));
     const gsiList = desc.Table.GlobalSecondaryIndexes || [];
     const gsi     = gsiList.find((g) => g.IndexName === "email-index");
     const status  = gsi?.IndexStatus;

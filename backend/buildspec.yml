@@ -1,0 +1,14 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 18
+    commands:
+      - npm install -g serverless
+      - cd backend && npm install
+
+  build:
+    commands:
+      - cd backend
+      - npx serverless deploy --stage dev
