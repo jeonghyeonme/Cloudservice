@@ -1,16 +1,19 @@
 import React from 'react';
 
 const ChatWindow = ({ activeChannel, channels }) => {
-  const currentChannel = channels.find(c => c.id === activeChannel);
+  const currentChannel = channels?.find(c => c.id === activeChannel);
   const messages = currentChannel?.messages || [];
+
+  // 현재 사용자 이름 (나중에 Auth 정보에서 가져오겠지만, 지금은 상수로!)
+  const CURRENT_USER = '';
 
   return (
     <main className="chat-main">
       <header className="chat-header">
-        <h3><span className="hash">#</span> {currentChannel?.label}</h3>
-        <p className="topic">{currentChannel?.topic}</p>
+        <h3> <span className="hash">#</span> {currentChannel ? (currentChannel.name || currentChannel.label) : "채널 선택 중..."}</h3>
+        <p className="topic">{currentChannel?.topic }</p>
       </header>
-
+      
       <div className="chat-messages">
         {messages.length === 0 ? (
           <div className="no-messages">채널에 메시지가 없습니다. 대화를 시작해보세요!</div>
@@ -27,7 +30,7 @@ const ChatWindow = ({ activeChannel, channels }) => {
                   </div>
                   <div className="ai-summary-content">
                     <ul className="ai-summary-list">
-                      {msg.points.map((pt, i) => (
+                      {(msg.points || []).map((pt, i) => (
                         <li key={i}>{pt}</li>
                       ))}
                     </ul>
@@ -37,9 +40,11 @@ const ChatWindow = ({ activeChannel, channels }) => {
             }
 
             // ── 일반 메시지/파일/링크 타입 ──
+            // 내 메시지 여부를 'StudyMaster_24' 대신 동적인 변수로 체크합니다.
+            const isMine = msg.author === CURRENT_USER;
             return (
-              <div key={msg.id} className={`message-dummy ${msg.author === 'StudyMaster_24' ? 'message-mine' : ''}`}>
-                <div className="avatar">{msg.avatar}</div>
+              <div key={msg.id} className={`message-dummy ${isMine ? 'message-mine' : ''}`}>
+                <div className="avatar">{msg.avatar || msg.author[0]}</div>
                 <div className="message-content">
                   <span className="author">{msg.author}</span>
                   {msg.text && <p>{msg.text}</p>}
@@ -73,7 +78,7 @@ const ChatWindow = ({ activeChannel, channels }) => {
       </div>
 
       <div className="chat-input-area">
-        <input type="text" placeholder={"Message #" + (currentChannel?.label || '')} />
+        <input type="text" placeholder={`#${currentChannel?.name || currentChannel?.label || '채널'}에 메시지 보내기`}/>
       </div>
     </main>
   );

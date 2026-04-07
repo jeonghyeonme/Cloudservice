@@ -38,6 +38,17 @@ const seedRooms = [
     status: "ACTIVE",
     createdAt: new Date().toISOString(),
     expiresAt: Math.floor(Date.now() / 1000) + 86400, // 24시간 후 만료
+    imageUrl: "https://picsum.photos/200",
+    channels: [
+      { id: "ch-1", name: "일반-대화", topic: "자유롭게 대화하는 공간입니다." },
+      { id: "ch-2", name: "공지사항", topic: "주요 업데이트를 확인하세요." }
+    ],
+    files: [
+    { name: "기말고사_정리.docx", meta: "Uploaded by KJS" },
+    { name: "알고리즘_강의노트.pdf", meta: "Uploaded 2h ago" },
+    { name: "출석부_명단.csv", meta: "Uploaded yesterday" }
+    ],
+    links: [{ title: "GitHub Repo", url: "github.com/kjs/study" }]
   },
   {
     roomId: "room-2",
@@ -47,6 +58,10 @@ const seedRooms = [
     status: "ACTIVE",
     createdAt: new Date().toISOString(),
     expiresAt: Math.floor(Date.now() / 1000) + 86400,
+    channels: [
+      { id: "ch-3", name: "리액트-공부", topic: "React 관련 질문과 답변" },
+      { id: "ch-4", name: "백엔드-연동", topic: "API 연결 삽질 공유방" }
+    ]
   },
 ];
 
@@ -54,16 +69,20 @@ const seedRooms = [
 const seedMessages = [
   {
     roomId: "room-1",
+    channelId: "ch-1", // 어느 채널 메시지인지 표시
     messageId: `msg-${Date.now()}-1`,
-    senderId: "user-1",
-    content: "Hello everyone!",
+    author: "User One", // senderId 대신 UI가 기다리는 author로!
+    avatar: "U1",
+    text: "Hello everyone! 진짜 데이터가 나옵니다!", // content 대신 text로!
     createdAt: new Date().toISOString(),
   },
   {
     roomId: "room-1",
+    channelId: "ch-1",
     messageId: `msg-${Date.now()}-2`,
-    senderId: "user-2",
-    content: "Hi User One!",
+    author: "", 
+    avatar: "",
+    text: "오... 드디어 채팅방에 생기가 도네요. 😎",
     createdAt: new Date().toISOString(),
   },
 ];

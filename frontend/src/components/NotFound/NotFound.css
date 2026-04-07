@@ -1,0 +1,43 @@
+.not-found-container {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #121212; /* 앱 테마색 */
+  color: #ffffff;
+  text-align: center;
+}
+
+.error-code {
+  font-size: 8rem;
+  font-weight: 800;
+  margin: 0;
+  color: #00d166; /* 포인트 컬러 */
+  text-shadow: 0 0 20px rgba(0, 209, 102, 0.3);
+}
+
+.error-message {
+  font-size: 2rem;
+  margin-top: -10px;
+}
+
+.error-description {
+  color: #888;
+  margin-bottom: 30px;
+}
+
+.go-home-btn {
+  padding: 12px 24px;
+  background-color: transparent;
+  border: 2px solid #00d166;
+  color: #00d166;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.2s;
+}
+
+.go-home-btn:hover {
+  background-color: #00d166;
+  color: #121212;
+}

@@ -25,6 +25,9 @@
 
 /* 좌측 채널 목록 */
 .logo {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   padding: 20px;
   font-size: 14px;
   color: #00ff66;

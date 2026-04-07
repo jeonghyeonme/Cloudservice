@@ -11,6 +11,7 @@ import Login from '../components/Auth/Login';
 import Register from '../components/Auth/Register';
 import ChatLayout from '../components/Chat/ChatLayout';
 import ExploreRooms from '../components/Rooms/ExploreRooms';
+import NotFound from '../components/NotFound/NotFound';
 
 /**
  * 로그인 여부에 따라 라우팅을 보호하는 컴포넌트
@@ -46,6 +47,8 @@ function AppRoutes() {
       <Route path="/onboarding" element={<Onboarding />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+
+      <Route path="*" element={<NotFound />} />
     </Routes>
   );
 }
