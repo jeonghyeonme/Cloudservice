@@ -17,13 +17,16 @@ const TerminalIcon = () => (
   </svg>
 );
 
-const Register = () => {
+const Register = ({ onRegisterSuccess }) => {
   const navigate = useNavigate();
 
   const handleRegister = (e) => {
     e.preventDefault();
-    // Form processing and API call here.
-    // On success, redirect to login or home.
+    if (onRegisterSuccess) {
+      onRegisterSuccess();
+      return;
+    }
+
     navigate('/login');
   };
 

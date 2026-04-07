@@ -26,13 +26,16 @@ const GoogleIcon = () => (
   </svg>
 );
 
-const Login = () => {
+const Login = ({ onLoginSuccess }) => {
   const navigate = useNavigate();
 
   const handleLogin = (e) => {
     e.preventDefault();
-    // In a real app, perform auth logic here.
-    // Assuming successful login, redirect to Home:
+    if (onLoginSuccess) {
+      onLoginSuccess();
+      return;
+    }
+
     navigate('/');
   };
 
