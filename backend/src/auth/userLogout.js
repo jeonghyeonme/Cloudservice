@@ -1,12 +1,8 @@
+const { HEADERS } = require("../utils/response");
 const jwt = require("jsonwebtoken");
 
 const config = require("../config");
 const { deleteRefreshToken } = require("../utils");
-
-const HEADERS = {
-  "Access-Control-Allow-Origin":      "*",
-  "Access-Control-Allow-Credentials": true,
-};
 
 // =========================
 // 로그아웃
