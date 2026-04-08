@@ -1,7 +1,25 @@
 import React, { useState } from 'react';
 
-const ResourceHub = () => {
+const getFileIcon = (fileName) => {
+  if (!fileName) return '📁'; // 파일명이 없을 때 기본 아이콘
+  
+  const extension = fileName.split('.').pop().toLowerCase(); // 확장자 추출
+
+  if (['docx', 'hwp', 'doc'].includes(extension)) return '📝';
+  if (extension === 'pdf') return '📄';
+  if (['csv', 'xlsx', 'xls'].includes(extension)) return '📊';
+  
+  return '📁'; // 그 외 기타 파일들
+};
+
+const ResourceHub = ({ roomResources }) => {
   const [activeHubTab, setActiveHubTab] = useState('Files');
+
+  // 데이터가 없을 경우를 대비한 기본값 설정
+  const files = roomResources?.files || [];
+  const links = roomResources?.links || [];
+  const pins = roomResources?.pins || [];
+  const meetings = roomResources?.meetings || [];
 
   return (
     <aside className="sidebar-right">
@@ -27,8 +45,19 @@ const ResourceHub = () => {
           <div className="hub-section">
             <p className="hub-section-label">RECENT FILES</p>
             <div className="hub-file-list">
-              <div className="hub-file-item">
-                <div className="hub-file-icon docx">📝</div>
+              {files.length > 0 ? files.map((file, i) => (
+                <div key={i} className="hub-file-item">
+                  <div className={`hub-file-icon ${file.type || 'default'}`}>{getFileIcon(file.name)}</div>
+                  <div className="hub-file-info">
+                    <span className="hub-file-name">{file.name}</span>
+                    <span className="hub-file-meta">{file.meta}</span>
+                  </div>
+                </div>
+              )) : <div className="empth-mag">공유된 파일이 없습니다.</div> }
+            </div>
+          </div>
+        )}
+                {/* <div className="hub-file-icon docx">📝</div>
                 <div className="hub-file-info">
                   <span className="hub-file-name">Final_Exam_Prep_v2.docx</span>
                   <span className="hub-file-meta">Uploaded by Aiden</span>
@@ -56,44 +85,24 @@ const ResourceHub = () => {
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          </div> */}
 
         {/* ── Links 탭 ── */}
         {activeHubTab === 'Links' && (
           <div className="hub-section">
             <p className="hub-section-label">SHARED LINKS</p>
             <div className="hub-file-list">
-              <div className="hub-file-item">
-                <div className="hub-file-icon" style={{backgroundColor:'#1a2a3a'}}>🔗</div>
-                <div className="hub-file-info">
-                  <span className="hub-file-name">MIT 6.006 Lecture Notes</span>
-                  <span className="hub-file-meta">ocw.mit.edu · Sarah_Labs</span>
+              {links.length > 0 ? links.map((links, i) => (
+                <div key={i} className="hub-file-item">
+                  <div className="hub-file-icon" style={{backgroundColor:'#1a2a3a'}}>🔗</div>
+                  <div className="hub-file-info">
+                    <span className="hub-file-name">{links.title}</span>
+                    <span className="hub-file-meta">{links.url}</span>
+                  </div>
                 </div>
-              </div>
-              <div className="hub-file-item">
-                <div className="hub-file-icon" style={{backgroundColor:'#1a2a3a'}}>🔗</div>
-                <div className="hub-file-info">
-                  <span className="hub-file-name">LeetCode Problem Set #34</span>
-                  <span className="hub-file-meta">leetcode.com · AlexChen</span>
-                </div>
-              </div>
-              <div className="hub-file-item">
-                <div className="hub-file-icon" style={{backgroundColor:'#1a2a3a'}}>🔗</div>
-                <div className="hub-file-info">
-                  <span className="hub-file-name">Khan Academy - Linear Algebra</span>
-                  <span className="hub-file-meta">khanacademy.org · Aiden</span>
-                </div>
-              </div>
-              <div className="hub-file-item">
-                <div className="hub-file-icon" style={{backgroundColor:'#1a2a3a'}}>🔗</div>
-                <div className="hub-file-info">
-                  <span className="hub-file-name">CS50 Week 5 Notes</span>
-                  <span className="hub-file-meta">cs50.harvard.edu · Sarah M.</span>
-                </div>
+              )) : <div className="empty-mag">공유된 링크가 없습니다.</div> }
               </div>
             </div>
-          </div>
         )}
 
         {/* ── Pins 탭 ── */}
@@ -101,52 +110,49 @@ const ResourceHub = () => {
           <div className="hub-section">
             <p className="hub-section-label">PINNED MESSAGES</p>
             <div className="hub-file-list">
-              <div className="hub-pin-item">
-                <div className="hub-pin-author">
-                  <div className="avatar" style={{width:20,minWidth:20,height:20,minHeight:20,fontSize:9}}>A</div>
-                  <span>Aiden</span>
-                  <span className="hub-pin-time">Yesterday 3:22 PM</span>
+              {pins.length > 0 ? pins.map((pin, i) => (
+                <div key={i} className="hub-pin-item">
+                  <div className="hub-pin-author">
+                    <div className="avatar" style={{width:20,minWidth:20,height:20,minHeight:20,fontSize:9}}>{pin.author[0]}</div>
+                    <span>{pin.author}</span>
+                    <span className="hub-pin-time">{pin.time}</span>
+                  </div>
+                  <p className="hub-pin-text">{pin.text}</p>
                 </div>
-                <p className="hub-pin-text">Reminder: midterm covers chapters 6–9. Focus on Hebbian theory and backpropagation.</p>
-              </div>
-              <div className="hub-pin-item">
-                <div className="hub-pin-author">
-                  <div className="avatar" style={{width:20,minWidth:20,height:20,minHeight:20,fontSize:9}}>S</div>
-                  <span>Sarah M.</span>
-                  <span className="hub-pin-time">Mon 11:05 AM</span>
-                </div>
-                <p className="hub-pin-text">Study session every Tuesday 8PM — join the lounge 10 mins early to set up!</p>
-              </div>
-              <div className="hub-pin-item">
-                <div className="hub-pin-author">
-                  <div className="avatar" style={{width:20,minWidth:20,height:20,minHeight:20,fontSize:9,backgroundColor:'#14532d',color:'#00ff66'}}>AI</div>
-                  <span style={{color:'#00ff66'}}>SAGE AI</span>
-                  <span className="hub-pin-time">Sun 9:00 AM</span>
-                </div>
-                <p className="hub-pin-text">Weekly summary posted in shared-resources. Key topics: sorting algorithms, graph traversal, dynamic programming.</p>
-              </div>
+              )) : <div className="empty-mag">고정된 메시지가 없습니다.</div> }
             </div>
           </div>
         )}
+                  {/* <div className="avatar" style={{width:20,minWidth:20,height:20,minHeight:20,fontSize:9,backgroundColor:'#14532d',color:'#00ff66'}}>AI</div>
+                  <span style={{color:'#00ff66'}}>SAGE AI</span>
+                  <span className="hub-pin-time">Sun 9:00 AM</span>
+                </div>
+                <p className="hub-pin-text">Weekly summary posted in shared-resources. Key topics: sorting algorithms, graph traversal, dynamic programming.</p> */}
 
         {/* ── Meeting 탭 ── */}
         {activeHubTab === 'Meeting' && (
           <div className="hub-section">
             <p className="hub-section-label">UPCOMING MEETINGS</p>
-            <div className="hub-meeting">
+            {meetings.length > 0 ? meetings.map((meet, i) => (
+              <div key={i} className="hub-meeting" style={{background:'linear-gradient(135deg,#1a1a2e,#16213e)', borderColor:'rgba(100,100,255,0.2)', marginTop: 10}}>
+                <div className="hub-meeting-label" style={{color:'#818cf8'}}>📅 SCHEDULED</div>
+                <p className="hub-meeting-title">{meet.title}</p>
+                <p className="hub-meeting-sub" style={{color:'#a5b4fc'}}>{meet.time}</p>
+                <button className="hub-meeting-btn" style={{backgroundColor:'#818cf8', color:'#fff'}}>RSVP</button>
+              </div>
+            )) : <div className="empty-mag">예정된 미팅이 없습니다.</div> }
+          </div>
+        )}
+
+
+
+
+            {/* <div className="hub-meeting">
               <div className="hub-meeting-label"><span className="meeting-dot">●</span> LIVE NOW</div>
               <p className="hub-meeting-title">Weekly Review Session</p>
               <p className="hub-meeting-sub">Started 5 minutes ago · 6 students joined</p>
               <button className="hub-meeting-btn">Join Lounge</button>
-            </div>
-            <div className="hub-meeting" style={{background:'linear-gradient(135deg,#1a1a2e,#16213e)', borderColor:'rgba(100,100,255,0.2)', marginTop: 10}}>
-              <div className="hub-meeting-label" style={{color:'#818cf8'}}>📅 SCHEDULED</div>
-              <p className="hub-meeting-title">Algorithm Deep Dive</p>
-              <p className="hub-meeting-sub" style={{color:'#a5b4fc'}}>Tomorrow 7:00 PM · 3 students RSVP'd</p>
-              <button className="hub-meeting-btn" style={{backgroundColor:'#818cf8', color:'#fff'}}>RSVP</button>
-            </div>
-          </div>
-        )}
+            </div>*/}
       </div>
     </aside>
   );

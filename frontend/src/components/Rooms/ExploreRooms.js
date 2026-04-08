@@ -1,19 +1,34 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './ExploreRooms.css';
 import ServerSidebar from '../layout/ServerSidebar';
 import CreateRoomModal from './CreateRoomModal';
-import { MOCK_ROOMS } from '../../data/mockData';
+// import { MOCK_ROOMS } from '../../data/mockData'; // 하드코딩 데이터
 
 const RoomCard = ({ room, onJoin }) => {
-  const isFull = (room.maxMembers && room.currentMembers >= room.maxMembers) || room.status === 'FULL';
+  const name = room.title || "제목 없음";           
+  const roomId = room.roomId;        
+  const description = room.description;
+  const currentMembers = Number(room.currentParticipants) || 0;
+  const maxMembers = 12;             // JSON에 없으니 일단 12
+  const coverImage = room.imageUrl || room.coverImage;
+  const emoji = "📚";                // 기본 이모지
+  
+
+  const isFull = (maxMembers && currentMembers >= maxMembers) || room.status === 'FULL';
   const isLocked = room.isPrivate && isFull;
   const displayStatus = isFull ? 'FULL' : room.status;
 
   return (
     <div className={`room-card ${isFull ? 'room-full' : ''}`}>
       <div className="room-cover">
-        <div className="room-cover-emoji">{room.emoji}</div>
+        {/* 이미지가 있으면 <img> 태그를, 없으면 기존처럼 이모지를 보여줌 */}
+        {coverImage ? (
+          <img src={coverImage} alt={name} className="room-cover-img" />
+        ) : (
+          <div className="room-cover-emoji">{emoji}</div>
+        )}
+        
         <span className={`room-badge badge-${displayStatus.toLowerCase()}`}>
           {displayStatus}
         </span>
@@ -21,22 +36,22 @@ const RoomCard = ({ room, onJoin }) => {
 
       <div className="room-body">
         <div className="room-title-row">
-          <h3 className="room-name">{room.name}</h3>
-          {room.maxMembers && (
+          <h3 className="room-name">{name}</h3>
+          {maxMembers && (
             <span className="room-count">
-              {room.currentMembers}/{room.maxMembers}
+              {currentMembers}/{maxMembers}
             </span>
           )}
         </div>
-        <p className="room-desc">{room.description}</p>
+        <p className="room-desc">{description}</p>
 
         <div className="room-footer">
           <div className="member-avatars">
-            {[...Array(Math.min(3, room.currentMembers))].map((_, i) => (
+            {[...Array(Math.min(3, currentMembers))].map((_, i) => (
               <div key={i} className="mini-avatar" style={{ zIndex: 3 - i }} />
             ))}
-            {room.currentMembers > 3 && (
-              <span className="member-extra">+{room.currentMembers - 3}</span>
+            {currentMembers > 3 && (
+              <span className="member-extra">+{currentMembers - 3}</span>
             )}
           </div>
 
@@ -45,7 +60,7 @@ const RoomCard = ({ room, onJoin }) => {
           ) : isFull ? (
             <button className="room-btn btn-locked" disabled>FULL</button>
           ) : (
-            <button className="room-btn btn-join" onClick={() => onJoin(room.id)}>
+            <button className="room-btn btn-join" onClick={() => onJoin(roomId)}>
               JOIN
             </button>
           )}
@@ -57,14 +72,24 @@ const RoomCard = ({ room, onJoin }) => {
 
 const ExploreRooms = () => {
   const navigate = useNavigate();
+  const [rooms, setRooms] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [inviteCode, setInviteCode] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const filteredRooms = MOCK_ROOMS.filter(room =>
-    room.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    room.description.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  useEffect(() => {
+    fetch('http://localhost:4000/dev/rooms') // 전체를 가져와서 찾거나, 상세 API가 있다면 그걸 사용
+      .then(res => res.json())
+      .then(data => setRooms(data))
+      .catch(err => console.error("데이터 로드 실패!", err));
+  }, []);
+
+  const filteredRooms = rooms.filter(room =>{
+    const title = room.title || ""; 
+    const description = room.description || "";
+    return title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    description.toLowerCase().includes(searchQuery.toLowerCase());
+  });
 
   // 방 입장 시 해당 ID의 주소로 이동
   const handleJoinRoom = (roomId) => {
@@ -118,7 +143,7 @@ const ExploreRooms = () => {
 
         <div className="rooms-grid">
           {filteredRooms.map(room => (
-            <RoomCard key={room.id} room={room} onJoin={handleJoinRoom} />
+            <RoomCard key={room.roomId} room={room} onJoin={handleJoinRoom} />
           ))}
 
           <div className="room-card create-card" onClick={() => setIsModalOpen(true)}>
