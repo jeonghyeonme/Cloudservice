@@ -58,7 +58,7 @@ const ChatLayout = () => {
     return (
       <div style={{ padding: '20px', color: 'white' }}>
         <h3>방을 찾을 수 없습니다. (ID: {roomId})</h3>
-        <button onClick={() => navigate('/rooms')}>목록으로 돌아가기</button>
+        <button onClick={() => navigate('/explore')}>목록으로 돌아가기</button>
       </div>
     );
   }
@@ -67,7 +67,7 @@ const ChatLayout = () => {
     <div className="chat-container">
       <ServerSidebar 
         activeView="chat" 
-        onHomeClick={() => navigate('/rooms')} 
+        onHomeClick={() => navigate('/explore')} 
         onServerClick={() => {}} 
         onAddClick={() => setIsModalOpen(true)}
       />

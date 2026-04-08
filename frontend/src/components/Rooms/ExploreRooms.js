@@ -100,7 +100,7 @@ const ExploreRooms = () => {
     <div className="explore-container">
       <ServerSidebar 
         activeView="home" 
-        onHomeClick={() => navigate('/rooms')} 
+        onHomeClick={() => navigate('/explore')} 
         onServerClick={() => {}} // 이미 홈임
         onAddClick={() => setIsModalOpen(true)}
       />

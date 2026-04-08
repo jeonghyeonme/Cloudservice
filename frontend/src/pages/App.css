@@ -5,6 +5,12 @@
     linear-gradient(180deg, #050505 0%, #0d0d0d 100%);
 }
 
+/* 
+  [참고] .app-shell 관련 스타일
+  추후 Explore나 Chat 페이지의 레이아웃 통일성을 위해 재사용할 가능성이 있는 스타일들입니다. 
+*/
+
+/*
 .app-shell {
   min-height: 100vh;
   display: flex;
@@ -92,3 +98,4 @@
     font-size: 16px;
   }
 }
+*/

@@ -9,7 +9,6 @@ import { AuthProvider, useAuth } from '../contexts/AuthContext'; // ProtectedRou
 import Onboarding from '../components/Onboarding/Onboarding';
 import Login from '../components/Auth/Login';
 import Register from '../components/Auth/Register';
-import AuthActionButton from '../components/common/AuthActionButton';
 import ChatLayout from '../components/Chat/ChatLayout';
 import ExploreRooms from '../components/Rooms/ExploreRooms';
 import NotFound from '../components/NotFound/NotFound';
@@ -27,33 +26,6 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
-function Home({ onLogout }) {
-  return (
-    <div className="App">
-      <header className="app-shell">
-        <nav className="app-shell__nav">
-          <div className="app-shell__brand">
-            <span className="app-shell__badge">LIVE SESSION</span>
-            <h1>SmartStudy Workspace</h1>
-          </div>
-          <AuthActionButton onClick={onLogout}>로그아웃</AuthActionButton>
-        </nav>
-
-        <main className="app-shell__hero">
-          <section className="app-shell__panel">
-            <span className="app-shell__eyebrow">CONNECTED</span>
-            <h2>학습 흐름을 끊지 않는 협업 공간에 입장했어요.</h2>
-            <p>
-              로그인한 사용자에게만 로그아웃 버튼이 노출되며, 온보딩 상단 액션과 동일한 공통 컴포넌트로
-              관리됩니다. 현재 페이지의 네온 브루탈리즘 톤과 맞도록 동일한 질감과 인터랙션을 유지했습니다.
-            </p>
-          </section>
-        </main>
-      </header>
-    </div>
-  );
-}
-
 function AppRoutes() {
   const navigate = useNavigate();
   const [isLoggedIn, setIsLoggedIn] = useState(() => sessionStorage.getItem(AUTH_STORAGE_KEY) === 'true');
@@ -61,7 +33,7 @@ function AppRoutes() {
   const handleLogin = () => {
     sessionStorage.setItem(AUTH_STORAGE_KEY, 'true');
     setIsLoggedIn(true);
-    navigate('/', { replace: true });
+    navigate('/explore', { replace: true });
   };
 
   const handleLogout = () => {
@@ -73,17 +45,17 @@ function AppRoutes() {
   return (
     <Routes>
       {/* 기존 라우팅 로직 유지 (이미 로그인한 사용자가 로그인/회원가입 페이지 접근 방지) */}
-      <Route path="/" element={isLoggedIn ? <Home onLogout={handleLogout} /> : <Navigate to="/onboarding" replace />} />
-      <Route path="/onboarding" element={<Onboarding />} />
+      <Route path="/" element={isLoggedIn ? <Navigate to="/explore" replace /> : <Navigate to="/onboarding" replace />} />
+      <Route path="/onboarding" element={isLoggedIn ? <Navigate to="/explore" replace /> : <Onboarding />} />
       <Route
         path="/login"
-        element={isLoggedIn ? <Navigate to="/" replace /> : <Login onLoginSuccess={handleLogin} />}
+        element={isLoggedIn ? <Navigate to="/explore" replace /> : <Login onLoginSuccess={handleLogin} />}
       />
       <Route
         path="/register"
-        element={isLoggedIn ? <Navigate to="/" replace /> : <Register onRegisterSuccess={handleLogin} />}
+        element={isLoggedIn ? <Navigate to="/explore" replace /> : <Register onRegisterSuccess={handleLogin} />}
       />
-      <Route path="/chat" element={<ProtectedRoute><ChatLayout /></ProtectedRoute>} />
+      <Route path="/rooms/:roomId" element={<ProtectedRoute><ChatLayout /></ProtectedRoute>} />
       <Route path="/explore" element={<ProtectedRoute><ExploreRooms /></ProtectedRoute>} />
       {/* 404 Not Found 페이지 처리 */}
       <Route path="*" element={<NotFound />} />
