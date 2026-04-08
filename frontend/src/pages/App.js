@@ -83,12 +83,8 @@ function AppRoutes() {
         path="/register"
         element={isLoggedIn ? <Navigate to="/" replace /> : <Register onRegisterSuccess={handleLogin} />}
       />
-
-      {/* 새로 추가된 컴포넌트들을 ProtectedRoute로 감싸서 사용하는 예시입니다. 
-          나중에 실제로 라우팅이 필요할 때 아래 주석을 풀고 사용하세요. */}
-      {/* <Route path="/chat" element={<ProtectedRoute><ChatLayout /></ProtectedRoute>} /> */}
-      {/* <Route path="/explore" element={<ProtectedRoute><ExploreRooms /></ProtectedRoute>} /> */}
-
+      <Route path="/chat" element={<ProtectedRoute><ChatLayout /></ProtectedRoute>} />
+      <Route path="/explore" element={<ProtectedRoute><ExploreRooms /></ProtectedRoute>} />
       {/* 404 Not Found 페이지 처리 */}
       <Route path="*" element={<NotFound />} />
     </Routes>
