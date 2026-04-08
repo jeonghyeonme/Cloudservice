@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Onboarding.css';
-import AuthActionButton from '../common/AuthActionButton';
 
 const slides = [
   {
@@ -83,15 +82,6 @@ const Onboarding = ({ onLogin, onRegister }) => {
     }
 
     navigate('/login');
-  };
-
-  const handleRegisterClick = () => {
-    if (onRegister) {
-      onRegister();
-      return;
-    }
-
-    navigate('/register');
   };
 
   const nextSlide = useCallback(() => {
