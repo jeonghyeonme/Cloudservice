@@ -10,7 +10,8 @@
   justify-content: space-between;
   align-items: center;
   padding: 12px 48px;
-  z-index: 50; /* 상단 고정, 다른 컨텐츠 위에 위치 */
+  min-height: 64px; /* 버튼 유무와 상관없이 일정한 높이 유지 */
+  z-index: 50;
 }
 
 .navbar-logo h2 {
