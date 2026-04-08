@@ -3,15 +3,18 @@ import { Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import './App.css';
 
 // Context
-import { AuthProvider } from '../contexts/AuthContext';
+import { AuthProvider, useAuth } from '../contexts/AuthContext'; // ProtectedRoute를 위해 useAuth 추가
 
 // Components
 import Onboarding from '../components/Onboarding/Onboarding';
 import Login from '../components/Auth/Login';
 import Register from '../components/Auth/Register';
+import AuthActionButton from '../components/common/AuthActionButton';
 import ChatLayout from '../components/Chat/ChatLayout';
 import ExploreRooms from '../components/Rooms/ExploreRooms';
 import NotFound from '../components/NotFound/NotFound';
+
+const AUTH_STORAGE_KEY = 'smartstudy-authenticated';
 
 /**
  * 로그인 여부에 따라 라우팅을 보호하는 컴포넌트
@@ -23,8 +26,6 @@ const ProtectedRoute = ({ children }) => {
   }
   return children;
 };
-
-const AUTH_STORAGE_KEY = 'smartstudy-authenticated';
 
 function Home({ onLogout }) {
   return (
@@ -71,11 +72,24 @@ function AppRoutes() {
 
   return (
     <Routes>
+      {/* 기존 라우팅 로직 유지 (이미 로그인한 사용자가 로그인/회원가입 페이지 접근 방지) */}
       <Route path="/" element={isLoggedIn ? <Home onLogout={handleLogout} /> : <Navigate to="/onboarding" replace />} />
       <Route path="/onboarding" element={<Onboarding />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
+      <Route
+        path="/login"
+        element={isLoggedIn ? <Navigate to="/" replace /> : <Login onLoginSuccess={handleLogin} />}
+      />
+      <Route
+        path="/register"
+        element={isLoggedIn ? <Navigate to="/" replace /> : <Register onRegisterSuccess={handleLogin} />}
+      />
 
+      {/* 새로 추가된 컴포넌트들을 ProtectedRoute로 감싸서 사용하는 예시입니다. 
+          나중에 실제로 라우팅이 필요할 때 아래 주석을 풀고 사용하세요. */}
+      {/* <Route path="/chat" element={<ProtectedRoute><ChatLayout /></ProtectedRoute>} /> */}
+      {/* <Route path="/explore" element={<ProtectedRoute><ExploreRooms /></ProtectedRoute>} /> */}
+
+      {/* 404 Not Found 페이지 처리 */}
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
