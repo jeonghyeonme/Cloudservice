@@ -17,12 +17,16 @@ const TerminalIcon = () => (
   </svg>
 );
 
-const Register = () => {
+const Register = ({ onRegisterSuccess }) => {
   const navigate = useNavigate();
 
   const handleRegister = (e) => {
     e.preventDefault();
-    // 테스트용: 바로 로그인 페이지로 이동
+    if (onRegisterSuccess) {
+      onRegisterSuccess();
+      return;
+    }
+
     navigate('/login');
   };
 

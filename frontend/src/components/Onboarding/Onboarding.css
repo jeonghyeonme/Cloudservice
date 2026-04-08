@@ -32,6 +32,12 @@
   z-index: 10;
 }
 
+.navbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .logo-dots {
   display: flex;
   gap: 8px;
@@ -46,23 +52,6 @@
 .dot-red { background-color: #FF5F56; }
 .dot-yellow { background-color: #FFBD2E; }
 .dot-green { background-color: #27C93F; }
-
-.signup-btn {
-  background: transparent;
-  color: var(--text-primary);
-  border: 1px solid var(--border-color);
-  padding: 8px 16px;
-  border-radius: var(--radius-sm);
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.signup-btn:hover {
-  border-color: var(--accent-primary);
-  color: var(--accent-primary);
-  box-shadow: 0 0 10px var(--accent-glow);
-}
 
 /* Main Slider */
 .slider-wrapper {
@@ -354,5 +343,17 @@
 
   .feature-pill {
     display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .navbar {
+    padding: 20px 20px 0;
+  }
+
+  .navbar-actions {
+    width: 100%;
+    justify-content: flex-end;
+    flex-wrap: wrap;
   }
 }
