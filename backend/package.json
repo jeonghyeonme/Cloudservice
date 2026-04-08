@@ -1,17 +1,22 @@
 {
-  "name": "backend",
+  "name": "smart-study-backend",
   "version": "1.0.0",
-  "description": "",
+  "description": "스마트 스터디 메신저 서버리스 백엔드",
   "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "type": "commonjs",
+  "scripts": {
+    "start": "serverless offline --httpPort 4000",
+    "localstack": "docker-compose up -d"
+  },
   "devDependencies": {
-    "serverless": "^4.33.0",
-    "serverless-offline": "^14.5.0"
+    "serverless": "^3.40.0",
+    "serverless-offline": "^13.9.0"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.1021.0",
+    "@aws-sdk/lib-dynamodb": "^3.1021.0",
+    "bcryptjs":              "^2.4.3",
+    "jsonwebtoken":          "^9.0.2",
+    "uuid":                  "^9.0.0"
   }
 }

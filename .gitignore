@@ -1,1 +1,7 @@
 /.env
+backend/.env
+
+node_modules/
+.serverless/
+.dynamodb/
+.vscode/

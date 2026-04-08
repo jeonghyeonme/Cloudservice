@@ -1,0 +1,220 @@
+service: smart-study-backend
+frameworkVersion: '3'
+
+plugins:
+  - serverless-offline
+
+custom:
+  studentId: "inhatc-202647019"
+  usersTableName:         "Users"
+  roomsTableName:         "Rooms"
+  connectionsTableName:   "Connections"
+  messagesTableName:      "Messages"
+  refreshTokensTableName: "RefreshTokens"
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: us-east-1
+  stage: dev
+
+  environment:
+    IS_OFFLINE:        "true"    # serverless-offline 실행 시 LocalStack 연결
+    REGION:            us-east-1
+    DB_ENDPOINT:       http://localhost:4566
+    # 암호화 관련 (실제 배포 시 AWS SSM Parameter Store로 교체 권장)
+    SALT:              ${env:SALT, "InhatcCloudProjectVfwdkYlgtdftyKHKJhjgdewqxKLPHGJVBdjhfJUfRhjjhgD"}
+    JWT_SECRET_KEY:    ${env:JWT_SECRET_KEY, "InhatcCloudProjectZresYYfjgiikLJjkgJGFfdGSXtfugiOpuKJGJHgvdxxDSF"}
+    HASHING_ALGORITHM: HS256
+    S3_BUCKET:         ${env:S3_BUCKET, ""}
+
+
+# -------------------------------------------------------
+# Lambda 함수 목록
+# -------------------------------------------------------
+functions:
+
+  # ── 방 관련 ──────────────────
+  createRoom:
+    handler: src/rooms/createRoom.handler
+    events:
+      - http:
+          path: /rooms
+          method: post
+          cors: true
+
+  getRooms:
+    handler: src/rooms/getRooms.handler
+    events:
+      - http:
+          path: /rooms
+          method: get
+          cors: true
+
+  # ── 인증 관련 ────────────────────────
+  userRegister:
+    handler: src/auth/userRegister.handler
+    events:
+      - http:
+          path: /userRegister
+          method: post
+          cors: true
+
+  userLogin:
+    handler: src/auth/userLogin.handler
+    events:
+      - http:
+          path: /userLogin
+          method: post
+          cors: true
+
+  userLogout:
+    handler: src/auth/userLogout.handler
+    events:
+      - http:
+          path: /userLogout
+          method: delete
+          cors: true
+
+  tokenRefresh:
+    handler: src/auth/tokenRefresh.handler
+    events:
+      - http:
+          path: /token/refresh
+          method: post
+          cors: true
+
+  # ── 채팅 WebSocket ───────────────────
+  chatHandler:
+    handler: src/chat/chatHandler.handler
+    events:
+      - websocket:
+          route: $connect
+      - websocket:
+          route: $disconnect
+      - websocket:
+          route: createRoom
+      - websocket:
+          route: joinRoom
+      - websocket:
+          route: sendMessage
+
+
+# -------------------------------------------------------
+# DynamoDB 테이블 정의 (CloudFormation)
+# -------------------------------------------------------
+resources:
+  Resources:
+
+    # 1. Users 테이블
+    UsersTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: Users
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: email
+            AttributeType: S
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: email-index
+            KeySchema:
+              - AttributeName: email
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+
+    # 2. Rooms 테이블
+    RoomsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: Rooms
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: roomId
+            AttributeType: S
+          - AttributeName: status
+            AttributeType: S
+          - AttributeName: createdAt
+            AttributeType: S
+        KeySchema:
+          - AttributeName: roomId
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: status-createdAt-index
+            KeySchema:
+              - AttributeName: status
+                KeyType: HASH
+              - AttributeName: createdAt
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+        TimeToLiveSpecification:
+          AttributeName: expiresAt
+          Enabled: true
+
+    # 3. Connections 테이블
+    ConnectionsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: Connections
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: connectionId
+            AttributeType: S
+          - AttributeName: roomId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: connectionId
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: roomId-index
+            KeySchema:
+              - AttributeName: roomId
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+        TimeToLiveSpecification:
+          AttributeName: expiresAt
+          Enabled: true
+
+    # 4. Messages 테이블
+    MessagesTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: Messages
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: roomId
+            AttributeType: S
+          - AttributeName: messageId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: roomId
+            KeyType: HASH
+          - AttributeName: messageId
+            KeyType: RANGE
+
+    # 5. RefreshTokens 테이블
+    RefreshTokensTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: RefreshTokens
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: refreshToken
+            AttributeType: S
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+          - AttributeName: refreshToken
+            KeyType: RANGE
+        TimeToLiveSpecification:
+          AttributeName: expiresAt
+          Enabled: true

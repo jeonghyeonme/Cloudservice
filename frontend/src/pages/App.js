@@ -1,6 +1,11 @@
 import React, { useState } from 'react';
 import { Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import './App.css';
+
+// Context
+import { AuthProvider, useAuth } from '../contexts/AuthContext';
+
+// Components
 import Onboarding from '../components/Onboarding/Onboarding';
 import Login from '../components/Auth/Login';
 import Register from '../components/Auth/Register';
@@ -64,6 +69,14 @@ function App() {
         element={isLoggedIn ? <Navigate to="/" replace /> : <Register onRegisterSuccess={handleLogin} />}
       />
     </Routes>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppRoutes />
+    </AuthProvider>
   );
 }
 
