@@ -40,7 +40,7 @@ function Home({ onLogout }) {
   );
 }
 
-function App() {
+function AppRoutes() {
   const navigate = useNavigate();
   const [isLoggedIn, setIsLoggedIn] = useState(() => sessionStorage.getItem(AUTH_STORAGE_KEY) === 'true');
 
