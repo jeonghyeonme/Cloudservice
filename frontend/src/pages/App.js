@@ -12,6 +12,7 @@ import Register from '../components/Auth/Register';
 import ChatLayout from '../components/Chat/ChatLayout';
 import ExploreRooms from '../components/Rooms/ExploreRooms';
 import NotFound from '../components/NotFound/NotFound';
+import SharedLayout from '../components/layout/SharedLayout';
 
 const AUTH_STORAGE_KEY = 'smartstudy-authenticated';
 
@@ -43,23 +44,25 @@ function AppRoutes() {
   };
 
   return (
-    <Routes>
-      {/* 기존 라우팅 로직 유지 (이미 로그인한 사용자가 로그인/회원가입 페이지 접근 방지) */}
-      <Route path="/" element={isLoggedIn ? <Navigate to="/explore" replace /> : <Navigate to="/onboarding" replace />} />
-      <Route path="/onboarding" element={isLoggedIn ? <Navigate to="/explore" replace /> : <Onboarding />} />
-      <Route
-        path="/login"
-        element={isLoggedIn ? <Navigate to="/explore" replace /> : <Login onLoginSuccess={handleLogin} />}
-      />
-      <Route
-        path="/register"
-        element={isLoggedIn ? <Navigate to="/explore" replace /> : <Register onRegisterSuccess={handleLogin} />}
-      />
-      <Route path="/rooms/:roomId" element={<ProtectedRoute><ChatLayout /></ProtectedRoute>} />
-      <Route path="/explore" element={<ProtectedRoute><ExploreRooms /></ProtectedRoute>} />
-      {/* 404 Not Found 페이지 처리 */}
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+    <SharedLayout isLoggedIn={isLoggedIn} onLogout={handleLogout}>
+      <Routes>
+        {/* 기존 라우팅 로직 유지 (이미 로그인한 사용자가 로그인/회원가입 페이지 접근 방지) */}
+        <Route path="/" element={isLoggedIn ? <Navigate to="/explore" replace /> : <Navigate to="/onboarding" replace />} />
+        <Route path="/onboarding" element={isLoggedIn ? <Navigate to="/explore" replace /> : <Onboarding />} />
+        <Route
+          path="/login"
+          element={isLoggedIn ? <Navigate to="/explore" replace /> : <Login onLoginSuccess={handleLogin} />}
+        />
+        <Route
+          path="/register"
+          element={isLoggedIn ? <Navigate to="/explore" replace /> : <Register onRegisterSuccess={handleLogin} />}
+        />
+        <Route path="/rooms/:roomId" element={<ProtectedRoute><ChatLayout /></ProtectedRoute>} />
+        <Route path="/explore" element={<ProtectedRoute><ExploreRooms /></ProtectedRoute>} />
+        {/* 404 Not Found 페이지 처리 */}
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </SharedLayout>
   );
 }
 

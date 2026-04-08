@@ -1,0 +1,42 @@
+.shared-layout-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  position: relative;
+}
+
+.global-navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 48px;
+  z-index: 50; /* 상단 고정, 다른 컨텐츠 위에 위치 */
+}
+
+.navbar-logo h2 {
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.navbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.layout-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+@media (max-width: 640px) {
+  .global-navbar {
+    padding: 20px 20px;
+  }
+  
+  .navbar-actions {
+    gap: 8px;
+  }
+}

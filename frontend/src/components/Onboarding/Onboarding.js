@@ -6,7 +6,7 @@ import AuthActionButton from '../common/AuthActionButton';
 const slides = [
   {
     id: 1,
-    badge: 'MODULE 01',
+    badge: '모듈 01',
     title: (
       <>
         학습 몰입도를 극대화하는<br />
@@ -18,7 +18,7 @@ const slides = [
   },
   {
     id: 2,
-    badge: 'MODULE 02',
+    badge: '모듈 02',
     title: (
       <>
         실시간으로 동기화되는<br />
@@ -30,7 +30,7 @@ const slides = [
   },
   {
     id: 3,
-    badge: 'MODULE 03',
+    badge: '모듈 03',
     title: (
       <>
         나만의 학습 패턴을 분석하는<br />
@@ -114,19 +114,6 @@ const Onboarding = ({ onLogin, onRegister }) => {
 
   return (
     <div className="onboarding-container">
-      {/* Navigation Bar */}
-      <nav className="navbar">
-        <div className="navbar-logo">
-          {/* Logo placeholder if needed */}
-        </div>
-        <div className="navbar-actions">
-          <AuthActionButton variant="solid" onClick={handleLoginClick}>
-            로그인
-          </AuthActionButton>
-          <AuthActionButton onClick={handleRegisterClick}>회원가입</AuthActionButton>
-        </div>
-      </nav>
-
       {/* Main Slider Area */}
       <main className="slider-wrapper">
         <button className="nav-arrow left-arrow" onClick={() => handleManualNav('prev')} aria-label="Previous Slide">
@@ -207,7 +194,7 @@ const Onboarding = ({ onLogin, onRegister }) => {
         <div className="footer-content">
           <div className="footer-left">
             <h2 className="footer-logo">SmartStudy</h2>
-            <p className="copyright">© 2024 SmartStudy. The Neon Brutalist Substratum.</p>
+            <p className="copyright">© 2026 SmartStudy. All rights reserved.</p>
           </div>
           <div className="footer-right">
             {/* Nav items removed per requirement */}

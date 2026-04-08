@@ -67,7 +67,6 @@ const ChatLayout = () => {
     <div className="chat-container">
       <ServerSidebar 
         activeView="chat" 
-        onHomeClick={() => navigate('/explore')} 
         onServerClick={() => {}} 
         onAddClick={() => setIsModalOpen(true)}
       />

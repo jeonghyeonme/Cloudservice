@@ -8,20 +8,9 @@ import './ServerSidebar.css';
  * @param {function} onServerClick - 서버 아이콘 클릭 시 실행할 함수
  * @param {function} onAddClick - + 버튼 클릭 시 실행할 함수 (모달 오픈 등)
  */
-const ServerSidebar = ({ activeView, onHomeClick, onServerClick, onAddClick }) => {
+const ServerSidebar = ({ activeView, onServerClick, onAddClick }) => {
   return (
     <nav className="server-nav">
-      {/* 홈 아이콘 */}
-      <div 
-        className={`server-icon home-icon ${activeView === 'home' ? 'active' : ''}`} 
-        onClick={onHomeClick} 
-        title="홈으로"
-      >
-        <span>🏠</span>
-      </div>
-      
-      <div className="server-separator"></div>
-      
       {/* 스터디룸/서버 아이콘들 (현재는 더미 데이터) */}
       <div 
         className={`server-icon dummy-bg-1 ${activeView === 'chat' ? 'active-server' : ''}`} 

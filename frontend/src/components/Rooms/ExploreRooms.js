@@ -100,14 +100,13 @@ const ExploreRooms = () => {
     <div className="explore-container">
       <ServerSidebar 
         activeView="home" 
-        onHomeClick={() => navigate('/explore')} 
         onServerClick={() => {}} // 이미 홈임
         onAddClick={() => setIsModalOpen(true)}
       />
 
       <div className="explore-main">
         <div className="explore-topbar">
-          <span className="topbar-title">EXPLORE ROOMS</span>
+          <span className="topbar-title">스터디룸 탐색</span>
           <div className="topbar-icons">
             <button className="icon-btn">🔔</button>
             <button className="icon-btn">⚙️</button>
@@ -116,7 +115,7 @@ const ExploreRooms = () => {
 
         <div className="explore-hero">
           <h1 className="hero-title">
-            서버를 <span className="accent">생성</span>하거나 <span className="accent">가입</span>해보세요!
+            새로운 <span className="accent">스터디룸</span>을 찾거나 <span className="accent">생성</span>해보세요!
           </h1>
         </div>
 
@@ -124,7 +123,7 @@ const ExploreRooms = () => {
           <span className="search-icon">🔍</span>
           <input
             type="text"
-            placeholder="Search Study Rooms..."
+            placeholder="스터디룸 검색..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -134,11 +133,11 @@ const ExploreRooms = () => {
           <span className="invite-icon">🔗</span>
           <input
             type="text"
-            placeholder="Enter Invite Code/URL"
+            placeholder="초대 코드 또는 URL 입력"
             value={inviteCode}
             onChange={(e) => setInviteCode(e.target.value)}
           />
-          <button className="join-directly-btn">JOIN DIRECTLY</button>
+          <button className="join-directly-btn">즉시 입장</button>
         </div>
 
         <div className="rooms-grid">
@@ -148,8 +147,8 @@ const ExploreRooms = () => {
 
           <div className="room-card create-card" onClick={() => setIsModalOpen(true)}>
             <div className="create-plus">+</div>
-            <p className="create-label">CREATE ROOM</p>
-            <p className="create-sub">START A NEW STUDY SESSION</p>
+            <p className="create-label">방 만들기</p>
+            <p className="create-sub">새로운 학습 세션 시작하기</p>
           </div>
         </div>
       </div>

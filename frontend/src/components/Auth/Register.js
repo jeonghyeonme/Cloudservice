@@ -56,22 +56,22 @@ const Register = ({ onRegisterSuccess }) => {
           <line x1="19" y1="12" x2="5" y2="12"></line>
           <polyline points="12 19 5 12 12 5"></polyline>
         </svg>
-        Back
+        뒤로가기
       </button>
 
       <div className="auth-header">
         <div className="auth-icon-wrapper">
           <TerminalIcon />
         </div>
-        <h1 className="auth-title">Create an account</h1>
-        <p className="auth-subtitle">Enter your details below to get started.</p>
+        <h1 className="auth-title">새 계정 만들기</h1>
+        <p className="auth-subtitle">아래에 정보를 입력하여 시작하세요.</p>
       </div>
 
       <div className="auth-card">
         <form onSubmit={handleRegister}>
           <div className="form-group">
             <label className="form-label" htmlFor="email">
-              EMAIL ADDRESS
+              이메일 주소
             </label>
             <input 
               className="form-input"
@@ -84,7 +84,7 @@ const Register = ({ onRegisterSuccess }) => {
 
           <div className="form-group">
             <label className="form-label" htmlFor="username">
-              USERNAME
+              사용자 이름
             </label>
             <input 
               className="form-input"
@@ -97,7 +97,7 @@ const Register = ({ onRegisterSuccess }) => {
 
           <div className="form-group">
             <label className="form-label" htmlFor="password">
-              PASSWORD
+              비밀번호
             </label>
             <input 
               className="form-input"
@@ -109,13 +109,13 @@ const Register = ({ onRegisterSuccess }) => {
           </div>
 
           <button type="submit" className="btn-neon">
-            Continue
+            계속하기
           </button>
         </form>
       </div>
 
       <div className="auth-footer">
-        Already have an account? <Link to="/login" className="auth-link">Log in</Link>
+        이미 계정이 있으신가요? <Link to="/login" className="auth-link">로그인</Link>
       </div>
     </div>
   );

@@ -23,7 +23,7 @@
   pointer-events: none;
 }
 
-/* Navbar */
+/* Navbar
 .navbar {
   display: flex;
   justify-content: space-between;
@@ -37,6 +37,7 @@
   align-items: center;
   gap: 12px;
 }
+*/
 
 .logo-dots {
   display: flex;

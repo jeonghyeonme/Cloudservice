@@ -18,23 +18,21 @@ const ResourceHub = ({ roomResources }) => {
   // 데이터가 없을 경우를 대비한 기본값 설정
   const files = roomResources?.files || [];
   const links = roomResources?.links || [];
-  const pins = roomResources?.pins || [];
-  const meetings = roomResources?.meetings || [];
 
   return (
     <aside className="sidebar-right">
       <div className="resource-hub">
         {/* 탭 헤더 */}
         <div className="hub-header">
-          <h3 className="hub-title">RESOURCE HUB</h3>
+          <h3 className="hub-title">리소스 허브</h3>
           <div className="hub-tabs">
-            {['Files', 'Links', 'Pins', 'Meeting'].map(tab => (
+            {[ {en: 'Files', ko: '파일'}, {en: 'Links', ko: '링크'} ].map(tab => (
               <button
-                key={tab}
-                className={"hub-tab" + (activeHubTab === tab ? " active" : "")}
-                onClick={() => setActiveHubTab(tab)}
+                key={tab.en}
+                className={"hub-tab" + (activeHubTab === tab.en ? " active" : "")}
+                onClick={() => setActiveHubTab(tab.en)}
               >
-                {tab}
+                {tab.ko}
               </button>
             ))}
           </div>
@@ -43,7 +41,7 @@ const ResourceHub = ({ roomResources }) => {
         {/* ── Files 탭 ── */}
         {activeHubTab === 'Files' && (
           <div className="hub-section">
-            <p className="hub-section-label">RECENT FILES</p>
+            <p className="hub-section-label">최근 파일</p>
             <div className="hub-file-list">
               {files.length > 0 ? files.map((file, i) => (
                 <div key={i} className="hub-file-item">
@@ -57,40 +55,11 @@ const ResourceHub = ({ roomResources }) => {
             </div>
           </div>
         )}
-                {/* <div className="hub-file-icon docx">📝</div>
-                <div className="hub-file-info">
-                  <span className="hub-file-name">Final_Exam_Prep_v2.docx</span>
-                  <span className="hub-file-meta">Uploaded by Aiden</span>
-                </div>
-              </div>
-              <div className="hub-file-item">
-                <div className="hub-file-icon pdf">📄</div>
-                <div className="hub-file-info">
-                  <span className="hub-file-name">Spherical_Coordinates_Diagra...</span>
-                  <span className="hub-file-meta">Uploaded 5h ago by Sarah M.</span>
-                </div>
-              </div>
-              <div className="hub-file-item">
-                <div className="hub-file-icon pdf">📄</div>
-                <div className="hub-file-info">
-                  <span className="hub-file-name">Stokes_Theorem_Notes.pdf</span>
-                  <span className="hub-file-meta">Uploaded 12:45 AM</span>
-                </div>
-              </div>
-              <div className="hub-file-item">
-                <div className="hub-file-icon csv">📊</div>
-                <div className="hub-file-info">
-                  <span className="hub-file-name">Grade_Distribution_Calc3.csv</span>
-                  <span className="hub-file-meta">Uploaded yesterday</span>
-                </div>
-              </div>
-            </div>
-          </div> */}
 
         {/* ── Links 탭 ── */}
         {activeHubTab === 'Links' && (
           <div className="hub-section">
-            <p className="hub-section-label">SHARED LINKS</p>
+            <p className="hub-section-label">공유된 링크</p>
             <div className="hub-file-list">
               {links.length > 0 ? links.map((links, i) => (
                 <div key={i} className="hub-file-item">
@@ -104,55 +73,6 @@ const ResourceHub = ({ roomResources }) => {
               </div>
             </div>
         )}
-
-        {/* ── Pins 탭 ── */}
-        {activeHubTab === 'Pins' && (
-          <div className="hub-section">
-            <p className="hub-section-label">PINNED MESSAGES</p>
-            <div className="hub-file-list">
-              {pins.length > 0 ? pins.map((pin, i) => (
-                <div key={i} className="hub-pin-item">
-                  <div className="hub-pin-author">
-                    <div className="avatar" style={{width:20,minWidth:20,height:20,minHeight:20,fontSize:9}}>{pin.author[0]}</div>
-                    <span>{pin.author}</span>
-                    <span className="hub-pin-time">{pin.time}</span>
-                  </div>
-                  <p className="hub-pin-text">{pin.text}</p>
-                </div>
-              )) : <div className="empty-mag">고정된 메시지가 없습니다.</div> }
-            </div>
-          </div>
-        )}
-                  {/* <div className="avatar" style={{width:20,minWidth:20,height:20,minHeight:20,fontSize:9,backgroundColor:'#14532d',color:'#00ff66'}}>AI</div>
-                  <span style={{color:'#00ff66'}}>SAGE AI</span>
-                  <span className="hub-pin-time">Sun 9:00 AM</span>
-                </div>
-                <p className="hub-pin-text">Weekly summary posted in shared-resources. Key topics: sorting algorithms, graph traversal, dynamic programming.</p> */}
-
-        {/* ── Meeting 탭 ── */}
-        {activeHubTab === 'Meeting' && (
-          <div className="hub-section">
-            <p className="hub-section-label">UPCOMING MEETINGS</p>
-            {meetings.length > 0 ? meetings.map((meet, i) => (
-              <div key={i} className="hub-meeting" style={{background:'linear-gradient(135deg,#1a1a2e,#16213e)', borderColor:'rgba(100,100,255,0.2)', marginTop: 10}}>
-                <div className="hub-meeting-label" style={{color:'#818cf8'}}>📅 SCHEDULED</div>
-                <p className="hub-meeting-title">{meet.title}</p>
-                <p className="hub-meeting-sub" style={{color:'#a5b4fc'}}>{meet.time}</p>
-                <button className="hub-meeting-btn" style={{backgroundColor:'#818cf8', color:'#fff'}}>RSVP</button>
-              </div>
-            )) : <div className="empty-mag">예정된 미팅이 없습니다.</div> }
-          </div>
-        )}
-
-
-
-
-            {/* <div className="hub-meeting">
-              <div className="hub-meeting-label"><span className="meeting-dot">●</span> LIVE NOW</div>
-              <p className="hub-meeting-title">Weekly Review Session</p>
-              <p className="hub-meeting-sub">Started 5 minutes ago · 6 students joined</p>
-              <button className="hub-meeting-btn">Join Lounge</button>
-            </div>*/}
       </div>
     </aside>
   );

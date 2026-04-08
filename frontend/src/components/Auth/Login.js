@@ -65,28 +65,28 @@ const Login = ({ onLoginSuccess }) => {
           <line x1="19" y1="12" x2="5" y2="12"></line>
           <polyline points="12 19 5 12 12 5"></polyline>
         </svg>
-        Back
+        뒤로가기
       </button>
 
       <div className="auth-header">
         <div className="auth-icon-wrapper">
           <TerminalIcon />
         </div>
-        <h1 className="auth-title">Welcome back</h1>
-        <p className="auth-subtitle">We're so excited to see you again!</p>
+        <h1 className="auth-title">다시 만나서 반가워요</h1>
+        <p className="auth-subtitle">계정에 로그인하여 학습을 이어가세요!</p>
       </div>
 
       <div className="auth-card">
         <form onSubmit={handleLogin}>
           <div className="form-group">
             <label className="form-label" htmlFor="email-or-phone">
-              EMAIL OR PHONE NUMBER
+              이메일 또는 전화번호
             </label>
             <input 
               className="form-input"
               id="email-or-phone" 
               type="text" 
-              placeholder="e.g. nathan@substratum.io"
+              placeholder="예: nathan@substratum.io"
               autoComplete="username"
               required
             />
@@ -94,7 +94,7 @@ const Login = ({ onLoginSuccess }) => {
 
           <div className="form-group">
             <label className="form-label" htmlFor="password">
-              PASSWORD
+              비밀번호
             </label>
             <input 
               className="form-input"
@@ -107,21 +107,21 @@ const Login = ({ onLoginSuccess }) => {
           </div>
 
           <button type="submit" className="btn-neon">
-            Log In
+            로그인
           </button>
         </form>
 
         <div className="auth-divider">
-          <span>OR CONTINUE WITH</span>
+          <span>또는 다음으로 계속하기</span>
         </div>
 
         <button type="button" className="btn-secondary">
-          <GoogleIcon /> Google
+          <GoogleIcon /> Google 계정으로 로그인
         </button>
       </div>
 
       <div className="auth-footer">
-        Need an account? <Link to="/register" className="auth-link">Register</Link>
+        아직 계정이 없으신가요? <Link to="/register" className="auth-link">회원가입</Link>
       </div>
     </div>
   );

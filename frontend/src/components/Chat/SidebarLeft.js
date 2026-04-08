@@ -26,20 +26,20 @@ const SidebarLeft = ({ roomName, channels, activeChannel, onChannelClick }) => {
 
       {/* 멤버 목록 */}
       <div className="member-panel">
-        <div className="member-panel-header">MEMBERS — 1 ONLINE</div>
+        <div className="member-panel-header">참여자 — 1명 온라인</div>
         <div className="member-list">
           <div className="member online">
             <div className="avatar-wrapper">
               <div className="avatar"></div>
               <div className="status-dot"></div>
             </div>
-            <span className="name green-text"> (Me)</span>
+            <span className="name green-text"> 나</span>
           </div>
           
-          <div className="member-category mt-20">OFFLINE — 1</div>
+          <div className="member-category mt-20">오프라인 — 1명</div>
           <div className="member offline">
             <div className="avatar-wrapper"><div className="avatar dummy-offline">AI</div></div>
-            <span className="name">SAGE AI <span className="bot-tag">BOT</span></span>
+            <span className="name">SAGE AI <span className="bot-tag">봇</span></span>
           </div>
         </div>
       </div>
@@ -48,8 +48,8 @@ const SidebarLeft = ({ roomName, channels, activeChannel, onChannelClick }) => {
       <div className="my-profile">
         <div className="avatar my-avatar"></div>
         <div className="my-info">
-          <span className="my-name"></span>
-          <span className="my-status">Online</span>
+          <span className="my-name">사용자</span>
+          <span className="my-status">온라인</span>
         </div>
         <button className="my-settings" title="설정">⚙️</button>
       </div>
