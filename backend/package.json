@@ -5,7 +5,7 @@
   "main": "index.js",
   "type": "commonjs",
   "scripts": {
-    "start": "serverless offline --httpPort 4000",
+    "start": "serverless offline --httpPort 4000 --websocketPort 4001",
     "localstack": "docker-compose up -d"
   },
   "devDependencies": {
