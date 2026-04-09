@@ -1,15 +1,17 @@
-import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import './Auth.css';
+import React, { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { register as registerApi } from "../../lib/auth";
+import { PATHS } from "../../constants/path";
+import "./Auth.css";
 
 const TerminalIcon = () => (
-  <svg 
-    className="terminal-icon" 
-    viewBox="0 0 24 24" 
-    fill="none" 
-    stroke="currentColor" 
-    strokeWidth="2" 
-    strokeLinecap="round" 
+  <svg
+    className="terminal-icon"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
     strokeLinejoin="round"
   >
     <polyline points="4 17 10 11 4 5"></polyline>
@@ -17,42 +19,77 @@ const TerminalIcon = () => (
   </svg>
 );
 
-const Register = ({ onRegisterSuccess }) => {
+const Register = () => {
   const navigate = useNavigate();
 
-  const handleRegister = (e) => {
-    e.preventDefault();
-    if (onRegisterSuccess) {
-      onRegisterSuccess();
-      return;
-    }
+  const [email, setEmail] = useState("");
+  const [nickname, setNickname] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-    navigate('/login');
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
+    try {
+      await registerApi({
+        email,
+        password,
+        nickname,
+      });
+
+      navigate(PATHS.login, {
+        replace: true,
+        state: {
+          registeredEmail: email,
+          successMessage: "회원가입이 완료되었습니다. 로그인해 주세요.",
+        },
+      });
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="auth-container">
-      <button 
-        onClick={() => navigate(-1)} 
+      <button
+        onClick={() => navigate(PATHS.onboarding)}
         style={{
-          position: 'absolute',
-          top: '32px',
-          left: '32px',
-          background: 'none',
-          border: 'none',
-          color: 'var(--text-secondary)',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          fontSize: '14px',
+          position: "absolute",
+          top: "32px",
+          left: "32px",
+          background: "none",
+          border: "none",
+          color: "var(--text-secondary)",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+          fontSize: "14px",
           fontWeight: 600,
-          transition: 'color 0.2s',
+          transition: "color 0.2s",
         }}
-        onMouseOver={(e) => e.currentTarget.style.color = 'var(--text-primary)'}
-        onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
+        onMouseOver={(e) =>
+          (e.currentTarget.style.color = "var(--text-primary)")
+        }
+        onMouseOut={(e) =>
+          (e.currentTarget.style.color = "var(--text-secondary)")
+        }
       >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
           <line x1="19" y1="12" x2="5" y2="12"></line>
           <polyline points="12 19 5 12 12 5"></polyline>
         </svg>
@@ -73,24 +110,28 @@ const Register = ({ onRegisterSuccess }) => {
             <label className="form-label" htmlFor="email">
               이메일 주소
             </label>
-            <input 
+            <input
               className="form-input"
-              id="email" 
-              type="email" 
+              id="email"
+              type="email"
               placeholder="name@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               required
             />
           </div>
 
           <div className="form-group">
-            <label className="form-label" htmlFor="username">
-              사용자 이름
+            <label className="form-label" htmlFor="nickname">
+              닉네임
             </label>
-            <input 
+            <input
               className="form-input"
-              id="username" 
-              type="text" 
-              placeholder="neon_nomad_88"
+              id="nickname"
+              type="text"
+              placeholder="테스터"
+              value={nickname}
+              onChange={(e) => setNickname(e.target.value)}
               required
             />
           </div>
@@ -99,23 +140,30 @@ const Register = ({ onRegisterSuccess }) => {
             <label className="form-label" htmlFor="password">
               비밀번호
             </label>
-            <input 
+            <input
               className="form-input"
-              id="password" 
-              type="password" 
+              id="password"
+              type="password"
               placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               required
             />
           </div>
 
-          <button type="submit" className="btn-neon">
-            계속하기
+          {error && <p className="auth-error">{error}</p>}
+
+          <button type="submit" className="btn-neon" disabled={loading}>
+            {loading ? "가입 중..." : "계속하기"}
           </button>
         </form>
       </div>
 
       <div className="auth-footer">
-        이미 계정이 있으신가요? <Link to="/login" className="auth-link">로그인</Link>
+        이미 계정이 있으신가요?{" "}
+        <Link to={PATHS.login} className="auth-link">
+          로그인
+        </Link>
       </div>
     </div>
   );
