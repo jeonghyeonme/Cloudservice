@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { PATHS } from '../../constants/path';
 import './Onboarding.css';
 
 const slides = [
@@ -81,7 +82,7 @@ const Onboarding = ({ onLogin, onRegister }) => {
       return;
     }
 
-    navigate('/login');
+    navigate(PATHS.login);
   };
 
   const nextSlide = useCallback(() => {

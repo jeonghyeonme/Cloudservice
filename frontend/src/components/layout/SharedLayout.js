@@ -1,6 +1,7 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import AuthActionButton from '../common/AuthActionButton';
+import { PATHS } from '../../constants/path';
 import './SharedLayout.css';
 
 const SharedLayout = ({ children, isLoggedIn, onLogout }) => {
@@ -8,11 +9,11 @@ const SharedLayout = ({ children, isLoggedIn, onLogout }) => {
   const navigate = useNavigate();
 
   // 로그인, 회원가입 페이지에서는 버튼 영역을 렌더링하지 않음
-  const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
+  const isAuthPage = location.pathname === PATHS.login || location.pathname === PATHS.register;
 
-  const handleLoginClick = () => navigate('/login');
-  const handleRegisterClick = () => navigate('/register');
-  const handleLogoClick = () => navigate('/'); 
+  const handleLoginClick = () => navigate(PATHS.login);
+  const handleRegisterClick = () => navigate(PATHS.register);
+  const handleLogoClick = () => navigate(PATHS.home); 
 
   return (
     <div className="App shared-layout-container">
