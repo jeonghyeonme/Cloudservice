@@ -1,6 +1,8 @@
 // ChatLayout.js
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { PATHS } from '../../constants/path';
+import { getRooms } from '../../lib/rooms';
 import './ChatLayout.css';
 import ServerSidebar from '../layout/ServerSidebar';
 import SidebarLeft from './SidebarLeft';
@@ -21,8 +23,7 @@ const ChatLayout = () => {
 
   useEffect(() => {
     setLoading(true);
-    fetch(`http://localhost:4000/dev/rooms`) // 전체를 가져와서 찾거나, 상세 API가 있다면 그걸 사용
-      .then(res => res.json())
+    getRooms()
       .then(data => {
         // 배열 중에서 현재 URL의 roomId와 일치하는 방을 찾습니다.
         const foundRoom = data.find(r => r.roomId === roomId);
@@ -58,7 +59,7 @@ const ChatLayout = () => {
     return (
       <div style={{ padding: '20px', color: 'white' }}>
         <h3>방을 찾을 수 없습니다. (ID: {roomId})</h3>
-        <button onClick={() => navigate('/explore')}>목록으로 돌아가기</button>
+        <button onClick={() => navigate(PATHS.explore)}>목록으로 돌아가기</button>
       </div>
     );
   }

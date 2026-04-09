@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getRoomPath } from '../../constants/path';
+import { getRooms } from '../../lib/rooms';
 import './ExploreRooms.css';
 import ServerSidebar from '../layout/ServerSidebar';
 import CreateRoomModal from './CreateRoomModal';
@@ -78,8 +80,7 @@ const ExploreRooms = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
-    fetch('http://localhost:4000/dev/rooms') // 전체를 가져와서 찾거나, 상세 API가 있다면 그걸 사용
-      .then(res => res.json())
+    getRooms()
       .then(data => setRooms(data))
       .catch(err => console.error("데이터 로드 실패!", err));
   }, []);
@@ -93,7 +94,7 @@ const ExploreRooms = () => {
 
   // 방 입장 시 해당 ID의 주소로 이동
   const handleJoinRoom = (roomId) => {
-    navigate(`/rooms/${roomId}`);
+    navigate(getRoomPath(roomId));
   };
 
   return (
