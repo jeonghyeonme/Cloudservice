@@ -5,11 +5,6 @@ const { DynamoDBDocumentClient, QueryCommand } = require("@aws-sdk/lib-dynamodb"
 const client = process.env.IS_OFFLINE
   ? new DynamoDBClient({
       region: "us-east-1",
-      endpoint: "http://localhost:4566",
-      credentials: {
-        accessKeyId: "test",
-        secretAccessKey: "test",
-      },
     })
   : new DynamoDBClient();
 

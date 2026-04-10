@@ -6,11 +6,6 @@ const { v4: uuidv4 } = require("uuid");
 const client = process.env.IS_OFFLINE
   ? new DynamoDBClient({
       region: "us-east-1",
-      endpoint: "http://localhost:4566",
-      credentials: {
-        accessKeyId: "test",
-        secretAccessKey: "test",
-      },
     })
   : new DynamoDBClient();
 
@@ -27,14 +22,14 @@ module.exports.handler = async (event) => {
     const params = {
       TableName: process.env.ROOMS_TABLE,
       Item: {
-        roomId: roomId,
-        status: "ACTIVE",                           // GSI 키 (String)
-        createdAt: createdAt,
+        roomId,
+        status: "ACTIVE",
+        createdAt,
         roomName: body.roomName || "기본 스터디룸",
-        description: body.description || "열공합시다!",
-        hostId: userId,                          // 방장 ID (인증 미들웨어에서 추출)
-        maxCapacity: body.maxCapacity || 10,     // 최대 인원 (기본값 10)
-        currentCount: 0,                         // 현재 인원 (생성 시 0)
+        description: body.description || "",
+        hostId: body.hostId || null,
+        maxCapacity: body.maxCapacity || 10,
+        currentCount: 0,
       },
     };
 
