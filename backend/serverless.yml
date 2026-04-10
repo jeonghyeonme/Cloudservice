@@ -18,6 +18,9 @@ provider:
   runtime: nodejs18.x
   region: us-east-1
   stage: dev
+  role: arn:aws:iam::269578498605:role/SafeRole-inhatc-team3
+  deploymentBucket:
+    name: inhatc-team3-2-deployments
 
   environment:
     REGION:            us-east-1
