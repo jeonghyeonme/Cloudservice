@@ -38,95 +38,95 @@ provider:
     REFRESH_TOKENS_TABLE: ${self:custom.refreshTokensTableName}
 
   # ── IAM 최소 권한 (SafeRole) ──────────────────────────────
-  iamRoleStatements:
-    # DynamoDB — smartstudy-* 테이블 및 GSI만 허용
-    - Effect: Allow
-      Action:
-        - dynamodb:GetItem
-        - dynamodb:Query
-        - dynamodb:PutItem
-        - dynamodb:UpdateItem
-        - dynamodb:DeleteItem
-        - dynamodb:DescribeTable
-        - dynamodb:ListTables
-        - dynamodb:UpdateTimeToLive
-      Resource:
-        - "arn:aws:dynamodb:us-east-1:*:table/smartstudy-*"
-        - "arn:aws:dynamodb:us-east-1:*:table/smartstudy-*/index/*"
+  # iamRoleStatements:
+  #   # DynamoDB — smartstudy-* 테이블 및 GSI만 허용
+  #   - Effect: Allow
+  #     Action:
+  #       - dynamodb:GetItem
+  #       - dynamodb:Query
+  #       - dynamodb:PutItem
+  #       - dynamodb:UpdateItem
+  #       - dynamodb:DeleteItem
+  #       - dynamodb:DescribeTable
+  #       - dynamodb:ListTables
+  #       - dynamodb:UpdateTimeToLive
+  #     Resource:
+  #       - "arn:aws:dynamodb:us-east-1:*:table/smartstudy-*"
+  #       - "arn:aws:dynamodb:us-east-1:*:table/smartstudy-*/index/*"
 
-    # API Gateway WebSocket — ManageConnections (브로드캐스트용)
-    - Effect: Allow
-      Action:
-        - execute-api:ManageConnections
-      Resource:
-        - "arn:aws:execute-api:us-east-1:*:*/@connections/*"
+  #   # API Gateway WebSocket — ManageConnections (브로드캐스트용)
+  #   - Effect: Allow
+  #     Action:
+  #       - execute-api:ManageConnections
+  #     Resource:
+  #       - "arn:aws:execute-api:us-east-1:*:*/@connections/*"
 
-    # CloudWatch Logs — Lambda 실행 로그
-    - Effect: Allow
-      Action:
-        - logs:CreateLogGroup
-        - logs:CreateLogStream
-        - logs:PutLogEvents
-      Resource:
-        - "arn:aws:logs:us-east-1:*:log-group:/aws/lambda/*"
+  #   # CloudWatch Logs — Lambda 실행 로그
+  #   - Effect: Allow
+  #     Action:
+  #       - logs:CreateLogGroup
+  #       - logs:CreateLogStream
+  #       - logs:PutLogEvents
+  #     Resource:
+  #       - "arn:aws:logs:us-east-1:*:log-group:/aws/lambda/*"
 
-    # SQS — 채팅 버퍼 큐 & AI 대기열 (SendMessage/ReceiveMessage만, DeleteMessage는 SafeRole에서 제외)
-    - Effect: Allow
-      Action:
-        - sqs:SendMessage
-        - sqs:ReceiveMessage
-        - sqs:GetQueueAttributes
-      Resource:
-        - "arn:aws:sqs:us-east-1:*:smartstudy-*"
+  #   # SQS — 채팅 버퍼 큐 & AI 대기열 (SendMessage/ReceiveMessage만, DeleteMessage는 SafeRole에서 제외)
+  #   - Effect: Allow
+  #     Action:
+  #       - sqs:SendMessage
+  #       - sqs:ReceiveMessage
+  #       - sqs:GetQueueAttributes
+  #     Resource:
+  #       - "arn:aws:sqs:us-east-1:*:smartstudy-*"
 
-    # S3 — AI 처리 대상 파일 읽기 (inhatc-team3-2,3- prefix 버킷만)
-    - Effect: Allow
-      Action:
-        - s3:GetObject
-        - s3:ListBucket
-      Resource:
-        - "arn:aws:s3:::inhatc-team3-2-*"
-        - "arn:aws:s3:::inhatc-team3-2-*/*"
-        - "arn:aws:s3:::inhatc-team3-3-*"
-        - "arn:aws:s3:::inhatc-team3-3-*/*"
+  #   # S3 — AI 처리 대상 파일 읽기 (inhatc-team3-2,3- prefix 버킷만)
+  #   - Effect: Allow
+  #     Action:
+  #       - s3:GetObject
+  #       - s3:ListBucket
+  #     Resource:
+  #       - "arn:aws:s3:::inhatc-team3-2-*"
+  #       - "arn:aws:s3:::inhatc-team3-2-*/*"
+  #       - "arn:aws:s3:::inhatc-team3-3-*"
+  #       - "arn:aws:s3:::inhatc-team3-3-*/*"
 
-    # Bedrock — Claude 모델 호출
-    - Effect: Allow
-      Action:
-        - bedrock:InvokeModel
-        - bedrock:GetFoundationModel
-        - bedrock:ListFoundationModels
-      Resource: "*"
+  #   # Bedrock — Claude 모델 호출
+  #   - Effect: Allow
+  #     Action:
+  #       - bedrock:InvokeModel
+  #       - bedrock:GetFoundationModel
+  #       - bedrock:ListFoundationModels
+  #     Resource: "*"
 
-    # Textract — 문서 텍스트 추출
-    - Effect: Allow
-      Action:
-        - textract:StartDocumentTextDetection
-        - textract:GetDocumentTextDetection
-      Resource: "*"
+  #   # Textract — 문서 텍스트 추출
+  #   - Effect: Allow
+  #     Action:
+  #       - textract:StartDocumentTextDetection
+  #       - textract:GetDocumentTextDetection
+  #     Resource: "*"
 
-    # Rekognition — 이미지 라벨/텍스트 감지
-    - Effect: Allow
-      Action:
-        - rekognition:DetectLabels
-        - rekognition:DetectText
-      Resource: "*"
+  #   # Rekognition — 이미지 라벨/텍스트 감지
+  #   - Effect: Allow
+  #     Action:
+  #       - rekognition:DetectLabels
+  #       - rekognition:DetectText
+  #     Resource: "*"
 
-    # Translate — 다국어 번역
-    - Effect: Allow
-      Action:
-        - translate:TranslateText
-      Resource: "*"
+  #   # Translate — 다국어 번역
+  #   - Effect: Allow
+  #     Action:
+  #       - translate:TranslateText
+  #     Resource: "*"
 
-    # Cognito — 사용자 조회 및 토큰 무효화
-    - Effect: Allow
-      Action:
-        - cognito-idp:AdminGetUser
-        - cognito-idp:ListUsers
-        - cognito-idp:GlobalSignOut
-        - cognito-idp:RevokeToken
-      Resource:
-        - "arn:aws:cognito-idp:us-east-1:*:userpool/smartstudy-*"
+  #   # Cognito — 사용자 조회 및 토큰 무효화
+  #   - Effect: Allow
+  #     Action:
+  #       - cognito-idp:AdminGetUser
+  #       - cognito-idp:ListUsers
+  #       - cognito-idp:GlobalSignOut
+  #       - cognito-idp:RevokeToken
+  #     Resource:
+  #       - "arn:aws:cognito-idp:us-east-1:*:userpool/smartstudy-*"
 
 
 # -------------------------------------------------------
