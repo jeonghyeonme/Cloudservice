@@ -10,8 +10,6 @@ const {
 // Python: boto3.client('dynamodb', endpoint_url='http://localhost:4566')
 const client = new DynamoDBClient({
   region:   "us-east-1",
-  endpoint: "http://localhost:4566",
-  credentials: { accessKeyId: "test", secretAccessKey: "test" },
 });
 
 // sleep 유틸 (Python: time.sleep(2))
