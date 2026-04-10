@@ -19,6 +19,8 @@ provider:
   region: us-east-1
   stage: dev
   role: arn:aws:iam::269578498605:role/SafeRole-inhatc-team3
+  disableDefaultOutputExportNames: true
+  tags: {}
   deploymentBucket:
     name: inhatc-team3-2-deployments
 
