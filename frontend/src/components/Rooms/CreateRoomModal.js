@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createRoom } from '../../lib/rooms';
 import './CreateRoomModal.css';
 
 const CreateRoomModal = ({ onClose }) => {
@@ -22,34 +23,17 @@ const CreateRoomModal = ({ onClose }) => {
     console.log("🚀 [STEP 1] 서버로 보낼 데이터(Payload):", newRoomData);
 
   try {
-    const response = await fetch('http://localhost:4000/dev/rooms', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(newRoomData),
-    });
+    const result = await createRoom(newRoomData);
 
-    // [LOG 2] HTTP 상태 코드 확인 (200, 201 등)
-    console.log("📡 [STEP 2] 서버 응답 상태(Status):", response.status);
+    // [LOG 2] 서버가 실제로 DB에 저장하고 돌려준 데이터 확인
+    console.log("✅ [STEP 2] 서버가 저장한 최종 데이터(Result):", result);
 
-    if (response.ok) {
-      const result = await response.json();
-      
-      // [LOG 3] 서버가 실제로 DB에 저장하고 돌려준 데이터 확인
-      console.log("✅ [STEP 3] 서버가 저장한 최종 데이터(Result):", result);
-      
-      alert(`${groupName} 랩이 성공적으로 구축되었습니다!`);
-      onClose();
-      window.location.reload(); 
-    } else {
-      const errorData = await response.json();
-      console.error("❌ [ERROR] 서버 응답 에러:", errorData);
-      throw new Error('방 생성에 실패했습니다.');
-    }
+    alert(`${groupName} 랩이 성공적으로 구축되었습니다!`);
+    onClose();
+    window.location.reload(); 
   } catch (error) {
     console.error("🚨 [CRITICAL] 통신 에러 발생:", error);
-    alert("서버 통신 중 오류가 발생했습니다.");
+    alert(error.message || "서버 통신 중 오류가 발생했습니다.");
   }
 };
 

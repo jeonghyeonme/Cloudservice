@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { PATHS } from '../../constants/path';
 import './NotFound.css';
 
 const NotFound = () => {
@@ -13,7 +14,7 @@ const NotFound = () => {
         <p className="error-description">
           요청하신 페이지가 존재하지 않거나 이동되었을 수 있습니다.
         </p>
-        <button className="go-home-btn" onClick={() => navigate('/')}>
+        <button className="go-home-btn" onClick={() => navigate(PATHS.home)}>
           홈으로 돌아가기
         </button>
       </div>
