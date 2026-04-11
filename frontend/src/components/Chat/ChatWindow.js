@@ -1,11 +1,13 @@
 import React from 'react';
+import { useAuth } from "../../contexts/AuthContext";
 
 const ChatWindow = ({ activeChannel, channels }) => {
+  const { user } = useAuth();
   const currentChannel = channels?.find(c => c.id === activeChannel);
   const messages = currentChannel?.messages || [];
 
-  // 현재 사용자 이름 (나중에 Auth 정보에서 가져오겠지만, 지금은 상수로!)
-  const CURRENT_USER = '';
+  // 현재 사용자 이름 (Auth 정보에서 가져옴)
+  const CURRENT_USER = user?.nickname || "";
 
   return (
     <main className="chat-main">

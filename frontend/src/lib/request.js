@@ -3,12 +3,17 @@ import { createApiUrl } from "../constants/endpoint";
 export async function request(path, options = {}) {
   const url = createApiUrl(path);
 
+  // localStorage에서 토큰 가져오기
+  const accessToken = localStorage.getItem("accessToken");
+  const authHeader = accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
+
   let response;
 
   try {
     response = await fetch(url, {
       headers: {
         "Content-Type": "application/json",
+        ...authHeader, // 인증 헤더 자동 주입
         ...(options.headers || {}),
       },
       ...options,

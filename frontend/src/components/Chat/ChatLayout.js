@@ -2,54 +2,59 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { PATHS } from '../../constants/path';
-import { getRooms } from '../../lib/rooms';
+import { getRoomDetail, getRoomMessages } from '../../lib/rooms';
 import './ChatLayout.css';
 import ServerSidebar from '../layout/ServerSidebar';
 import SidebarLeft from './SidebarLeft';
 import ChatWindow from './ChatWindow';
 import ResourceHub from './ResourceHub';
 import CreateRoomModal from '../Rooms/CreateRoomModal';
-// import { MOCK_ROOMS } from '../../data/mockData';
 
 const ChatLayout = () => {
-  const { roomId } = useParams(); // URL에서 roomId 추출 (예: /rooms/1 -> roomId = '1')
+  const { roomId } = useParams(); // URL에서 roomId 추출
   const navigate = useNavigate();
 
   const [currentRoom, setCurrentRoom] = useState(null);
-  const [loading, setLoading] = useState(true); // 로딩 상태 추가
+  const [loading, setLoading] = useState(true); 
   
   const [activeChannel, setActiveChannel] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     setLoading(true);
-    getRooms()
-      .then(data => {
-        // 배열 중에서 현재 URL의 roomId와 일치하는 방을 찾습니다.
-        const foundRoom = data.find(r => r.roomId === roomId);
-        
-        if (foundRoom) {
-          // 서버 데이터에 channels가 없을 경우를 대비해 기본값(Empty Array)을 넣어줍니다.
+    
+    // 방 상세 정보와 메시지 이력을 병렬로 호출
+    Promise.all([
+      getRoomDetail(roomId),
+      getRoomMessages(roomId)
+    ])
+      .then(([roomData, messages]) => {
+        if (roomData) {
+          // 채널 정보가 없을 경우 기본값 설정
+          const channels = roomData.channels || [{ id: 'ch-general', name: '일반', label: '일반' }];
+          
+          // 메시지를 채널 데이터에 주입 (일단 모든 메시지를 첫 번째 채널에!)
           const roomWithChannels = {
-            ...foundRoom,
-            channels: foundRoom.channels || [{ id: 'general', name: '일반' }] 
+            ...roomData,
+            channels: channels.map((ch, idx) => ({
+              ...ch,
+              label: ch.label || ch.name, // label 필드 보장
+              messages: idx === 0 ? messages : [] // 첫 번째 채널에만 메시지 배포
+            }))
           };
+          
           setCurrentRoom(roomWithChannels);
+          if (channels.length > 0) {
+            setActiveChannel(channels[0].id);
+          }
         }
         setLoading(false);
       })
       .catch(err => {
-        console.error("방 정보 불러오기 실패:", err);
+        console.error("방 정보를 가져오는 중 오류 발생:", err);
         setLoading(false);
       });
   }, [roomId]);
-
-  // 방 정보가 로드되면 첫 번째 채널 활성화
-  useEffect(() => {
-    if (currentRoom && currentRoom.channels && currentRoom.channels.length > 0) {
-      setActiveChannel(currentRoom.channels[0].id);
-    }
-  }, [currentRoom]);
 
   // 로딩 중일 때 처리
   if (loading) return <div style={{ color: 'white', padding: '20px' }}>방 정보를 가져오는 중...</div>;

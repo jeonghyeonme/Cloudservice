@@ -17,20 +17,25 @@ const dynamoDb = DynamoDBDocumentClient.from(client);
 
 exports.handler = async (event) => {
   try {
+    const roomId = event.pathParameters.roomId;
+
+    if (!roomId) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ message: "roomId가 필요합니다." }),
+      };
+    }
+
     const params = {
-      TableName: "Rooms",
-      IndexName: "status-createdAt-index",
-      KeyConditionExpression: "#status = :status",
-      ExpressionAttributeNames: {
-        "#status": "status"
-      },
+      TableName: "Messages",
+      KeyConditionExpression: "roomId = :roomId",
       ExpressionAttributeValues: {
-        ":status": "ACTIVE"
+        ":roomId": roomId,
       },
-      ScanIndexForward: false // 최신순 (내림차순) 정렬
+      // 메시지 ID(타임스탬프 포함) 기준으로 오름차순 정렬 (과거 -> 최신)
+      ScanIndexForward: true, 
     };
 
-    // QueryCommand: GSI를 사용한 효율적인 조회
     const result = await dynamoDb.send(new QueryCommand(params));
 
     return {
@@ -43,10 +48,10 @@ exports.handler = async (event) => {
       body: JSON.stringify(result.Items),
     };
   } catch (error) {
-    console.error("DynamoDB Query Error:", error);
+    console.error("DynamoDB Query Error (Messages):", error);
     return {
       statusCode: 500,
-      body: JSON.stringify({ message: "방 목록을 불러오는 중 오류가 발생했습니다.", error: error.message }),
+      body: JSON.stringify({ message: "메시지 내역을 불러오는 중 오류가 발생했습니다.", error: error.message }),
     };
   }
 };

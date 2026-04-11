@@ -29,8 +29,14 @@ module.exports.handler = async (event) => {
         roomId: roomId,
         status: "ACTIVE",                           // GSI 키 (String)
         createdAt: createdAt,
-        roomName: body.roomName || "기본 스터디룸",
+        title: body.title || "기본 스터디룸",       // roomName -> title로 변경 (프론트엔드와 맞춤)
         description: body.description || "열공합시다!",
+        channels: [
+          { id: "ch-general", name: "일반", topic: "기본 채널입니다." }
+        ],
+        files: [],
+        links: [],
+        expiresAt: Math.floor(Date.now() / 1000) + 86400, // 24시간 TTL 추가
       },
     };
 
@@ -42,6 +48,7 @@ module.exports.handler = async (event) => {
       headers: {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Credentials": true,
+        "Content-Type": "application/json"
       },
       body: JSON.stringify({
         message: "✅ 스터디룸이 완벽하게 DB에 저장되었습니다!",
