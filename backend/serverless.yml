@@ -51,6 +51,14 @@ functions:
           method: get
           cors: true
 
+  getRoomDetail:
+    handler: src/rooms/getRoomDetail.handler
+    events:
+      - http:
+          path: /rooms/{roomId}
+          method: get
+          cors: true
+
   # ── 인증 관련 ────────────────────────
   userRegister:
     handler: src/auth/userRegister.handler
@@ -82,6 +90,15 @@ functions:
       - http:
           path: /token/refresh
           method: post
+          cors: true
+
+  # ── 채팅 관련 ────────────────────────
+  getMessages:
+    handler: src/chat/getMessages.handler
+    events:
+      - http:
+          path: /rooms/{roomId}/messages
+          method: get
           cors: true
 
   # ── 채팅 WebSocket ───────────────────

@@ -13,3 +13,15 @@ export function createRoom(payload) {
     body: JSON.stringify(payload),
   });
 }
+
+export function getRoomDetail(roomId) {
+  return request(`${ENDPOINTS.rooms.list}/${roomId}`, {
+    method: "GET",
+  });
+}
+
+export function getRoomMessages(roomId) {
+  return request(`${ENDPOINTS.rooms.list}/${roomId}/messages`, {
+    method: "GET",
+  });
+}
