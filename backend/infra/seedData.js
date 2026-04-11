@@ -10,11 +10,54 @@ const docClient = DynamoDBDocumentClient.from(client);
 
 // 1. 다수의 샘플 유저 (커뮤니티 활성화 느낌)
 const seedUsers = [
-  { userId: "user_1", nickname: "알고리즘깎는노인", avatar: "A" },
-  { userId: "user_2", nickname: "리액트장인", avatar: "R" },
-  { userId: "user_3", nickname: "파이썬초보", avatar: "P" },
-  { userId: "user_4", nickname: "인프라요정", avatar: "I" },
-  { userId: "user_5", nickname: "취준생_A", avatar: "T" },
+  { 
+    userId: "user_test_1", 
+    email: "tester@example.com", 
+    password: "hashed_password_here", 
+    nickname: "열공마스터", 
+    avatar: "열",
+    createdAt: new Date().toISOString() 
+  },
+  { 
+    userId: "user_1", 
+    email: "user1@example.com", 
+    password: "hashed_password_here", 
+    nickname: "알고리즘깎는노인", 
+    avatar: "A",
+    createdAt: new Date().toISOString() 
+  },
+  { 
+    userId: "user_2", 
+    email: "user2@example.com", 
+    password: "hashed_password_here", 
+    nickname: "리액트장인", 
+    avatar: "R",
+    createdAt: new Date().toISOString() 
+  },
+  { 
+    userId: "user_3", 
+    email: "user3@example.com", 
+    password: "hashed_password_here", 
+    nickname: "파이썬초보", 
+    avatar: "P",
+    createdAt: new Date().toISOString() 
+  },
+  { 
+    userId: "user_4", 
+    email: "user4@example.com", 
+    password: "hashed_password_here", 
+    nickname: "인프라요정", 
+    avatar: "I",
+    createdAt: new Date().toISOString() 
+  },
+  { 
+    userId: "user_5", 
+    email: "user5@example.com", 
+    password: "hashed_password_here", 
+    nickname: "취준생_A", 
+    avatar: "T",
+    createdAt: new Date().toISOString() 
+  },
 ];
 
 // 2. 다양한 테마의 스터디룸
@@ -61,20 +104,21 @@ const seedRooms = [
 ];
 
 // 3. 방별 풍성한 채팅 내역 (AI 요약 포함)
+const now = Date.now();
 const seedMessages = [
   // 알고리즘 방 메시지들
-  { roomId: "room_algo", messageId: "m1", author: "알고리즘깎는노인", type: "text", text: "여러분 오늘 문제는 DFS/BFS 기초입니다.", createdAt: new Date(Date.now() - 10000).toISOString() },
-  { roomId: "room_algo", messageId: "m2", author: "파이썬초보", type: "text", text: "저는 아직 재귀가 어려워요 ㅠㅠ", createdAt: new Date(Date.now() - 9000).toISOString() },
-  { roomId: "room_algo", messageId: "m3", author: "알고리즘깎는노인", type: "file", fileName: "DFS_기초_정리.pdf", fileMeta: "800KB | PDF", createdAt: new Date(Date.now() - 8000).toISOString() },
-  { roomId: "room_algo", messageId: "m4", author: "인프라요정", type: "text", text: "이 파일 참고해보세요! 그림으로 잘 설명되어 있습니다.", createdAt: new Date(Date.now() - 7000).toISOString() },
-  { roomId: "room_algo", messageId: "m5", author: "SAGE AI", avatar: "🤖", type: "ai-summary", title: "학습 세션 요약", points: ["DFS는 재귀 또는 스택 사용", "BFS는 큐를 사용한 최단 거리 탐색에 유리", "방문 체크(visited) 배열은 필수"], createdAt: new Date(Date.now() - 6000).toISOString() },
-  { roomId: "room_algo", messageId: "m6", author: "취준생_A", type: "link", linkName: "BFS 추천 문제", linkUrl: "https://www.acmicpc.net/problem/2178", createdAt: new Date(Date.now() - 5000).toISOString() },
+  { roomId: "room_algo", messageId: `msg-${now - 10000}`, author: "알고리즘깎는노인", type: "text", text: "여러분 오늘 문제는 DFS/BFS 기초입니다.", createdAt: new Date(now - 10000).toISOString() },
+  { roomId: "room_algo", messageId: `msg-${now - 9000}`, author: "파이썬초보", type: "text", text: "저는 아직 재귀가 어려워요 ㅠㅠ", createdAt: new Date(now - 9000).toISOString() },
+  { roomId: "room_algo", messageId: `msg-${now - 8000}`, author: "알고리즘깎는노인", type: "file", fileName: "DFS_기초_정리.pdf", fileMeta: "800KB | PDF", createdAt: new Date(now - 8000).toISOString() },
+  { roomId: "room_algo", messageId: `msg-${now - 7000}`, author: "인프라요정", type: "text", text: "이 파일 참고해보세요! 그림으로 잘 설명되어 있습니다.", createdAt: new Date(now - 7000).toISOString() },
+  { roomId: "room_algo", messageId: `msg-${now - 6000}`, author: "SAGE AI", avatar: "🤖", type: "ai-summary", title: "학습 세션 요약", points: ["DFS는 재귀 또는 스택 사용", "BFS는 큐를 사용한 최단 거리 탐색에 유리", "방문 체크(visited) 배열은 필수"], createdAt: new Date(now - 6000).toISOString() },
+  { roomId: "room_algo", messageId: `msg-${now - 5000}`, author: "취준생_A", type: "link", linkName: "BFS 추천 문제", linkUrl: "https://www.acmicpc.net/problem/2178", createdAt: new Date(now - 5000).toISOString() },
   
   // 프론트엔드 방 메시지들
-  { roomId: "room_fe", messageId: "fe_m1", author: "리액트장인", type: "text", text: "Next.js 14 서버 컴포넌트 써보신 분?", createdAt: new Date(Date.now() - 20000).toISOString() },
-  { roomId: "room_fe", messageId: "fe_m2", author: "인프라요정", type: "text", text: "성능은 확실히 좋은데 배포 설정이 좀 까다롭네요.", createdAt: new Date(Date.now() - 18000).toISOString() },
-  { roomId: "room_fe", messageId: "fe_m3", author: "리액트장인", type: "file", fileName: "서버컴포넌트_비교.png", fileMeta: "1.2MB | Image", createdAt: new Date(Date.now() - 15000).toISOString() },
-  { roomId: "room_fe", messageId: "fe_m4", author: "SAGE AI", avatar: "🤖", type: "ai-summary", title: "기술 토론 요약", points: ["App Router의 장점 논의", "서버 컴포넌트와 클라이언트 컴포넌트 분리 기준", "로딩/에러 바운더리 활용 팁"], createdAt: new Date(Date.now() - 10000).toISOString() }
+  { roomId: "room_fe", messageId: `msg-${now - 20000}`, author: "리액트장인", type: "text", text: "Next.js 14 서버 컴포넌트 써보신 분?", createdAt: new Date(now - 20000).toISOString() },
+  { roomId: "room_fe", messageId: `msg-${now - 18000}`, author: "인프라요정", type: "text", text: "성능은 확실히 좋은데 배포 설정이 좀 까다롭네요.", createdAt: new Date(now - 18000).toISOString() },
+  { roomId: "room_fe", messageId: `msg-${now - 15000}`, author: "리액트장인", type: "file", fileName: "서버컴포넌트_비교.png", fileMeta: "1.2MB | Image", createdAt: new Date(now - 15000).toISOString() },
+  { roomId: "room_fe", messageId: `msg-${now - 10000}`, author: "SAGE AI", avatar: "🤖", type: "ai-summary", title: "기술 토론 요약", points: ["App Router의 장점 논의", "서버 컴포넌트와 클라이언트 컴포넌트 분리 기준", "로딩/에러 바운더리 활용 팁"], createdAt: new Date(now - 10000).toISOString() }
 ];
 
 async function seedTable(tableName, data) {
