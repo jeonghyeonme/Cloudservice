@@ -42,7 +42,7 @@ exports.handler = async (event) => {
       }),
     };
   } catch (error) {
-    console.error("DynamoDB Scan Error:", error);
+    console.error("DynamoDB Query Error:", error);
     return {
       statusCode: 500,
       body: JSON.stringify({ message: "방 목록을 불러오는 중 오류가 발생했습니다.", error: error.message }),

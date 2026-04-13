@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { PATHS } from '../../constants/path';
 import './Onboarding.css';
 
 const slides = [
   {
     id: 1,
-    badge: 'MODULE 01',
+    badge: '모듈 01',
     title: (
       <>
         학습 몰입도를 극대화하는<br />
@@ -17,7 +18,7 @@ const slides = [
   },
   {
     id: 2,
-    badge: 'MODULE 02',
+    badge: '모듈 02',
     title: (
       <>
         실시간으로 동기화되는<br />
@@ -29,7 +30,7 @@ const slides = [
   },
   {
     id: 3,
-    badge: 'MODULE 03',
+    badge: '모듈 03',
     title: (
       <>
         나만의 학습 패턴을 분석하는<br />
@@ -71,9 +72,18 @@ const ChartIcon = () => (
   </svg>
 );
 
-const Onboarding = () => {
+const Onboarding = ({ onLogin, onRegister }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const navigate = useNavigate();
+
+  const handleLoginClick = () => {
+    if (onLogin) {
+      onLogin();
+      return;
+    }
+
+    navigate(PATHS.login);
+  };
 
   const nextSlide = useCallback(() => {
     setCurrentSlide((prev) => (prev === slides.length - 1 ? 0 : prev + 1));
@@ -95,14 +105,6 @@ const Onboarding = () => {
 
   return (
     <div className="onboarding-container">
-      {/* Navigation Bar */}
-      <nav className="navbar">
-        <div className="navbar-logo">
-          {/* Logo placeholder if needed */}
-        </div>
-        <button className="signup-btn" onClick={() => navigate('/register')}>회원가입</button>
-      </nav>
-
       {/* Main Slider Area */}
       <main className="slider-wrapper">
         <button className="nav-arrow left-arrow" onClick={() => handleManualNav('prev')} aria-label="Previous Slide">
@@ -150,7 +152,7 @@ const Onboarding = () => {
                     <span className="slide-badge">{slide.badge}</span>
                     <h1 className="slide-title">{slide.title}</h1>
                     <p className="slide-description">{slide.description}</p>
-                    <button className="start-btn" onClick={() => navigate('/login')}>
+                    <button className="start-btn" onClick={handleLoginClick}>
                       {slide.buttonText} <ArrowRightIcon />
                     </button>
                   </div>
@@ -183,7 +185,7 @@ const Onboarding = () => {
         <div className="footer-content">
           <div className="footer-left">
             <h2 className="footer-logo">SmartStudy</h2>
-            <p className="copyright">© 2024 SmartStudy. The Neon Brutalist Substratum.</p>
+            <p className="copyright">© 2026 SmartStudy. All rights reserved.</p>
           </div>
           <div className="footer-right">
             {/* Nav items removed per requirement */}

@@ -41,6 +41,7 @@ module.exports.handler = async (event) => {
       headers: {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Credentials": true,
+        "Content-Type": "application/json"
       },
       body: JSON.stringify({
         message: "✅ 스터디룸이 완벽하게 DB에 저장되었습니다!",

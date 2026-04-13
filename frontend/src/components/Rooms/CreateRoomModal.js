@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createRoom } from '../../lib/rooms';
 import './CreateRoomModal.css';
 
 const CreateRoomModal = ({ onClose }) => {
@@ -8,10 +9,33 @@ const CreateRoomModal = ({ onClose }) => {
   const [maxParticipants, setMaxParticipants] = useState(12);
   const [coverImage, setCoverImage] = useState(null);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
+    // const now = new Date();
     e.preventDefault();
-    console.log({ groupName, description, privacy, maxParticipants, coverImage });
-  };
+
+    // 서버가 기대하는 이름표(title)로 데이터를 포장합니다.
+    const newRoomData = {
+      title: groupName,           // 딱 이것만!
+      description: description,
+      status: 'ACTIVE',
+    };
+
+    console.log("🚀 [STEP 1] 서버로 보낼 데이터(Payload):", newRoomData);
+
+  try {
+    const result = await createRoom(newRoomData);
+
+    // [LOG 2] 서버가 실제로 DB에 저장하고 돌려준 데이터 확인
+    console.log("✅ [STEP 2] 서버가 저장한 최종 데이터(Result):", result);
+
+    alert(`${groupName} 랩이 성공적으로 구축되었습니다!`);
+    onClose();
+    window.location.reload(); 
+  } catch (error) {
+    console.error("🚨 [CRITICAL] 통신 에러 발생:", error);
+    alert(error.message || "서버 통신 중 오류가 발생했습니다.");
+  }
+};
 
   return (
     <div className="modal-overlay">
@@ -20,26 +44,26 @@ const CreateRoomModal = ({ onClose }) => {
         <button className="close-button" onClick={onClose}>✕</button>
 
         <div className="modal-header">
-          <h2>Create Your Study Lab</h2>
-          <p>Architect a focused space for collaborative deep work.</p>
+          <h2>새로운 스터디룸 만들기</h2>
+          <p>함께 집중하고 성장할 수 있는 몰입 공간을 설계하세요.</p>
           <hr/>
         </div>
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label>GROUP NAME</label>
+            <label>스터디룸 이름</label>
             <input 
               type="text" 
-              placeholder="e.g. Quantum Computing Deep Dive"
+              placeholder="예: 양자 컴퓨팅 심화 학습"
               value={groupName}
               onChange={(e) => setGroupName(e.target.value)}
             />
           </div>
 
           <div className="form-group">
-            <label>DESCRIPTION</label>
+            <label>상세 설명</label>
             <textarea 
-              placeholder="Define the objectives and focus areas of this lab..."
+              placeholder="이 스터디룸의 목표와 주요 학습 분야를 정의하세요..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
@@ -47,7 +71,7 @@ const CreateRoomModal = ({ onClose }) => {
 
           <div className="form-row">
             <div className="form-group">
-              <label>PRIVACY LEVEL</label>
+              <label>공개 설정</label>
               <div className="toggle-group">
                 {/* 선택된 값에 따라 'active' 클래스를 붙여 */}
                 <button 
@@ -55,33 +79,33 @@ const CreateRoomModal = ({ onClose }) => {
                   className={privacy === 'Public' ? 'active' : ''}
                   onClick={() => setPrivacy('Public')}
                 >
-                  Public
+                  공개
                 </button>
                 <button 
                   type="button" 
                   className={privacy === 'Private' ? 'active' : ''}
                   onClick={() => setPrivacy('Private')}
                 >
-                  Private
+                  비공개
                 </button>
               </div>
             </div>
             
             <div className="form-group">
-              <label>MAX PARTICIPANTS</label>
+              <label>최대 정원</label>
               <select 
                 value={maxParticipants} 
                 onChange={(e) => setMaxParticipants(e.target.value)}
               >
-                <option value={5}>5 Participants</option>
-                <option value={12}>12 Participants</option>
-                <option value={20}>20 Participants</option>
+                <option value={5}>5명</option>
+                <option value={12}>12명</option>
+                <option value={20}>20명</option>
               </select>
             </div>
           </div>
 
           <div className="form-group">
-            <label>UPLOAD COVER IMAGE</label>
+            <label>커버 이미지 업로드</label>
             <div className="upload-box">
               {/* 진짜 input은 CSS로 숨기고 id를 부여 */}
               <input 
@@ -96,7 +120,7 @@ const CreateRoomModal = ({ onClose }) => {
                 ) : (
                   <>
                     <span className="upload-icon">⊕</span>
-                    <p>Drag & drop or click to browse</p>
+                    <p>파일을 드래그하거나 클릭하여 브라우징하세요</p>
                   </>
                 )}
               </label>
@@ -104,8 +128,8 @@ const CreateRoomModal = ({ onClose }) => {
           </div>
 
           <div className="modal-footer">
-            <button type="button" onClick={onClose}>Cancel</button>
-            <button type="submit">CREATE GROUP</button>
+            <button type="button" onClick={onClose}>취소</button>
+            <button type="submit">스터디룸 생성</button>
           </div>
         </form>
       </div>

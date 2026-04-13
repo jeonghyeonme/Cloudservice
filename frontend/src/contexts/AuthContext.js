@@ -1,51 +1,88 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState } from "react";
 
 // 전역에서 사용할 Auth Context 생성
 const AuthContext = createContext();
 
+const ACCESS_TOKEN_KEY = "accessToken";
+const REFRESH_TOKEN_KEY = "refreshToken";
+const USER_KEY = "user";
+
 /**
  * 전역 인증 상태 제공자 컴포넌트
- * App 전체를 감싸서 로그인 정보를 공유합니다.
+ * App 전체를 감싸서 로그인 정보 공유
  */
 export const AuthProvider = ({ children }) => {
-  // 초기 상태: 로컬 스토리지에 로그인 정보가 있으면 가져옵니다 (테스트용)
-  const [isLoggedIn, setIsLoggedIn] = useState(() => {
-    return localStorage.getItem('isLoggedIn') === 'true';
-  });
-
+  const [accessToken, setAccessToken] = useState(() =>
+    localStorage.getItem(ACCESS_TOKEN_KEY),
+  );
+  const [refreshToken, setRefreshToken] = useState(() =>
+    localStorage.getItem(REFRESH_TOKEN_KEY),
+  );
   const [user, setUser] = useState(() => {
-    const savedUser = localStorage.getItem('user');
+    const savedUser = localStorage.getItem(USER_KEY);
     return savedUser ? JSON.parse(savedUser) : null;
   });
 
+  const isLoggedIn = Boolean(accessToken && refreshToken);
+
   // 로그인 처리 함수
-  const login = (userData = { name: 'StudyMaster_24', id: 'sm24' }) => {
-    setIsLoggedIn(true);
+  const login = ({
+    nickname,
+    profileImageUrl = null,
+    accessToken,
+    refreshToken,
+  }) => {
+    const userData = { nickname, profileImageUrl };
+
+    setAccessToken(accessToken);
+    setRefreshToken(refreshToken);
     setUser(userData);
-    localStorage.setItem('isLoggedIn', 'true');
-    localStorage.setItem('user', JSON.stringify(userData));
+
+    localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
+    localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+    localStorage.setItem(USER_KEY, JSON.stringify(userData));
+  };
+
+  // 액세스 토큰 업데이트 함수
+  const updateAccessToken = (newAccessToken) => {
+    setAccessToken(newAccessToken);
+    localStorage.setItem(ACCESS_TOKEN_KEY, newAccessToken);
   };
 
   // 로그아웃 처리 함수
   const logout = () => {
-    setIsLoggedIn(false);
+    setAccessToken(null);
+    setRefreshToken(null);
     setUser(null);
-    localStorage.removeItem('isLoggedIn');
-    localStorage.removeItem('user');
+
+    localStorage.removeItem(ACCESS_TOKEN_KEY);
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
   };
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn, user, login, logout }}>
+    <AuthContext.Provider
+      value={{
+        isLoggedIn,
+        user,
+        accessToken,
+        refreshToken,
+        login,
+        logout,
+        updateAccessToken,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
 };
 
-// 다른 컴포넌트에서 쉽게 사용할 수 있도록 커스텀 훅 제공
 export const useAuth = () => {
   const context = useContext(AuthContext);
+
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
+
   return context;
 };

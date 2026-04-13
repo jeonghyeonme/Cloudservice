@@ -1,19 +1,36 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getRoomPath } from '../../constants/path';
+import { getRooms } from '../../lib/rooms';
 import './ExploreRooms.css';
 import ServerSidebar from '../layout/ServerSidebar';
 import CreateRoomModal from './CreateRoomModal';
-import { MOCK_ROOMS } from '../../data/mockData';
+// import { MOCK_ROOMS } from '../../data/mockData'; // 하드코딩 데이터
 
 const RoomCard = ({ room, onJoin }) => {
-  const isFull = (room.maxMembers && room.currentMembers >= room.maxMembers) || room.status === 'FULL';
+  const name = room.title || "제목 없음";           
+  const roomId = room.roomId;        
+  const description = room.description;
+  const currentMembers = Number(room.currentParticipants) || 0;
+  const maxMembers = 12;             // JSON에 없으니 일단 12
+  const coverImage = room.imageUrl || room.coverImage;
+  const emoji = "📚";                // 기본 이모지
+  
+
+  const isFull = (maxMembers && currentMembers >= maxMembers) || room.status === 'FULL';
   const isLocked = room.isPrivate && isFull;
   const displayStatus = isFull ? 'FULL' : room.status;
 
   return (
     <div className={`room-card ${isFull ? 'room-full' : ''}`}>
       <div className="room-cover">
-        <div className="room-cover-emoji">{room.emoji}</div>
+        {/* 이미지가 있으면 <img> 태그를, 없으면 기존처럼 이모지를 보여줌 */}
+        {coverImage ? (
+          <img src={coverImage} alt={name} className="room-cover-img" />
+        ) : (
+          <div className="room-cover-emoji">{emoji}</div>
+        )}
+        
         <span className={`room-badge badge-${displayStatus.toLowerCase()}`}>
           {displayStatus}
         </span>
@@ -21,22 +38,22 @@ const RoomCard = ({ room, onJoin }) => {
 
       <div className="room-body">
         <div className="room-title-row">
-          <h3 className="room-name">{room.name}</h3>
-          {room.maxMembers && (
+          <h3 className="room-name">{name}</h3>
+          {maxMembers && (
             <span className="room-count">
-              {room.currentMembers}/{room.maxMembers}
+              {currentMembers}/{maxMembers}
             </span>
           )}
         </div>
-        <p className="room-desc">{room.description}</p>
+        <p className="room-desc">{description}</p>
 
         <div className="room-footer">
           <div className="member-avatars">
-            {[...Array(Math.min(3, room.currentMembers))].map((_, i) => (
+            {[...Array(Math.min(3, currentMembers))].map((_, i) => (
               <div key={i} className="mini-avatar" style={{ zIndex: 3 - i }} />
             ))}
-            {room.currentMembers > 3 && (
-              <span className="member-extra">+{room.currentMembers - 3}</span>
+            {currentMembers > 3 && (
+              <span className="member-extra">+{currentMembers - 3}</span>
             )}
           </div>
 
@@ -45,7 +62,7 @@ const RoomCard = ({ room, onJoin }) => {
           ) : isFull ? (
             <button className="room-btn btn-locked" disabled>FULL</button>
           ) : (
-            <button className="room-btn btn-join" onClick={() => onJoin(room.id)}>
+            <button className="room-btn btn-join" onClick={() => onJoin(roomId)}>
               JOIN
             </button>
           )}
@@ -57,32 +74,40 @@ const RoomCard = ({ room, onJoin }) => {
 
 const ExploreRooms = () => {
   const navigate = useNavigate();
+  const [rooms, setRooms] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [inviteCode, setInviteCode] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const filteredRooms = MOCK_ROOMS.filter(room =>
-    room.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    room.description.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  useEffect(() => {
+    getRooms()
+      .then(data => setRooms(data))
+      .catch(err => console.error("데이터 로드 실패!", err));
+  }, []);
+
+  const filteredRooms = rooms.filter(room =>{
+    const title = room.title || ""; 
+    const description = room.description || "";
+    return title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    description.toLowerCase().includes(searchQuery.toLowerCase());
+  });
 
   // 방 입장 시 해당 ID의 주소로 이동
   const handleJoinRoom = (roomId) => {
-    navigate(`/rooms/${roomId}`);
+    navigate(getRoomPath(roomId));
   };
 
   return (
     <div className="explore-container">
       <ServerSidebar 
         activeView="home" 
-        onHomeClick={() => navigate('/rooms')} 
         onServerClick={() => {}} // 이미 홈임
         onAddClick={() => setIsModalOpen(true)}
       />
 
       <div className="explore-main">
         <div className="explore-topbar">
-          <span className="topbar-title">EXPLORE ROOMS</span>
+          <span className="topbar-title">스터디룸 탐색</span>
           <div className="topbar-icons">
             <button className="icon-btn">🔔</button>
             <button className="icon-btn">⚙️</button>
@@ -91,7 +116,7 @@ const ExploreRooms = () => {
 
         <div className="explore-hero">
           <h1 className="hero-title">
-            서버를 <span className="accent">생성</span>하거나 <span className="accent">가입</span>해보세요!
+            새로운 <span className="accent">스터디룸</span>을 찾거나 <span className="accent">생성</span>해보세요!
           </h1>
         </div>
 
@@ -99,7 +124,7 @@ const ExploreRooms = () => {
           <span className="search-icon">🔍</span>
           <input
             type="text"
-            placeholder="Search Study Rooms..."
+            placeholder="스터디룸 검색..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -109,22 +134,22 @@ const ExploreRooms = () => {
           <span className="invite-icon">🔗</span>
           <input
             type="text"
-            placeholder="Enter Invite Code/URL"
+            placeholder="초대 코드 또는 URL 입력"
             value={inviteCode}
             onChange={(e) => setInviteCode(e.target.value)}
           />
-          <button className="join-directly-btn">JOIN DIRECTLY</button>
+          <button className="join-directly-btn">즉시 입장</button>
         </div>
 
         <div className="rooms-grid">
           {filteredRooms.map(room => (
-            <RoomCard key={room.id} room={room} onJoin={handleJoinRoom} />
+            <RoomCard key={room.roomId} room={room} onJoin={handleJoinRoom} />
           ))}
 
           <div className="room-card create-card" onClick={() => setIsModalOpen(true)}>
             <div className="create-plus">+</div>
-            <p className="create-label">CREATE ROOM</p>
-            <p className="create-sub">START A NEW STUDY SESSION</p>
+            <p className="create-label">방 만들기</p>
+            <p className="create-sub">새로운 학습 세션 시작하기</p>
           </div>
         </div>
       </div>
