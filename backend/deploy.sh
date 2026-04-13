@@ -33,6 +33,7 @@ ENV_VARS="{
     \"CONNECTIONS_TABLE\": \"${PREFIX}-Connections\",
     \"MESSAGES_TABLE\": \"${PREFIX}-Messages\",
     \"REFRESH_TOKENS_TABLE\": \"${PREFIX}-RefreshTokens\"
+    \"RESOURCES_BUCKET\": \"inhatc-team3-2-resources\"
   }
 }"
 
@@ -45,6 +46,9 @@ FUNCTIONS=(
   "${PREFIX}-${STAGE}-userLogout|src/auth/userLogout.handler"
   "${PREFIX}-${STAGE}-tokenRefresh|src/auth/tokenRefresh.handler"
   "${PREFIX}-${STAGE}-chatHandler|src/chat/chatHandler.handler"
+  "${PREFIX}-${STAGE}-addChannel|src/rooms/addChannel.handler"
+  "${PREFIX}-${STAGE}-deleteChannel|src/rooms/deleteChannel.handler"
+  "${PREFIX}-${STAGE}-getUploadUrl|src/resources/getUploadUrl.handler"
 )
 
 # ── 1단계: 코드 패키징 + S3 업로드 ────────────────────────
