@@ -136,6 +136,21 @@ echo "  /token → $TOKEN_ID"
 REFRESH_ID=$(create_resource "$TOKEN_ID" "refresh")
 echo "  /token/refresh → $REFRESH_ID"
 
+ROOM_ID_PARAM_ID=$(create_resource "$ROOMS_ID" "{roomId}")
+echo "  /rooms/{roomId} → $ROOM_ID_PARAM_ID"
+
+CHANNELS_ID=$(create_resource "$ROOM_ID_PARAM_ID" "channels")
+echo "  /rooms/{roomId}/channels → $CHANNELS_ID"
+
+CH_ID_PARAM_ID=$(create_resource "$CHANNELS_ID" "{chId}")
+echo "  /rooms/{roomId}/channels/{chId} → $CH_ID_PARAM_ID"
+
+RESOURCES_ROOT_ID=$(create_resource "$ROOT_ID" "resources")
+echo "  /resources → $RESOURCES_ROOT_ID"
+
+UPLOAD_URL_ID=$(create_resource "$RESOURCES_ROOT_ID" "upload-url")
+echo "  /resources/upload-url → $UPLOAD_URL_ID"
+
 # ── 메서드 + Lambda 연결 ──────────────────────────────────
 echo ""
 echo "🔗 Lambda 연결..."
@@ -146,6 +161,9 @@ setup_endpoint "$REGISTER_ID" "POST"   "${PREFIX}-${STAGE}-userRegister"  "userR
 setup_endpoint "$LOGIN_ID"    "POST"   "${PREFIX}-${STAGE}-userLogin"     "userLogin"
 setup_endpoint "$LOGOUT_ID"   "DELETE" "${PREFIX}-${STAGE}-userLogout"    "userLogout"
 setup_endpoint "$REFRESH_ID"  "POST"   "${PREFIX}-${STAGE}-tokenRefresh"  "token/refresh"
+setup_endpoint "$CHANNELS_ID"  "POST"   "${PREFIX}-${STAGE}-addChannel"    "rooms/{roomId}/channels"
+setup_endpoint "$CH_ID_PARAM_ID" "DELETE" "${PREFIX}-${STAGE}-deleteChannel" "rooms/{roomId}/channels/{chId}"
+setup_endpoint "$UPLOAD_URL_ID" "GET"    "${PREFIX}-${STAGE}-getUploadUrl"  "resources/upload-url"
 
 # ── CORS 설정 ─────────────────────────────────────────────
 echo ""
@@ -156,6 +174,9 @@ setup_cors "$REGISTER_ID"
 setup_cors "$LOGIN_ID"
 setup_cors "$LOGOUT_ID"
 setup_cors "$REFRESH_ID"
+setup_cors "$CHANNELS_ID"
+setup_cors "$CH_ID_PARAM_ID"
+setup_cors "$UPLOAD_URL_ID"
 
 echo "  ✅ CORS OPTIONS 설정 완료"
 

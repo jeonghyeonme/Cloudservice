@@ -30,6 +30,7 @@ provider:
     HASHING_ALGORITHM: HS256
     S3_BUCKET:         ${env:S3_BUCKET, ""}
     ALLOWED_ORIGIN:    ${env:ALLOWED_ORIGIN, "https://your-cloudfront-domain.net"}
+    RESOURCES_BUCKET:  "inhatc-team3-2-resources"
     # 테이블명 환경변수 (핸들러에서 process.env.USERS_TABLE 등으로 참조)
     USERS_TABLE:        ${self:custom.usersTableName}
     ROOMS_TABLE:        ${self:custom.roomsTableName}
@@ -215,6 +216,32 @@ functions:
           route: joinRoom
       - websocket:
           route: sendMessage
+  
+  # ── 채널 추가/삭제 ───────────────────
+  addChannel:
+    handler: src/rooms/addChannel.handler
+    events:
+      - http:
+          path: /rooms/{roomId}/channels
+          method: post
+          cors: true
+
+  deleteChannel:
+    handler: src/rooms/deleteChannel.handler
+    events:
+      - http:
+          path: /rooms/{roomId}/channels/{chId}
+          method: delete
+          cors: true
+
+  # ── S3 Pre-signed URL 관련 ───────────────────
+  getUploadUrl:
+    handler: src/resources/getUploadUrl.handler
+    events:
+      - http:
+          path: /resources/upload-url
+          method: get
+          cors: true
 
 
 # -------------------------------------------------------
