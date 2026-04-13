@@ -1,19 +1,5 @@
-const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
-const { DynamoDBDocumentClient, GetCommand } = require("@aws-sdk/lib-dynamodb");
-
-// 로컬(LocalStack) / 운영(AWS) 환경 분기
-const client = process.env.IS_OFFLINE
-  ? new DynamoDBClient({
-      region: "us-east-1",
-      endpoint: "http://localhost:4566",
-      credentials: {
-        accessKeyId: "test",
-        secretAccessKey: "test",
-      },
-    })
-  : new DynamoDBClient();
-
-const dynamoDb = DynamoDBDocumentClient.from(client);
+const { GetCommand } = require("@aws-sdk/lib-dynamodb");
+const dynamoDb = require("../dynamodbClient");
 
 exports.handler = async (event) => {
   try {
@@ -27,7 +13,7 @@ exports.handler = async (event) => {
     }
 
     const params = {
-      TableName: "Rooms",
+      TableName: process.env.ROOMS_TABLE, // 환경 변수 적용
       Key: {
         roomId: roomId,
       },
@@ -57,10 +43,10 @@ exports.handler = async (event) => {
       body: JSON.stringify(result.Item),
     };
   } catch (error) {
-    console.error("DynamoDB Get Error:", error);
+    console.error(error);
     return {
       statusCode: 500,
-      body: JSON.stringify({ message: "방 정보를 불러오는 중 오류가 발생했습니다.", error: error.message }),
+      body: JSON.stringify({ message: "방 상세 조회 실패", error: error.message }),
     };
   }
 };

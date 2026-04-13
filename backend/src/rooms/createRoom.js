@@ -1,21 +1,10 @@
-const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
-const { DynamoDBDocumentClient, PutCommand } = require("@aws-sdk/lib-dynamodb");
+const { PutCommand } = require("@aws-sdk/lib-dynamodb");
 const { v4: uuidv4 } = require("uuid");
-
-// 로컬(LocalStack) / 운영(AWS) 환경 분기
-const client = process.env.IS_OFFLINE
-  ? new DynamoDBClient({
-      region: "us-east-1",
-    })
-  : new DynamoDBClient();
-
-const dynamoDb = DynamoDBDocumentClient.from(client);
+const dynamoDb = require("../dynamodbClient");
 
 module.exports.handler = async (event) => {
   try {
     const body = JSON.parse(event.body || "{}");
-    
-    // roomId: uuid
     const roomId = uuidv4();
     const createdAt = new Date().toISOString();
 
@@ -33,7 +22,6 @@ module.exports.handler = async (event) => {
       },
     };
 
-    // Rooms 테이블에 저장
     await dynamoDb.send(new PutCommand(params));
 
     return {
@@ -44,15 +32,15 @@ module.exports.handler = async (event) => {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        message: "✅ 스터디룸이 완벽하게 DB에 저장되었습니다!",
-        createdRoom: params.Item,
+        message: "방 생성 성공",
+        roomId: roomId
       }),
     };
   } catch (error) {
-    console.error("DynamoDB Put Error:", error);
+    console.error(error);
     return {
       statusCode: 500,
-      body: JSON.stringify({ message: "방 생성 중 에러가 발생했습니다.", error: error.message }),
+      body: JSON.stringify({ message: "방 생성 실패", error: error.message }),
     };
   }
 };
