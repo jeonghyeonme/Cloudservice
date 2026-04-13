@@ -1,36 +1,24 @@
-const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
-const { DynamoDBDocumentClient, QueryCommand } = require("@aws-sdk/lib-dynamodb");
-
-// 로컬(LocalStack) / 운영(AWS) 환경 분기
-const client = process.env.IS_OFFLINE
-  ? new DynamoDBClient({
-      region: "us-east-1",
-      endpoint: "http://localhost:4566",
-      credentials: {
-        accessKeyId: "test",
-        secretAccessKey: "test",
-      },
-    })
-  : new DynamoDBClient();
-
-const dynamoDb = DynamoDBDocumentClient.from(client);
+const { QueryCommand } = require("@aws-sdk/lib-dynamodb");
+const dynamoDb = require("../dynamodbClient");
 
 exports.handler = async (event) => {
   try {
+    const { limit = "20", lastKey } = event.queryStringParameters || {};
+
     const params = {
-      TableName: "Rooms",
+      TableName: process.env.ROOMS_TABLE,
       IndexName: "status-createdAt-index",
-      KeyConditionExpression: "#status = :status",
-      ExpressionAttributeNames: {
-        "#status": "status"
-      },
-      ExpressionAttributeValues: {
-        ":status": "ACTIVE"
-      },
-      ScanIndexForward: false // 최신순 (내림차순) 정렬
+      KeyConditionExpression: "#st = :status",
+      ExpressionAttributeNames:  { "#st": "status" },
+      ExpressionAttributeValues: { ":status": "ACTIVE" },
+      ScanIndexForward: false,
+      Limit: parseInt(limit),
     };
 
-    // QueryCommand: GSI를 사용한 효율적인 조회
+    if (lastKey) {
+      params.ExclusiveStartKey = JSON.parse(decodeURIComponent(lastKey));
+    }
+
     const result = await dynamoDb.send(new QueryCommand(params));
 
     return {
@@ -40,13 +28,16 @@ exports.handler = async (event) => {
         "Access-Control-Allow-Credentials": true,
         "Content-Type": "application/json"
       },
-      body: JSON.stringify(result.Items),
+      body: JSON.stringify({
+        items: result.Items,
+        lastKey: result.LastEvaluatedKey ? encodeURIComponent(JSON.stringify(result.LastEvaluatedKey)) : null
+      }),
     };
   } catch (error) {
-    console.error("DynamoDB Query Error:", error);
+    console.error(error);
     return {
       statusCode: 500,
-      body: JSON.stringify({ message: "방 목록을 불러오는 중 오류가 발생했습니다.", error: error.message }),
+      body: JSON.stringify({ message: "방 목록 조회 실패", error: error.message }),
     };
   }
 };

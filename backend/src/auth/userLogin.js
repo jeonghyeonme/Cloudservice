@@ -1,3 +1,4 @@
+const { HEADERS } = require("../utils/response");
 const { QueryCommand } = require("@aws-sdk/lib-dynamodb");
 
 const dynamoDb = require("../dynamodbClient");
@@ -8,12 +9,7 @@ const {
   saveRefreshToken,
 } = require("../utils");
 
-const USERS_TABLE = "Users";
-
-const HEADERS = {
-  "Access-Control-Allow-Origin":      "*",
-  "Access-Control-Allow-Credentials": true,
-};
+const USERS_TABLE = process.env.USERS_TABLE;
 
 // =========================
 // 로그인

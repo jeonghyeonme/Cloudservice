@@ -1,3 +1,4 @@
+const { HEADERS } = require("../utils/response");
 const { PutCommand } = require("@aws-sdk/lib-dynamodb");
 const { v4: uuidv4 } = require("uuid");
 
@@ -9,13 +10,7 @@ const {
   saveRefreshToken,
 } = require("../utils");
 
-const USERS_TABLE = "Users";
-
-// CORS 헤더 (API Gateway 연동 시 필수)
-const HEADERS = {
-  "Access-Control-Allow-Origin":      "*",
-  "Access-Control-Allow-Credentials": true,
-};
+const USERS_TABLE = process.env.USERS_TABLE;
 
 // =========================
 // 회원가입

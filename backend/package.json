@@ -5,7 +5,7 @@
   "main": "index.js",
   "type": "commonjs",
   "scripts": {
-    "start": "serverless offline --httpPort 4000",
+    "start": "serverless offline --httpPort 4000 --websocketPort 4001",
     "localstack": "docker-compose up -d"
   },
   "devDependencies": {
@@ -14,9 +14,11 @@
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.1021.0",
+    "@aws-sdk/client-s3": "^3.1029.0",
     "@aws-sdk/lib-dynamodb": "^3.1021.0",
-    "bcryptjs":              "^2.4.3",
-    "jsonwebtoken":          "^9.0.2",
-    "uuid":                  "^9.0.0"
+    "@aws-sdk/s3-request-presigner": "^3.1029.0",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "uuid": "^9.0.0"
   }
 }

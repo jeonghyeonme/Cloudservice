@@ -1,19 +1,5 @@
-const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
-const { DynamoDBDocumentClient, QueryCommand } = require("@aws-sdk/lib-dynamodb");
-
-// 로컬(LocalStack) / 운영(AWS) 환경 분기
-const client = process.env.IS_OFFLINE
-  ? new DynamoDBClient({
-      region: "us-east-1",
-      endpoint: "http://localhost:4566",
-      credentials: {
-        accessKeyId: "test",
-        secretAccessKey: "test",
-      },
-    })
-  : new DynamoDBClient();
-
-const dynamoDb = DynamoDBDocumentClient.from(client);
+const { QueryCommand } = require("@aws-sdk/lib-dynamodb");
+const dynamoDb = require("../dynamodbClient"); // 공통 모듈 사용
 
 exports.handler = async (event) => {
   try {
@@ -27,12 +13,11 @@ exports.handler = async (event) => {
     }
 
     const params = {
-      TableName: "Messages",
+      TableName: process.env.MESSAGES_TABLE, // 환경 변수 적용
       KeyConditionExpression: "roomId = :roomId",
       ExpressionAttributeValues: {
         ":roomId": roomId,
       },
-      // 메시지 ID(타임스탬프 포함) 기준으로 오름차순 정렬 (과거 -> 최신)
       ScanIndexForward: true, 
     };
 
@@ -48,10 +33,10 @@ exports.handler = async (event) => {
       body: JSON.stringify(result.Items),
     };
   } catch (error) {
-    console.error("DynamoDB Query Error (Messages):", error);
+    console.error(error);
     return {
       statusCode: 500,
-      body: JSON.stringify({ message: "메시지 내역을 불러오는 중 오류가 발생했습니다.", error: error.message }),
+      body: JSON.stringify({ message: "메시지 조회 실패", error: error.message }),
     };
   }
 };

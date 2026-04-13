@@ -6,27 +6,128 @@ plugins:
 
 custom:
   studentId: "inhatc-202647019"
-  usersTableName:         "Users"
-  roomsTableName:         "Rooms"
-  connectionsTableName:   "Connections"
-  messagesTableName:      "Messages"
-  refreshTokensTableName: "RefreshTokens"
+  prefix: "smartstudy"
+  usersTableName:         "${self:custom.prefix}-Users"
+  roomsTableName:         "${self:custom.prefix}-Rooms"
+  connectionsTableName:   "${self:custom.prefix}-Connections"
+  messagesTableName:      "${self:custom.prefix}-Messages"
+  refreshTokensTableName: "${self:custom.prefix}-RefreshTokens"
 
 provider:
   name: aws
   runtime: nodejs18.x
   region: us-east-1
   stage: dev
+  role: arn:aws:iam::269578498605:role/SafeRole-inhatc-team3
+  deploymentBucket:
+    name: inhatc-team3-2-deployments
 
   environment:
-    IS_OFFLINE:        "true"    # serverless-offline 실행 시 LocalStack 연결
     REGION:            us-east-1
-    DB_ENDPOINT:       http://localhost:4566
-    # 암호화 관련 (실제 배포 시 AWS SSM Parameter Store로 교체 권장)
-    SALT:              ${env:SALT, "InhatcCloudProjectVfwdkYlgtdftyKHKJhjgdewqxKLPHGJVBdjhfJUfRhjjhgD"}
-    JWT_SECRET_KEY:    ${env:JWT_SECRET_KEY, "InhatcCloudProjectZresYYfjgiikLJjkgJGFfdGSXtfugiOpuKJGJHgvdxxDSF"}
+    # 암호화 관련
+    JWT_SECRET_KEY:    ${ssm:/smartstudy/dev/jwt-secret-key}
+    SALT:              ${ssm:/smartstudy/dev/salt}
     HASHING_ALGORITHM: HS256
     S3_BUCKET:         ${env:S3_BUCKET, ""}
+    ALLOWED_ORIGIN:    ${env:ALLOWED_ORIGIN, "https://your-cloudfront-domain.net"}
+    RESOURCES_BUCKET:  "inhatc-team3-2-resources"
+    # 테이블명 환경변수 (핸들러에서 process.env.USERS_TABLE 등으로 참조)
+    USERS_TABLE:        ${self:custom.usersTableName}
+    ROOMS_TABLE:        ${self:custom.roomsTableName}
+    CONNECTIONS_TABLE:  ${self:custom.connectionsTableName}
+    MESSAGES_TABLE:     ${self:custom.messagesTableName}
+    REFRESH_TOKENS_TABLE: ${self:custom.refreshTokensTableName}
+
+  # ── IAM 최소 권한 (SafeRole) ──────────────────────────────
+  # iamRoleStatements:
+  #   # DynamoDB — smartstudy-* 테이블 및 GSI만 허용
+  #   - Effect: Allow
+  #     Action:
+  #       - dynamodb:GetItem
+  #       - dynamodb:Query
+  #       - dynamodb:PutItem
+  #       - dynamodb:UpdateItem
+  #       - dynamodb:DeleteItem
+  #       - dynamodb:DescribeTable
+  #       - dynamodb:ListTables
+  #       - dynamodb:UpdateTimeToLive
+  #     Resource:
+  #       - "arn:aws:dynamodb:us-east-1:*:table/smartstudy-*"
+  #       - "arn:aws:dynamodb:us-east-1:*:table/smartstudy-*/index/*"
+
+  #   # API Gateway WebSocket — ManageConnections (브로드캐스트용)
+  #   - Effect: Allow
+  #     Action:
+  #       - execute-api:ManageConnections
+  #     Resource:
+  #       - "arn:aws:execute-api:us-east-1:*:*/@connections/*"
+
+  #   # CloudWatch Logs — Lambda 실행 로그
+  #   - Effect: Allow
+  #     Action:
+  #       - logs:CreateLogGroup
+  #       - logs:CreateLogStream
+  #       - logs:PutLogEvents
+  #     Resource:
+  #       - "arn:aws:logs:us-east-1:*:log-group:/aws/lambda/*"
+
+  #   # SQS — 채팅 버퍼 큐 & AI 대기열 (SendMessage/ReceiveMessage만, DeleteMessage는 SafeRole에서 제외)
+  #   - Effect: Allow
+  #     Action:
+  #       - sqs:SendMessage
+  #       - sqs:ReceiveMessage
+  #       - sqs:GetQueueAttributes
+  #     Resource:
+  #       - "arn:aws:sqs:us-east-1:*:smartstudy-*"
+
+  #   # S3 — AI 처리 대상 파일 읽기 (inhatc-team3-2,3- prefix 버킷만)
+  #   - Effect: Allow
+  #     Action:
+  #       - s3:GetObject
+  #       - s3:ListBucket
+  #     Resource:
+  #       - "arn:aws:s3:::inhatc-team3-2-*"
+  #       - "arn:aws:s3:::inhatc-team3-2-*/*"
+  #       - "arn:aws:s3:::inhatc-team3-3-*"
+  #       - "arn:aws:s3:::inhatc-team3-3-*/*"
+
+  #   # Bedrock — Claude 모델 호출
+  #   - Effect: Allow
+  #     Action:
+  #       - bedrock:InvokeModel
+  #       - bedrock:GetFoundationModel
+  #       - bedrock:ListFoundationModels
+  #     Resource: "*"
+
+  #   # Textract — 문서 텍스트 추출
+  #   - Effect: Allow
+  #     Action:
+  #       - textract:StartDocumentTextDetection
+  #       - textract:GetDocumentTextDetection
+  #     Resource: "*"
+
+  #   # Rekognition — 이미지 라벨/텍스트 감지
+  #   - Effect: Allow
+  #     Action:
+  #       - rekognition:DetectLabels
+  #       - rekognition:DetectText
+  #     Resource: "*"
+
+  #   # Translate — 다국어 번역
+  #   - Effect: Allow
+  #     Action:
+  #       - translate:TranslateText
+  #     Resource: "*"
+
+  #   # Cognito — 사용자 조회 및 토큰 무효화
+  #   - Effect: Allow
+  #     Action:
+  #       - cognito-idp:AdminGetUser
+  #       - cognito-idp:ListUsers
+  #       - cognito-idp:GlobalSignOut
+  #       - cognito-idp:RevokeToken
+  #     Resource:
+  #       - "arn:aws:cognito-idp:us-east-1:*:userpool/smartstudy-*"
 
 
 # -------------------------------------------------------
@@ -115,123 +216,149 @@ functions:
           route: joinRoom
       - websocket:
           route: sendMessage
+  
+  # ── 채널 추가/삭제 ───────────────────
+  addChannel:
+    handler: src/rooms/addChannel.handler
+    events:
+      - http:
+          path: /rooms/{roomId}/channels
+          method: post
+          cors: true
+
+  deleteChannel:
+    handler: src/rooms/deleteChannel.handler
+    events:
+      - http:
+          path: /rooms/{roomId}/channels/{chId}
+          method: delete
+          cors: true
+
+  # ── S3 Pre-signed URL 관련 ───────────────────
+  getUploadUrl:
+    handler: src/resources/getUploadUrl.handler
+    events:
+      - http:
+          path: /resources/upload-url
+          method: get
+          cors: true
 
 
 # -------------------------------------------------------
 # DynamoDB 테이블 정의 (CloudFormation)
 # -------------------------------------------------------
-resources:
-  Resources:
+# resources:
+#   Resources:
 
-    # 1. Users 테이블
-    UsersTable:
-      Type: AWS::DynamoDB::Table
-      Properties:
-        TableName: Users
-        BillingMode: PAY_PER_REQUEST
-        AttributeDefinitions:
-          - AttributeName: userId
-            AttributeType: S
-          - AttributeName: email
-            AttributeType: S
-        KeySchema:
-          - AttributeName: userId
-            KeyType: HASH
-        GlobalSecondaryIndexes:
-          - IndexName: email-index
-            KeySchema:
-              - AttributeName: email
-                KeyType: HASH
-            Projection:
-              ProjectionType: ALL
+#     # 1. Users 테이블
+#     UsersTable:
+#       Type: AWS::DynamoDB::Table
+#       Properties:
+#         TableName: ${self:custom.usersTableName}
+#         BillingMode: PAY_PER_REQUEST
+#         AttributeDefinitions:
+#           - AttributeName: userId
+#             AttributeType: S
+#           - AttributeName: email
+#             AttributeType: S
+#         KeySchema:
+#           - AttributeName: userId
+#             KeyType: HASH
+#         GlobalSecondaryIndexes:
+#           - IndexName: email-index
+#             KeySchema:
+#               - AttributeName: email
+#                 KeyType: HASH
+#             Projection:
+#               ProjectionType: ALL
 
-    # 2. Rooms 테이블
-    RoomsTable:
-      Type: AWS::DynamoDB::Table
-      Properties:
-        TableName: Rooms
-        BillingMode: PAY_PER_REQUEST
-        AttributeDefinitions:
-          - AttributeName: roomId
-            AttributeType: S
-          - AttributeName: status
-            AttributeType: S
-          - AttributeName: createdAt
-            AttributeType: S
-        KeySchema:
-          - AttributeName: roomId
-            KeyType: HASH
-        GlobalSecondaryIndexes:
-          - IndexName: status-createdAt-index
-            KeySchema:
-              - AttributeName: status
-                KeyType: HASH
-              - AttributeName: createdAt
-                KeyType: RANGE
-            Projection:
-              ProjectionType: ALL
-        TimeToLiveSpecification:
-          AttributeName: expiresAt
-          Enabled: true
+#     # 2. Rooms 테이블
+#     RoomsTable:
+#       Type: AWS::DynamoDB::Table
+#       Properties:
+#         TableName: ${self:custom.roomsTableName}
+#         BillingMode: PAY_PER_REQUEST
+#         AttributeDefinitions:
+#           - AttributeName: roomId
+#             AttributeType: S
+#           - AttributeName: status
+#             AttributeType: S
+#           - AttributeName: createdAt
+#             AttributeType: S
+#         KeySchema:
+#           - AttributeName: roomId
+#             KeyType: HASH
+#         GlobalSecondaryIndexes:
+#           - IndexName: status-createdAt-index
+#             KeySchema:
+#               - AttributeName: status
+#                 KeyType: HASH
+#               - AttributeName: createdAt
+#                 KeyType: RANGE
+#             Projection:
+#               ProjectionType: ALL
+#         TimeToLiveSpecification:
+#           AttributeName: expiresAt
+#           Enabled: true
 
-    # 3. Connections 테이블
-    ConnectionsTable:
-      Type: AWS::DynamoDB::Table
-      Properties:
-        TableName: Connections
-        BillingMode: PAY_PER_REQUEST
-        AttributeDefinitions:
-          - AttributeName: connectionId
-            AttributeType: S
-          - AttributeName: roomId
-            AttributeType: S
-        KeySchema:
-          - AttributeName: connectionId
-            KeyType: HASH
-        GlobalSecondaryIndexes:
-          - IndexName: roomId-index
-            KeySchema:
-              - AttributeName: roomId
-                KeyType: HASH
-            Projection:
-              ProjectionType: ALL
-        TimeToLiveSpecification:
-          AttributeName: expiresAt
-          Enabled: true
+#     # 3. Connections 테이블
+#     ConnectionsTable:
+#       Type: AWS::DynamoDB::Table
+#       Properties:
+#         TableName: ${self:custom.connectionsTableName}
+#         BillingMode: PAY_PER_REQUEST
+#         AttributeDefinitions:
+#           - AttributeName: connectionId
+#             AttributeType: S
+#           - AttributeName: roomId
+#             AttributeType: S
+#         KeySchema:
+#           - AttributeName: connectionId
+#             KeyType: HASH
+#         GlobalSecondaryIndexes:
+#           - IndexName: roomId-index
+#             KeySchema:
+#               - AttributeName: roomId
+#                 KeyType: HASH
+#             Projection:
+#               ProjectionType: ALL
+#         TimeToLiveSpecification:
+#           AttributeName: expiresAt
+#           Enabled: true
 
-    # 4. Messages 테이블
-    MessagesTable:
-      Type: AWS::DynamoDB::Table
-      Properties:
-        TableName: Messages
-        BillingMode: PAY_PER_REQUEST
-        AttributeDefinitions:
-          - AttributeName: roomId
-            AttributeType: S
-          - AttributeName: messageId
-            AttributeType: S
-        KeySchema:
-          - AttributeName: roomId
-            KeyType: HASH
-          - AttributeName: messageId
-            KeyType: RANGE
+#     # 4. Messages 테이블
+#     MessagesTable:
+#       Type: AWS::DynamoDB::Table
+#       Properties:
+#         TableName: ${self:custom.messagesTableName}
+#         BillingMode: PAY_PER_REQUEST
+#         AttributeDefinitions:
+#           - AttributeName: roomId
+#             AttributeType: S
+#           - AttributeName: messageId
+#             AttributeType: S
+#         KeySchema:
+#           - AttributeName: roomId
+#             KeyType: HASH
+#           - AttributeName: messageId
+#             KeyType: RANGE
 
-    # 5. RefreshTokens 테이블
-    RefreshTokensTable:
-      Type: AWS::DynamoDB::Table
-      Properties:
-        TableName: RefreshTokens
-        BillingMode: PAY_PER_REQUEST
-        AttributeDefinitions:
-          - AttributeName: userId
-            AttributeType: S
-          - AttributeName: refreshToken
-            AttributeType: S
-        KeySchema:
-          - AttributeName: userId
-            KeyType: HASH
-          - AttributeName: refreshToken
-            KeyType: RANGE
-        TimeToLiveSpecification:
-          AttributeName: expiresAt
-          Enabled: true
+#     # 5. RefreshTokens 테이블
+#     RefreshTokensTable:
+#       Type: AWS::DynamoDB::Table
+#       Properties:
+#         TableName: ${self:custom.refreshTokensTableName}
+#         BillingMode: PAY_PER_REQUEST
+#         AttributeDefinitions:
+#           - AttributeName: userId
+#             AttributeType: S
+#           - AttributeName: refreshToken
+#             AttributeType: S
+#         KeySchema:
+#           - AttributeName: userId
+#             KeyType: HASH
+#           - AttributeName: refreshToken
+#             KeyType: RANGE
+#         TimeToLiveSpecification:
+#           AttributeName: expiresAt
+#           Enabled: true

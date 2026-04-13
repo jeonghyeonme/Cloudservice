@@ -3,17 +3,17 @@ const jwt    = require("jsonwebtoken");
 const {
   PutCommand,
   GetCommand,
-  DeleteCommand,
+  UpdateCommand,
 } = require("@aws-sdk/lib-dynamodb");
 
 const config   = require("./config");
 const dynamoDb = require("./dynamodbClient");
 
-const REFRESH_TOKENS_TABLE = "RefreshTokens";
+// 환경 변수에서 테이블 명을 가져오도록 수정 (하드코딩 제거)
+const REFRESH_TOKENS_TABLE = process.env.REFRESH_TOKENS_TABLE;
 
 // =========================
 // 비밀번호 처리
-// Python: passlib.pbkdf2_sha256.hash / verify
 // =========================
 async function hashPassword(originalPassword) {
   const password = originalPassword + config.SALT;
@@ -29,7 +29,6 @@ async function checkPassword(originalPassword, hashedPassword) {
 
 // =========================
 // JWT 생성
-// Python: jwt.encode(to_encode, JWT_SECRET_KEY, algorithm=HASHING_ALGORITHM)
 // =========================
 function createAccessToken(data) {
   return jwt.sign(
@@ -56,7 +55,6 @@ function createRefreshToken(data) {
 
 // =========================
 // Access Token 검증
-// Python: jwt.decode() + scope 체크 + sub 추출
 // =========================
 function verifyAccessToken(token) {
   // Authorization: Bearer <token> 헤더에서 토큰 추출
@@ -81,10 +79,7 @@ function verifyAccessToken(token) {
 
 // =========================
 // Refresh Token DB 처리
-// Python: table.put_item / get_item / delete_item
-// RefreshTokens 테이블 구조: PK=userId, SK=refreshToken
-// → 한 유저가 여러 기기에서 로그인해도 토큰이 각각 저장됨 (멀티 기기 지원)
-// → expiresAt TTL로 7일 후 DynamoDB가 자동 삭제
+// 물리적 삭제(Delete) 대신 논리적 삭제(Update)로 우회
 // =========================
 async function saveRefreshToken(userId, refreshToken) {
   const expiresAt = Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60; // 7일 TTL
@@ -94,6 +89,7 @@ async function saveRefreshToken(userId, refreshToken) {
     Item: {
       userId,
       refreshToken,
+      isRevoked: false, // 새로 추가: 초기 상태는 폐기되지 않음
       createdAt: new Date().toISOString(),
       expiresAt,
     },
@@ -110,16 +106,18 @@ async function getRefreshToken(userId, refreshToken) {
 }
 
 async function deleteRefreshToken(userId, refreshToken) {
-  await dynamoDb.send(new DeleteCommand({
+  // DeleteCommand 대신 UpdateCommand 사용
+  await dynamoDb.send(new UpdateCommand({
     TableName: REFRESH_TOKENS_TABLE,
     Key: { userId, refreshToken },
+    UpdateExpression: "SET isRevoked = :revoked",
+    ExpressionAttributeValues: { ":revoked": true },
   }));
 }
 
 
 // =========================
 // Refresh Token 검증 + Access Token 재발급
-// Python: validate_refresh_token_and_generate_access_token()
 // =========================
 async function validateRefreshTokenAndGenerateAccessToken(refreshToken) {
   try {
@@ -137,10 +135,10 @@ async function validateRefreshTokenAndGenerateAccessToken(refreshToken) {
       return { error: "리프레시 토큰이 유효하지 않습니다." };
     }
 
-    // DB에 저장된 토큰인지 검증 (로그아웃된 토큰 재사용 방지)
+    // DB 검증 시 isRevoked(폐기 상태)인지 체크 로직 추가
     const stored = await getRefreshToken(userId, refreshToken);
-    if (!stored) {
-      return { error: "리프레시 토큰이 유효하지 않습니다." };
+    if (!stored || stored.isRevoked === true) {
+      return { error: "리프레시 토큰이 유효하지 않습니다(로그아웃 됨)." };
     }
 
     // 새 Access Token 발급
