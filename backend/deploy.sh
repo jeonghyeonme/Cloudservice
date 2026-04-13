@@ -32,7 +32,7 @@ ENV_VARS="{
     \"ROOMS_TABLE\": \"${PREFIX}-Rooms\",
     \"CONNECTIONS_TABLE\": \"${PREFIX}-Connections\",
     \"MESSAGES_TABLE\": \"${PREFIX}-Messages\",
-    \"REFRESH_TOKENS_TABLE\": \"${PREFIX}-RefreshTokens\"
+    \"REFRESH_TOKENS_TABLE\": \"${PREFIX}-RefreshTokens\",
     \"RESOURCES_BUCKET\": \"inhatc-team3-2-resources\"
   }
 }"
