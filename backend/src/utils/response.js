@@ -4,3 +4,5 @@ const HEADERS = {
   "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
   "Access-Control-Allow-Credentials": true,
 };
+
+module.exports = { HEADERS };
