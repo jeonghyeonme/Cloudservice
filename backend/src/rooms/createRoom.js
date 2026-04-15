@@ -1,4 +1,3 @@
-// backend/src/rooms/createRoom.js
 const { PutCommand } = require("@aws-sdk/lib-dynamodb");
 const { v4: uuidv4 } = require("uuid");
 const dynamoDb = require("../dynamodbClient");
@@ -8,8 +7,8 @@ module.exports.handler = async (event) => {
   try {
     const body = JSON.parse(event.body || "{}");
 
-    // JWT 토큰에서 userId 추출
-    const authHeader = event.headers?.Authorization || event.headers?.authorization || "";
+    const authHeader =
+      event.headers?.Authorization || event.headers?.authorization || "";
     const { userId: hostId } = verifyAccessToken(authHeader);
 
     const roomId = uuidv4();
@@ -25,7 +24,7 @@ module.exports.handler = async (event) => {
         description: body.description || "",
         hostId: hostId || null,
         maxCapacity: body.maxCapacity || 10,
-        currentCount: 0,
+        currentCount: hostId ? 1 : 0, // 호스트가 있으면 1명, 없으면 0명으로 초기화
         members: hostId
           ? [{ userId: hostId, role: "HOST", joinedAt: createdAt }]
           : [],
@@ -39,7 +38,7 @@ module.exports.handler = async (event) => {
       headers: {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Credentials": true,
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
         message: "방 생성 성공",
