@@ -4,6 +4,7 @@ import "./App.css";
 
 // Context
 import { AuthProvider, useAuth } from "../contexts/AuthContext";
+import { RoomProvider, useRooms } from "../contexts/RoomContext";
 
 // Components
 import Onboarding from "../components/Onboarding/Onboarding";
@@ -29,6 +30,7 @@ const ProtectedRoute = ({ children }) => {
 function AppRoutes() {
   const navigate = useNavigate();
   const { isLoggedIn, refreshToken, logout } = useAuth();
+  const { clearJoinedRooms } = useRooms();
 
   const handleLogout = async () => {
     try {
@@ -39,6 +41,7 @@ function AppRoutes() {
     } catch (error) {
       console.error("Logout failed:", error);
     } finally {
+      clearJoinedRooms();
       logout();
       navigate(PATHS.onboarding, { replace: true });
     }
@@ -70,7 +73,9 @@ function AppRoutes() {
 function App() {
   return (
     <AuthProvider>
-      <AppRoutes />
+      <RoomProvider>
+        <AppRoutes />
+      </RoomProvider>
     </AuthProvider>
   );
 }

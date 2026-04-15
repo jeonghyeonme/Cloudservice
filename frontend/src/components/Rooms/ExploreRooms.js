@@ -1,31 +1,29 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { getRoomPath } from '../../constants/path';
-import { getRooms } from '../../lib/rooms';
-import './ExploreRooms.css';
-import ServerSidebar from '../layout/ServerSidebar';
-import CreateRoomModal from './CreateRoomModal';
-import { useAuth } from '../../contexts/AuthContext'; 
-import { PATHS } from '../../constants/path';
-// import AuthActionButton from '../common/AuthActionButton';
-// import { MOCK_ROOMS } from '../../data/mockData'; // 하드코딩 데이터
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { getRoomPath } from "../../constants/path";
+import { getRooms, joinRoom } from "../../lib/rooms";
+import "./ExploreRooms.css";
+import ServerSidebar from "../layout/ServerSidebar";
+import CreateRoomModal from "./CreateRoomModal";
+import { useAuth } from "../../contexts/AuthContext";
+import { PATHS } from "../../constants/path";
+import { useRooms } from "../../contexts/RoomContext";
 
 const RoomCard = ({ room, onJoin }) => {
-  const name = room.roomName || room.title || "제목 없음";         
-  const roomId = room.roomId;        
+  const name = room.roomName || room.title || "제목 없음";
   const description = room.description;
   const currentMembers = Number(room.currentCount) || 0;
   const maxMembers = room.maxCapacity || 12;
   const coverImage = room.imageUrl || room.coverImage;
-  const emoji = "📚";                // 기본 이모지
-  
+  const emoji = "📚";
 
-  const isFull = (maxMembers && currentMembers >= maxMembers) || room.status === 'FULL';
+  const isFull =
+    (maxMembers && currentMembers >= maxMembers) || room.status === "FULL";
   const isLocked = room.isPrivate && isFull;
-  const displayStatus = isFull ? 'FULL' : room.status;
+  const displayStatus = isFull ? "FULL" : room.status;
 
   return (
-    <div className={`room-card ${isFull ? 'room-full' : ''}`}>
+    <div className={`room-card ${isFull ? "room-full" : ""}`}>
       <div className="room-cover">
         {/* 이미지가 있으면 <img> 태그를, 없으면 기존처럼 이모지를 보여줌 */}
         {coverImage ? (
@@ -33,7 +31,7 @@ const RoomCard = ({ room, onJoin }) => {
         ) : (
           <div className="room-cover-emoji">{emoji}</div>
         )}
-        
+
         <span className={`room-badge badge-${displayStatus.toLowerCase()}`}>
           {displayStatus}
         </span>
@@ -61,11 +59,15 @@ const RoomCard = ({ room, onJoin }) => {
           </div>
 
           {isLocked ? (
-            <button className="room-btn btn-locked" disabled>LOCKED</button>
+            <button className="room-btn btn-locked" disabled>
+              LOCKED
+            </button>
           ) : isFull ? (
-            <button className="room-btn btn-locked" disabled>FULL</button>
+            <button className="room-btn btn-locked" disabled>
+              FULL
+            </button>
           ) : (
-            <button className="room-btn btn-join" onClick={() => onJoin(roomId)}>
+            <button className="room-btn btn-join" onClick={() => onJoin(room)}>
               JOIN
             </button>
           )}
@@ -78,49 +80,61 @@ const RoomCard = ({ room, onJoin }) => {
 const ExploreRooms = () => {
   const navigate = useNavigate();
   const { logout } = useAuth();
+  const { clearJoinedRooms, setActiveRoomId, upsertJoinedRoom } = useRooms();
   const [rooms, setRooms] = useState([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [inviteCode, setInviteCode] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [inviteCode, setInviteCode] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const handleLogout = () => { 
+  const handleLogout = () => {
     console.log("로그아웃 로직 실행");
+    clearJoinedRooms();
     logout();
     navigate(PATHS.onboarding);
-  }
+  };
 
   useEffect(() => {
+    setActiveRoomId(null);
     getRooms()
-    .then(data => setRooms(data.items || []))
-    .catch(err => {
-      console.error("데이터 로드 실패!", err);
-      setRooms([]);
-    });
-  }, []);
+      .then((data) => setRooms(data.items || []))
+      .catch((err) => {
+        console.error("데이터 로드 실패!", err);
+        setRooms([]);
+      });
+  }, [setActiveRoomId]);
 
-  const filteredRooms = rooms.filter(room => {
-    const title = room.roomName || room.title || "";  // roomName 우선
+  const filteredRooms = rooms.filter((room) => {
+    const title = room.roomName || room.title || "";
     const description = room.description || "";
-    return title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      description.toLowerCase().includes(searchQuery.toLowerCase());
+    return (
+      title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      description.toLowerCase().includes(searchQuery.toLowerCase())
+    );
   });
 
   // 방 입장 시 해당 ID의 주소로 이동
-  const handleJoinRoom = (roomId) => {
-    navigate(getRoomPath(roomId));
+  const handleJoinRoom = async (room) => {
+    try {
+      await joinRoom(room.roomId);
+      upsertJoinedRoom(room);
+      navigate(getRoomPath(room.roomId));
+    } catch (error) {
+      console.error("방 참여 실패:", error);
+      alert(error.message || "방 입장 중 오류가 발생했습니다.");
+    }
   };
 
   const handleDirectJoin = () => {
     if (!inviteCode.trim()) {
-      alert('코드 혹은 주소를 입력해주세요!');
+      alert("코드 혹은 주소를 입력해주세요!");
       return;
     }
   };
 
   return (
     <div className="explore-container">
-      <ServerSidebar 
-        activeView="home" 
-        onServerClick={() => {}} // 이미 홈임
+      <ServerSidebar
+        activeView="home"
+        onServerClick={() => {}}
         onAddClick={() => setIsModalOpen(true)}
         onLogout={handleLogout}
       />
@@ -128,15 +142,12 @@ const ExploreRooms = () => {
       <div className="explore-main">
         <div className="explore-topbar">
           <span className="topbar-title">스터디룸 탐색</span>
-          {/* <div className="topbar-icons">
-            <button className="icon-btn">🔔</button>
-            <button className="icon-btn">⚙️</button>
-          </div> */}
         </div>
 
         <div className="explore-hero">
           <h1 className="hero-title">
-            새로운 <span className="accent">스터디룸</span>을 찾거나 <span className="accent">생성</span>해보세요!
+            새로운 <span className="accent">스터디룸</span>을 찾거나{" "}
+            <span className="accent">생성</span>해보세요!
           </h1>
         </div>
 
@@ -158,15 +169,20 @@ const ExploreRooms = () => {
             value={inviteCode}
             onChange={(e) => setInviteCode(e.target.value)}
           />
-          <button className="join-directly-btn" onClick={handleDirectJoin}>즉시 입장</button>
+          <button className="join-directly-btn" onClick={handleDirectJoin}>
+            즉시 입장
+          </button>
         </div>
 
         <div className="rooms-grid">
-          {filteredRooms.map(room => (
+          {filteredRooms.map((room) => (
             <RoomCard key={room.roomId} room={room} onJoin={handleJoinRoom} />
           ))}
 
-          <div className="room-card create-card" onClick={() => setIsModalOpen(true)}>
+          <div
+            className="room-card create-card"
+            onClick={() => setIsModalOpen(true)}
+          >
             <div className="create-plus">+</div>
             <p className="create-label">방 만들기</p>
             <p className="create-sub">새로운 학습 세션 시작하기</p>
@@ -174,9 +190,7 @@ const ExploreRooms = () => {
         </div>
       </div>
 
-      {isModalOpen && (
-        <CreateRoomModal onClose={() => setIsModalOpen(false)} />
-      )}
+      {isModalOpen && <CreateRoomModal onClose={() => setIsModalOpen(false)} />}
     </div>
   );
 };
