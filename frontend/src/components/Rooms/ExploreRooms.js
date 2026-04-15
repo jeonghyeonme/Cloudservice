@@ -5,6 +5,9 @@ import { getRooms } from '../../lib/rooms';
 import './ExploreRooms.css';
 import ServerSidebar from '../layout/ServerSidebar';
 import CreateRoomModal from './CreateRoomModal';
+import { useAuth } from '../../contexts/AuthContext'; 
+import { PATHS } from '../../constants/path';
+// import AuthActionButton from '../common/AuthActionButton';
 // import { MOCK_ROOMS } from '../../data/mockData'; // 하드코딩 데이터
 
 const RoomCard = ({ room, onJoin }) => {
@@ -74,23 +77,32 @@ const RoomCard = ({ room, onJoin }) => {
 
 const ExploreRooms = () => {
   const navigate = useNavigate();
+  const { logout } = useAuth();
   const [rooms, setRooms] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [inviteCode, setInviteCode] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const handleLogout = () => { 
+    console.log("로그아웃 로직 실행");
+    logout();
+    navigate(PATHS.onboarding);
+  }
 
   useEffect(() => {
-  getRooms()
-    .then(data => setRooms(data.items || []))  // data → data.items
-    .catch(err => console.error("데이터 로드 실패!", err));
+    getRooms()
+    .then(data => setRooms(data.items || []))
+    .catch(err => {
+      console.error("데이터 로드 실패!", err);
+      setRooms([]);
+    });
   }, []);
 
   const filteredRooms = rooms.filter(room => {
-  const title = room.roomName || room.title || "";  // roomName 우선
-  const description = room.description || "";
-  return title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    description.toLowerCase().includes(searchQuery.toLowerCase());
-});
+    const title = room.roomName || room.title || "";  // roomName 우선
+    const description = room.description || "";
+    return title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      description.toLowerCase().includes(searchQuery.toLowerCase());
+  });
 
   // 방 입장 시 해당 ID의 주소로 이동
   const handleJoinRoom = (roomId) => {
@@ -103,15 +115,16 @@ const ExploreRooms = () => {
         activeView="home" 
         onServerClick={() => {}} // 이미 홈임
         onAddClick={() => setIsModalOpen(true)}
+        onLogout={handleLogout}
       />
 
       <div className="explore-main">
         <div className="explore-topbar">
           <span className="topbar-title">스터디룸 탐색</span>
-          <div className="topbar-icons">
+          {/* <div className="topbar-icons">
             <button className="icon-btn">🔔</button>
             <button className="icon-btn">⚙️</button>
-          </div>
+          </div> */}
         </div>
 
         <div className="explore-hero">
