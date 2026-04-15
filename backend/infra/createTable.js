@@ -8,8 +8,20 @@ const {
 
 // LocalStack 연결
 // Python: boto3.client('dynamodb', endpoint_url='http://localhost:4566')
+// const client = new DynamoDBClient({
+//   region:   "us-east-1",
+// });
+
 const client = new DynamoDBClient({
-  region:   "us-east-1",
+  region: "us-east-1",
+  // 1. 도커로 실행 중인 로컬 주소를 지정합니다. (보통 LocalStack은 4566, DynamoDB Local은 8000)
+  endpoint: "http://localhost:4566", 
+  
+  // 2. 로컬에서는 실제 키가 필요 없으므로 아무 값이나 넣어줍니다. (안 넣으면 에러 날 수 있음)
+  credentials: {
+    accessKeyId: "local",
+    secretAccessKey: "local",
+  },
 });
 
 // sleep 유틸 (Python: time.sleep(2))

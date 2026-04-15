@@ -11,7 +11,7 @@
   padding: 12px 0;
   gap: 10px;
   flex-shrink: 0;
-  height: 100vh;
+  height: 100%;
 }
 
 .server-icon {
@@ -35,11 +35,10 @@
   color: #000000;
 }
 
-/* 홈 아이콘 특수 스타일 */
 .home-icon {
   background-color: #00ff66;
   color: black;
-  border-radius: 50%; /* 기본은 원형 */
+  border-radius: 50%;
 }
 
 .home-icon.active {
@@ -88,3 +87,81 @@
 
 .dummy-bg-1 { background-color: #14532d; }
 .dummy-bg-2 { background-color: #064e3b; }
+
+/* ── 하단 프로필 영역 ── */
+.profile-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 8px;
+}
+ 
+.profile-icon {
+  background-color: #14532d;
+  color: #00ff66;
+  font-size: 14px;
+  font-weight: 700;
+}
+ 
+/* 설정 팝업 */
+.profile-popup {
+  position: absolute;
+  bottom: 56px;
+  left: 60px;
+  width: 200px;
+  background-color: #18181b;
+  border: 1px solid #27272a;
+  border-radius: 10px;
+  padding: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  z-index: 100;
+  animation: popupFadeIn 0.15s ease-out;
+}
+ 
+@keyframes popupFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+ 
+.profile-popup-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #71717a;
+  letter-spacing: 1px;
+  padding: 8px 12px 6px;
+}
+ 
+.profile-popup-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  background: none;
+  border: none;
+  color: #d4d4d8;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 9px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s;
+  text-align: left;
+}
+ 
+.profile-popup-item:hover {
+  background-color: #27272a;
+  color: #ffffff;
+}
+ 
+.profile-popup-item.danger { color: #f87171; }
+.profile-popup-item.danger:hover { background-color: rgba(248, 113, 113, 0.1); }
+ 
+.popup-icon { font-size: 15px; flex-shrink: 0; }
+.popup-arrow { margin-left: auto; color: #52525b; font-size: 16px; }
+ 
+.profile-popup-divider {
+  height: 1px;
+  background-color: #27272a;
+  margin: 4px 6px;
+}

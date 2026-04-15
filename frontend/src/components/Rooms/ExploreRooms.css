@@ -5,14 +5,13 @@
 /* 전체 컨테이너 */
 .explore-container {
   display: flex;
-  height: 100vh;
+  height: calc(100vh - 64px);
+  width: 100vw;
   background-color: #09090b;
   color: #ffffff;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   overflow: hidden;
 }
-
-/* ── (기존 server-nav 스타일 제거됨 - ServerSidebar.css 참조) ── */
 
 /* ── 메인 영역 ── */
 .explore-main {

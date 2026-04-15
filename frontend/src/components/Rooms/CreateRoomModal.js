@@ -15,8 +15,9 @@ const CreateRoomModal = ({ onClose }) => {
 
     // 서버가 기대하는 이름표(title)로 데이터를 포장합니다.
     const newRoomData = {
-      title: groupName,           // 딱 이것만!
+      roomName: groupName,        // title -> roomName
       description: description,
+      maxCapacity: Number(maxParticipants), // 정원 정보도 백엔드 필드명에 맞춤
       status: 'ACTIVE',
     };
 

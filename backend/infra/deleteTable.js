@@ -29,7 +29,13 @@ async function deleteTable(tableName) {
 async function run() {
   console.log("🚀 테이블 삭제를 시작합니다...");
   
-  const tables = ["Users", "Rooms", "Connections", "Messages", "RefreshTokens"];
+  const tables = [
+    "smartstudy-Users", 
+    "smartstudy-Rooms", 
+    "smartstudy-Connections", 
+    "smartstudy-Messages", 
+    "smartstudy-RefreshTokens"
+  ];
   
   for (const table of tables) {
     await deleteTable(table);

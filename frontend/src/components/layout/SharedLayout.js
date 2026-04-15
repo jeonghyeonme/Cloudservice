@@ -9,7 +9,10 @@ const SharedLayout = ({ children, isLoggedIn, onLogout }) => {
   const navigate = useNavigate();
 
   // 로그인, 회원가입 페이지에서는 버튼 영역을 렌더링하지 않음
-  const isAuthPage = location.pathname === PATHS.login || location.pathname === PATHS.register;
+  // const isAuthPage = location.pathname === PATHS.login || location.pathname === PATHS.register;
+
+  // 수정 => 온보딩 화면이 아니라면 버튼 영역을 렌더링하지 않음
+  const isAuthPage = location.pathname === PATHS.onboarding;
 
   const handleLoginClick = () => navigate(PATHS.login);
   const handleRegisterClick = () => navigate(PATHS.register);
@@ -22,7 +25,7 @@ const SharedLayout = ({ children, isLoggedIn, onLogout }) => {
           <h2 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--text-primary)' }}>SmartStudy</h2>
         </div>
         
-        {!isAuthPage && (
+        {isAuthPage && (
           <div className="navbar-actions">
             {isLoggedIn ? (
               <AuthActionButton onClick={onLogout}>로그아웃</AuthActionButton>

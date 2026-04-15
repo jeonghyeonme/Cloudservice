@@ -132,11 +132,22 @@ async function seedTable(tableName, data) {
   }
 }
 
+// async function run() {
+//   console.log("🚀 풍성한 커뮤니티 시드 데이터 삽입 시작...");
+//   await seedTable("Users", seedUsers);
+//   await seedTable("Rooms", seedRooms);
+//   await seedTable("Messages", seedMessages);
+//   console.log("\n🎉 시드 데이터 삽입 완료!");
+// }
+
 async function run() {
   console.log("🚀 풍성한 커뮤니티 시드 데이터 삽입 시작...");
-  await seedTable("Users", seedUsers);
-  await seedTable("Rooms", seedRooms);
-  await seedTable("Messages", seedMessages);
+  
+  // 테이블명(smartstudy-*)과 정확히 일치시키기.
+  await seedTable("smartstudy-Users", seedUsers);
+  await seedTable("smartstudy-Rooms", seedRooms);
+  await seedTable("smartstudy-Messages", seedMessages);
+  
   console.log("\n🎉 시드 데이터 삽입 완료!");
 }
 
