@@ -51,6 +51,10 @@ const ChatLayout = () => {
         }
         setLoading(false);
       })
+      .catch(err => {
+        console.error("방 정보를 가져오는 중 오류 발생:", err);
+        setLoading(false);
+      });
   }, [roomId]);
 
   // 로딩 중일 때 처리
