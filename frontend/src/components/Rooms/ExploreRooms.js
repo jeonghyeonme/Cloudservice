@@ -7,7 +7,7 @@ import ServerSidebar from '../layout/ServerSidebar';
 import CreateRoomModal from './CreateRoomModal';
 import { useAuth } from '../../contexts/AuthContext'; 
 import { PATHS } from '../../constants/path';
-import AuthActionButton from '../common/AuthActionButton';
+// import AuthActionButton from '../common/AuthActionButton';
 // import { MOCK_ROOMS } from '../../data/mockData'; // 하드코딩 데이터
 
 const RoomCard = ({ room, onJoin }) => {
