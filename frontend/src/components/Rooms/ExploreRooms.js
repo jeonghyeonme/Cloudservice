@@ -109,6 +109,13 @@ const ExploreRooms = () => {
     navigate(getRoomPath(roomId));
   };
 
+  const handleDirectJoin = () => {
+    if (!inviteCode.trim()) {
+      alert('코드 혹은 주소를 입력해주세요!');
+      return;
+    }
+  };
+
   return (
     <div className="explore-container">
       <ServerSidebar 
@@ -151,7 +158,7 @@ const ExploreRooms = () => {
             value={inviteCode}
             onChange={(e) => setInviteCode(e.target.value)}
           />
-          <button className="join-directly-btn">즉시 입장</button>
+          <button className="join-directly-btn" onClick={handleDirectJoin}>즉시 입장</button>
         </div>
 
         <div className="rooms-grid">
