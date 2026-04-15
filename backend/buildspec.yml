@@ -5,10 +5,8 @@ phases:
     runtime-versions:
       nodejs: 18
     commands:
-      - npm install -g serverless
-      - cd backend && npm install
+      - cd backend && npm install --production
 
   build:
     commands:
-      - cd backend
-      - npx serverless deploy --stage dev
+      - cd backend && bash deploy.sh

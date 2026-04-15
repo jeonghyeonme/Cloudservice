@@ -49,6 +49,9 @@ FUNCTIONS=(
   "${PREFIX}-${STAGE}-addChannel|src/rooms/addChannel.handler"
   "${PREFIX}-${STAGE}-deleteChannel|src/rooms/deleteChannel.handler"
   "${PREFIX}-${STAGE}-getUploadUrl|src/resources/getUploadUrl.handler"
+  "${PREFIX}-${STAGE}-saveFileMetadata|src/resources/saveFileMetadata.handler"
+  "${PREFIX}-${STAGE}-aiRouter|src/ai/aiRouter.handler"
+  "${PREFIX}-${STAGE}-saveLink|src/resources/saveLink.handler"
 )
 
 # ── 1단계: 코드 패키징 + S3 업로드 ────────────────────────
