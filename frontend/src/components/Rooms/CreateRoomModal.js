@@ -10,30 +10,26 @@ const CreateRoomModal = ({ onClose }) => {
   const [coverImage, setCoverImage] = useState(null);
 
   const handleSubmit = async (e) => {
-    // const now = new Date();
-    e.preventDefault();
+  e.preventDefault();
 
-    // 서버가 기대하는 이름표(title)로 데이터를 포장합니다.
-    const newRoomData = {
-      roomName: groupName,        // title -> roomName
-      description: description,
-      maxCapacity: Number(maxParticipants), // 정원 정보도 백엔드 필드명에 맞춤
-      status: 'ACTIVE',
-    };
+  // 서버가 기대하는 이름표(title)로 데이터를 포장합니다.
+  const newRoomData = {
+    roomName: groupName,        // title -> roomName
+    description: description,
+    maxCapacity: Number(maxParticipants), // 정원 정보도 백엔드 필드명에 맞춤
+    status: 'ACTIVE',
+  };
 
     console.log("🚀 [STEP 1] 서버로 보낼 데이터(Payload):", newRoomData);
 
   try {
     const result = await createRoom(newRoomData);
-
-    // [LOG 2] 서버가 실제로 DB에 저장하고 돌려준 데이터 확인
-    console.log("✅ [STEP 2] 서버가 저장한 최종 데이터(Result):", result);
-
-    alert(`${groupName} 랩이 성공적으로 구축되었습니다!`);
+    console.log("✅ 방 생성 성공:", result);
+    alert(`${groupName} 스터디룸이 생성되었습니다!`);
     onClose();
-    window.location.reload(); 
+    window.location.reload();
   } catch (error) {
-    console.error("🚨 [CRITICAL] 통신 에러 발생:", error);
+    console.error("🚨 방 생성 실패:", error);
     alert(error.message || "서버 통신 중 오류가 발생했습니다.");
   }
 };

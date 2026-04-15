@@ -8,9 +8,16 @@ set -e
 
 REGION="us-east-1"
 ACCOUNT_ID="269578498605"
-API_ID="9lmklrvhh5"
-ROOT_ID="qge9ps3305"
 STAGE="dev"
+API_ID=$(aws apigateway get-rest-apis \
+  --region "$REGION" \
+  --query "items[?name=='smartstudy-dev-rest'].id" \
+  --output text)
+ROOT_ID=$(aws apigateway get-resources \
+  --rest-api-id "$API_ID" \
+  --region "$REGION" \
+  --query "items[?path=='/'].id" \
+  --output text)
 PREFIX="smartstudy"
 
 echo ""
@@ -48,7 +55,7 @@ setup_endpoint() {
   local PATH_PART="$4"
   local FUNC_ARN="arn:aws:lambda:${REGION}:${ACCOUNT_ID}:function:${FUNC_NAME}"
 
-  # メソッド
+  # 
   aws apigateway put-method \
     --rest-api-id "$API_ID" \
     --resource-id "$RESOURCE_ID" \
@@ -151,6 +158,21 @@ echo "  /resources → $RESOURCES_ROOT_ID"
 UPLOAD_URL_ID=$(create_resource "$RESOURCES_ROOT_ID" "upload-url")
 echo "  /resources/upload-url → $UPLOAD_URL_ID"
 
+MESSAGES_ID=$(create_resource "$ROOM_ID_PARAM_ID" "messages")
+echo "  /rooms/{roomId}/messages → $MESSAGES_ID"
+
+FILES_ID=$(create_resource "$ROOM_ID_PARAM_ID" "files")
+echo "  /rooms/{roomId}/files → $FILES_ID"
+
+LINKS_ID=$(create_resource "$ROOM_ID_PARAM_ID" "links")
+echo "  /rooms/{roomId}/links → $LINKS_ID"
+
+AI_ROOT_ID=$(create_resource "$ROOT_ID" "ai")
+echo "  /ai → $AI_ROOT_ID"
+
+ANALYZE_ID=$(create_resource "$AI_ROOT_ID" "analyze")
+echo "  /ai/analyze → $ANALYZE_ID"
+
 # ── 메서드 + Lambda 연결 ──────────────────────────────────
 echo ""
 echo "🔗 Lambda 연결..."
@@ -164,6 +186,12 @@ setup_endpoint "$REFRESH_ID"  "POST"   "${PREFIX}-${STAGE}-tokenRefresh"  "token
 setup_endpoint "$CHANNELS_ID"  "POST"   "${PREFIX}-${STAGE}-addChannel"    "rooms/{roomId}/channels"
 setup_endpoint "$CH_ID_PARAM_ID" "DELETE" "${PREFIX}-${STAGE}-deleteChannel" "rooms/{roomId}/channels/{chId}"
 setup_endpoint "$UPLOAD_URL_ID" "GET"    "${PREFIX}-${STAGE}-getUploadUrl"  "resources/upload-url"
+setup_endpoint "$ROOM_ID_PARAM_ID" "GET"  "${PREFIX}-${STAGE}-getRoomDetail"    "rooms/{roomId}"
+setup_endpoint "$MESSAGES_ID"      "GET"  "${PREFIX}-${STAGE}-getMessages"      "rooms/{roomId}/messages"
+setup_endpoint "$FILES_ID"         "POST" "${PREFIX}-${STAGE}-saveFileMetadata" "rooms/{roomId}/files"
+setup_endpoint "$LINKS_ID"         "POST" "${PREFIX}-${STAGE}-saveLink"         "rooms/{roomId}/links"
+setup_endpoint "$ROOM_ID_PARAM_ID" "DELETE" "${PREFIX}-${STAGE}-deleteRoom" "rooms/{roomId}"
+setup_endpoint "$ANALYZE_ID"       "POST" "${PREFIX}-${STAGE}-aiRouter"         "ai/analyze"
 
 # ── CORS 설정 ─────────────────────────────────────────────
 echo ""
@@ -177,6 +205,11 @@ setup_cors "$REFRESH_ID"
 setup_cors "$CHANNELS_ID"
 setup_cors "$CH_ID_PARAM_ID"
 setup_cors "$UPLOAD_URL_ID"
+setup_cors "$ROOM_ID_PARAM_ID"
+setup_cors "$MESSAGES_ID"
+setup_cors "$FILES_ID"
+setup_cors "$LINKS_ID"
+setup_cors "$ANALYZE_ID"
 
 echo "  ✅ CORS OPTIONS 설정 완료"
 

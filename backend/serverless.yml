@@ -249,6 +249,30 @@ functions:
           method: get
           cors: true
 
+  saveFileMetadata:
+    handler: src/resources/saveFileMetadata.handler
+    events:
+      - http:
+          path: /rooms/{roomId}/files
+          method: post
+          cors: true
+
+  aiRouter:
+    handler: src/ai/aiRouter.handler
+    events:
+      - http:
+          path: /ai/analyze
+          method: post
+          cors: true
+
+  saveLink:
+    handler: src/resources/saveLink.handler
+    events:
+      - http:
+          path: /rooms/{roomId}/links
+          method: post
+          cors: true
+
 
 # -------------------------------------------------------
 # DynamoDB 테이블 정의 (CloudFormation)

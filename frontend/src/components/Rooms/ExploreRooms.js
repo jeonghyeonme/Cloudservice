@@ -11,11 +11,11 @@ import { PATHS } from '../../constants/path';
 // import { MOCK_ROOMS } from '../../data/mockData'; // 하드코딩 데이터
 
 const RoomCard = ({ room, onJoin }) => {
-  const name = room.title || room.roomName || "제목 없음";          
+  const name = room.roomName || room.title || "제목 없음";         
   const roomId = room.roomId;        
-  const description = room.description || "설명이 없습니다.";
-  const currentMembers = Number(room.currentCount) || Number(room.currentParticipants) || 0;
-  const maxMembers = Number(room.maxCapacity) || 12;            // JSON에 없으니 일단 12
+  const description = room.description;
+  const currentMembers = Number(room.currentCount) || 0;
+  const maxMembers = room.maxCapacity || 12;
   const coverImage = room.imageUrl || room.coverImage;
   const emoji = "📚";                // 기본 이모지
   
@@ -90,10 +90,7 @@ const ExploreRooms = () => {
 
   useEffect(() => {
     getRooms()
-    .then(data => {
-      // data.items가 배열인지 확인하고 저장
-      setRooms(data.items || []); 
-    })
+    .then(data => setRooms(data.items || []))
     .catch(err => {
       console.error("데이터 로드 실패!", err);
       setRooms([]);
@@ -101,10 +98,10 @@ const ExploreRooms = () => {
   }, []);
 
   const filteredRooms = rooms.filter(room => {
-    const name = (room.title || room.roomName || "").toLowerCase(); // 두 필드 모두 확인
-    const description = (room.description || "").toLowerCase();
-    const query = searchQuery.toLowerCase();
-    return name.includes(query) || description.includes(query);
+    const title = room.roomName || room.title || "";  // roomName 우선
+    const description = room.description || "";
+    return title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      description.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
   // 방 입장 시 해당 ID의 주소로 이동

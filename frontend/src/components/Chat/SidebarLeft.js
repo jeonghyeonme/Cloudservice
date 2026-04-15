@@ -8,12 +8,11 @@ const SidebarLeft = ({ roomName, channels, activeChannel, onChannelClick }) => {
         {channels && channels.length > 0 ? (
           channels.map(ch => (
             <div
-              key={ch.id}
-              className={"channel" + (activeChannel === ch.id ? " active" : "")}
-              onClick={() => onChannelClick(ch.id)}
+              key={ch.chId || ch.id}
+              className={"channel" + (activeChannel === (ch.chId || ch.id) ? " active" : "")}
+              onClick={() => onChannelClick(ch.chId || ch.id)}
             >
-              <span className="hash">#</span> {ch.label}
-              {ch.name || ch.label || "이름 없는 채널"}
+              <span className="hash">#</span> {ch.name || ch.label || "이름 없는 채널"}
             </div>
           ))
         ) : (

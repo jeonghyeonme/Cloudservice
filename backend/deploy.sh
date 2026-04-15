@@ -33,7 +33,8 @@ ENV_VARS="{
     \"CONNECTIONS_TABLE\": \"${PREFIX}-Connections\",
     \"MESSAGES_TABLE\": \"${PREFIX}-Messages\",
     \"REFRESH_TOKENS_TABLE\": \"${PREFIX}-RefreshTokens\",
-    \"RESOURCES_BUCKET\": \"inhatc-team3-2-resources\"
+    \"RESOURCES_BUCKET\": \"inhatc-team3-2-resources\",
+    \"ALLOWED_ORIGIN\": \"*\"
   }
 }"
 
@@ -41,14 +42,20 @@ ENV_VARS="{
 FUNCTIONS=(
   "${PREFIX}-${STAGE}-createRoom|src/rooms/createRoom.handler"
   "${PREFIX}-${STAGE}-getRooms|src/rooms/getRooms.handler"
+  "${PREFIX}-${STAGE}-getRoomDetail|src/rooms/getRoomDetail.handler"
   "${PREFIX}-${STAGE}-userRegister|src/auth/userRegister.handler"
   "${PREFIX}-${STAGE}-userLogin|src/auth/userLogin.handler"
   "${PREFIX}-${STAGE}-userLogout|src/auth/userLogout.handler"
   "${PREFIX}-${STAGE}-tokenRefresh|src/auth/tokenRefresh.handler"
+  "${PREFIX}-${STAGE}-getMessages|src/chat/getMessages.handler"
   "${PREFIX}-${STAGE}-chatHandler|src/chat/chatHandler.handler"
   "${PREFIX}-${STAGE}-addChannel|src/rooms/addChannel.handler"
   "${PREFIX}-${STAGE}-deleteChannel|src/rooms/deleteChannel.handler"
   "${PREFIX}-${STAGE}-getUploadUrl|src/resources/getUploadUrl.handler"
+  "${PREFIX}-${STAGE}-saveFileMetadata|src/resources/saveFileMetadata.handler"
+  "${PREFIX}-${STAGE}-aiRouter|src/ai/aiRouter.handler"
+  "${PREFIX}-${STAGE}-saveLink|src/resources/saveLink.handler"
+  "${PREFIX}-${STAGE}-deleteRoom|src/rooms/deleteRoom.handler"
 )
 
 # ── 1단계: 코드 패키징 + S3 업로드 ────────────────────────
