@@ -8,10 +8,10 @@ import CreateRoomModal from './CreateRoomModal';
 // import { MOCK_ROOMS } from '../../data/mockData'; // 하드코딩 데이터
 
 const RoomCard = ({ room, onJoin }) => {
-  const name = room.title || "제목 없음";           
+  const name = room.roomName || room.title || "제목 없음";         
   const roomId = room.roomId;        
   const description = room.description;
-  const currentMembers = Number(room.currentParticipants) || 0;
+  const currentMembers = Number(room.currentCount) || 0;
   const maxMembers = 12;             // JSON에 없으니 일단 12
   const coverImage = room.imageUrl || room.coverImage;
   const emoji = "📚";                // 기본 이모지
@@ -80,17 +80,17 @@ const ExploreRooms = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
-    getRooms()
-      .then(data => setRooms(data))
-      .catch(err => console.error("데이터 로드 실패!", err));
+  getRooms()
+    .then(data => setRooms(data.items || []))  // data → data.items
+    .catch(err => console.error("데이터 로드 실패!", err));
   }, []);
 
-  const filteredRooms = rooms.filter(room =>{
-    const title = room.title || ""; 
-    const description = room.description || "";
-    return title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  const filteredRooms = rooms.filter(room => {
+  const title = room.roomName || room.title || "";  // roomName 우선
+  const description = room.description || "";
+  return title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     description.toLowerCase().includes(searchQuery.toLowerCase());
-  });
+});
 
   // 방 입장 시 해당 ID의 주소로 이동
   const handleJoinRoom = (roomId) => {
