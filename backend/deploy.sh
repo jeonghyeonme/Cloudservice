@@ -54,6 +54,7 @@ FUNCTIONS=(
   "${PREFIX}-${STAGE}-saveFileMetadata|src/resources/saveFileMetadata.handler"
   "${PREFIX}-${STAGE}-aiRouter|src/ai/aiRouter.handler"
   "${PREFIX}-${STAGE}-saveLink|src/resources/saveLink.handler"
+  "${PREFIX}-${STAGE}-deleteRoom|src/rooms/deleteRoom.handler"
 )
 
 # ── 1단계: 코드 패키징 + S3 업로드 ────────────────────────

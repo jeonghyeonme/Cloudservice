@@ -8,6 +8,7 @@ set -e
 
 REGION="us-east-1"
 ACCOUNT_ID="269578498605"
+STAGE="dev"
 API_ID=$(aws apigateway get-rest-apis \
   --region "$REGION" \
   --query "items[?name=='smartstudy-dev-rest'].id" \
@@ -189,6 +190,7 @@ setup_endpoint "$ROOM_ID_PARAM_ID" "GET"  "${PREFIX}-${STAGE}-getRoomDetail"    
 setup_endpoint "$MESSAGES_ID"      "GET"  "${PREFIX}-${STAGE}-getMessages"      "rooms/{roomId}/messages"
 setup_endpoint "$FILES_ID"         "POST" "${PREFIX}-${STAGE}-saveFileMetadata" "rooms/{roomId}/files"
 setup_endpoint "$LINKS_ID"         "POST" "${PREFIX}-${STAGE}-saveLink"         "rooms/{roomId}/links"
+setup_endpoint "$ROOM_ID_PARAM_ID" "DELETE" "${PREFIX}-${STAGE}-deleteRoom" "rooms/{roomId}"
 setup_endpoint "$ANALYZE_ID"       "POST" "${PREFIX}-${STAGE}-aiRouter"         "ai/analyze"
 
 # ── CORS 설정 ─────────────────────────────────────────────
