@@ -33,7 +33,8 @@ const SidebarLeft = ({ roomName, channels, activeChannel, onChannelClick }) => {
               <div className="avatar"></div>
               <div className="status-dot"></div>
             </div>
-            <span className="name green-text"> 나</span>
+            <span className="name green-text">사용자</span>
+            {/* <span className="my-name">사용자</span> */}
           </div>
           
           <div className="member-category mt-20">오프라인 — 1명</div>
@@ -45,14 +46,14 @@ const SidebarLeft = ({ roomName, channels, activeChannel, onChannelClick }) => {
       </div>
 
       {/* 하단 내 프로필 */}
-      <div className="my-profile">
+      {/* <div className="my-profile">
         <div className="avatar my-avatar"></div>
         <div className="my-info">
           <span className="my-name">사용자</span>
           <span className="my-status">온라인</span>
         </div>
         <button className="my-settings" title="설정">⚙️</button>
-      </div>
+      </div> */}
     </aside>
   );
 };

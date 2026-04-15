@@ -5,14 +5,17 @@ import { getRooms } from '../../lib/rooms';
 import './ExploreRooms.css';
 import ServerSidebar from '../layout/ServerSidebar';
 import CreateRoomModal from './CreateRoomModal';
+import { useAuth } from '../../contexts/AuthContext'; 
+import { PATHS } from '../../constants/path';
+// import AuthActionButton from '../common/AuthActionButton';
 // import { MOCK_ROOMS } from '../../data/mockData'; // 하드코딩 데이터
 
 const RoomCard = ({ room, onJoin }) => {
-  const name = room.title || "제목 없음";           
+  const name = room.title || room.roomName || "제목 없음";          
   const roomId = room.roomId;        
-  const description = room.description;
-  const currentMembers = Number(room.currentParticipants) || 0;
-  const maxMembers = 12;             // JSON에 없으니 일단 12
+  const description = room.description || "설명이 없습니다.";
+  const currentMembers = Number(room.currentCount) || Number(room.currentParticipants) || 0;
+  const maxMembers = Number(room.maxCapacity) || 12;            // JSON에 없으니 일단 12
   const coverImage = room.imageUrl || room.coverImage;
   const emoji = "📚";                // 기본 이모지
   
@@ -74,22 +77,34 @@ const RoomCard = ({ room, onJoin }) => {
 
 const ExploreRooms = () => {
   const navigate = useNavigate();
+  const { logout } = useAuth();
   const [rooms, setRooms] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [inviteCode, setInviteCode] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const handleLogout = () => { 
+    console.log("로그아웃 로직 실행");
+    logout();
+    navigate(PATHS.onboarding);
+  }
 
   useEffect(() => {
     getRooms()
-      .then(data => setRooms(data))
-      .catch(err => console.error("데이터 로드 실패!", err));
+    .then(data => {
+      // data.items가 배열인지 확인하고 저장
+      setRooms(data.items || []); 
+    })
+    .catch(err => {
+      console.error("데이터 로드 실패!", err);
+      setRooms([]);
+    });
   }, []);
 
-  const filteredRooms = rooms.filter(room =>{
-    const title = room.title || ""; 
-    const description = room.description || "";
-    return title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    description.toLowerCase().includes(searchQuery.toLowerCase());
+  const filteredRooms = rooms.filter(room => {
+    const name = (room.title || room.roomName || "").toLowerCase(); // 두 필드 모두 확인
+    const description = (room.description || "").toLowerCase();
+    const query = searchQuery.toLowerCase();
+    return name.includes(query) || description.includes(query);
   });
 
   // 방 입장 시 해당 ID의 주소로 이동
@@ -103,15 +118,16 @@ const ExploreRooms = () => {
         activeView="home" 
         onServerClick={() => {}} // 이미 홈임
         onAddClick={() => setIsModalOpen(true)}
+        onLogout={handleLogout}
       />
 
       <div className="explore-main">
         <div className="explore-topbar">
           <span className="topbar-title">스터디룸 탐색</span>
-          <div className="topbar-icons">
+          {/* <div className="topbar-icons">
             <button className="icon-btn">🔔</button>
             <button className="icon-btn">⚙️</button>
-          </div>
+          </div> */}
         </div>
 
         <div className="explore-hero">
