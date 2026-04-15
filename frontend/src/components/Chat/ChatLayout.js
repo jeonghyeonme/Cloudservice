@@ -28,32 +28,29 @@ const ChatLayout = () => {
       getRoomDetail(roomId),
       getRoomMessages(roomId)
     ])
-      .then(([roomData, messages]) => {
+      .then(([roomData, messagesData]) => {
+        // messages가 배열인지 items 안에 있는지 처리
+        const messages = Array.isArray(messagesData) ? messagesData : (messagesData?.items || []);
+        
         if (roomData) {
-          // 채널 정보가 없을 경우 기본값 설정
           const channels = roomData.channels || [{ id: 'ch-general', name: '일반', label: '일반' }];
           
-          // 메시지를 채널 데이터에 주입 (일단 모든 메시지를 첫 번째 채널에!)
           const roomWithChannels = {
             ...roomData,
             channels: channels.map((ch, idx) => ({
               ...ch,
-              label: ch.label || ch.name, // label 필드 보장
-              messages: idx === 0 ? messages : [] // 첫 번째 채널에만 메시지 배포
+              label: ch.label || ch.name,
+              messages: idx === 0 ? messages : []
             }))
           };
           
           setCurrentRoom(roomWithChannels);
           if (channels.length > 0) {
-            setActiveChannel(channels[0].id);
+            setActiveChannel(channels[0].id || channels[0].chId);
           }
         }
         setLoading(false);
       })
-      .catch(err => {
-        console.error("방 정보를 가져오는 중 오류 발생:", err);
-        setLoading(false);
-      });
   }, [roomId]);
 
   // 로딩 중일 때 처리
@@ -78,7 +75,7 @@ const ChatLayout = () => {
       />
 
       <SidebarLeft 
-        roomName={currentRoom?.title || "로딩 중..."} // 방 제목을 넘겨줌
+        roomName={currentRoom?.roomName || currentRoom?.title || "로딩 중..."} // 방 제목을 넘겨줌
         channels={currentRoom?.channels || []} 
         activeChannel={activeChannel} 
         onChannelClick={setActiveChannel}

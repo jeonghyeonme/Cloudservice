@@ -12,7 +12,7 @@ const RoomCard = ({ room, onJoin }) => {
   const roomId = room.roomId;        
   const description = room.description;
   const currentMembers = Number(room.currentCount) || 0;
-  const maxMembers = 12;             // JSON에 없으니 일단 12
+  const maxMembers = room.maxCapacity || 12;
   const coverImage = room.imageUrl || room.coverImage;
   const emoji = "📚";                // 기본 이모지
   
