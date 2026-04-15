@@ -41,10 +41,12 @@ ENV_VARS="{
 FUNCTIONS=(
   "${PREFIX}-${STAGE}-createRoom|src/rooms/createRoom.handler"
   "${PREFIX}-${STAGE}-getRooms|src/rooms/getRooms.handler"
+  "${PREFIX}-${STAGE}-getRoomDetail|src/rooms/getRoomDetail.handler"
   "${PREFIX}-${STAGE}-userRegister|src/auth/userRegister.handler"
   "${PREFIX}-${STAGE}-userLogin|src/auth/userLogin.handler"
   "${PREFIX}-${STAGE}-userLogout|src/auth/userLogout.handler"
   "${PREFIX}-${STAGE}-tokenRefresh|src/auth/tokenRefresh.handler"
+  "${PREFIX}-${STAGE}-getMessages|src/chat/getMessages.handler"
   "${PREFIX}-${STAGE}-chatHandler|src/chat/chatHandler.handler"
   "${PREFIX}-${STAGE}-addChannel|src/rooms/addChannel.handler"
   "${PREFIX}-${STAGE}-deleteChannel|src/rooms/deleteChannel.handler"
