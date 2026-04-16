@@ -12,6 +12,7 @@ export const ENDPOINTS = {
   },
   rooms: {
     list: "/rooms",
+    mine: "/rooms/me",
   },
 };
 

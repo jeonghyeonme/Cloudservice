@@ -7,6 +7,12 @@ export function getRooms() {
   });
 }
 
+export function getMyRooms() {
+  return request(ENDPOINTS.rooms.mine, {
+    method: "GET",
+  });
+}
+
 export function createRoom(payload) {
   return request(ENDPOINTS.rooms.list, {
     method: "POST",
@@ -23,5 +29,11 @@ export function getRoomDetail(roomId) {
 export function getRoomMessages(roomId) {
   return request(`${ENDPOINTS.rooms.list}/${roomId}/messages`, {
     method: "GET",
+  });
+}
+
+export function joinRoom(roomId) {
+  return request(`${ENDPOINTS.rooms.list}/${roomId}/join`, {
+    method: "POST",
   });
 }

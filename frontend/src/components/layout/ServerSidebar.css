@@ -85,8 +85,13 @@
   flex: 1; 
 }
 
-.dummy-bg-1 { background-color: #14532d; }
-.dummy-bg-2 { background-color: #064e3b; }
+.room-server-icon {
+  background-color: #14532d;
+  color: #dcfce7;
+  font-size: 16px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
 
 /* ── 하단 프로필 영역 ── */
 .profile-wrapper {
