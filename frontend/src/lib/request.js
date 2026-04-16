@@ -13,7 +13,7 @@ export async function request(path, options = {}) {
     response = await fetch(url, {
       headers: {
         "Content-Type": "application/json",
-        ...authHeader, // 인증 헤더 자동 주입
+        ...authHeader,
         ...(options.headers || {}),
       },
       ...options,
@@ -27,11 +27,11 @@ export async function request(path, options = {}) {
   const payload = isJsonResponse ? await response.json() : await response.text();
 
   if (!response.ok) {
-    // 백엔드에서 보낸 JSON 에러 메시지를 우선적으로 파싱
-    const errorData = await response.json().catch(() => ({})); 
-    
-    // 백엔드가 보낸 message가 있으면 그걸 띄우고, 없으면 기본 메시지 띄움
-    throw new Error(errorData.message || "요청에 실패했습니다."); 
+    // ✅ 백엔드가 detail 또는 message 어느 키로 보내든 둘 다 체크
+    if (isJsonResponse) {
+      throw new Error(payload.detail || payload.message || "요청에 실패했습니다.");
+    }
+    throw new Error("서버가 JSON이 아닌 응답을 반환했습니다.");
   }
 
   if (!isJsonResponse) {
