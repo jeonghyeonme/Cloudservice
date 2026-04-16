@@ -149,8 +149,8 @@ echo "  /rooms/{roomId} → $ROOM_ID_PARAM_ID"
 JOIN_ID=$(create_resource "$ROOM_ID_PARAM_ID" "join")
 echo "  /rooms/{roomId}/join → $JOIN_ID"
 
-MY_ROOMS_ID=$(create_resource "$ROOMS_ID" "my")
-echo "  /rooms/my → $MY_ROOMS_ID"
+MY_ROOMS_ID=$(create_resource "$ROOMS_ID" "me")
+echo "  /rooms/me → $MY_ROOMS_ID"
 
 CHANNELS_ID=$(create_resource "$ROOM_ID_PARAM_ID" "channels")
 echo "  /rooms/{roomId}/channels → $CHANNELS_ID"
@@ -199,7 +199,7 @@ setup_endpoint "$LINKS_ID"         "POST" "${PREFIX}-${STAGE}-saveLink"         
 setup_endpoint "$ROOM_ID_PARAM_ID" "DELETE" "${PREFIX}-${STAGE}-deleteRoom" "rooms/{roomId}"
 setup_endpoint "$ANALYZE_ID"       "POST" "${PREFIX}-${STAGE}-aiRouter"         "ai/analyze"
 setup_endpoint "$JOIN_ID"     "POST" "${PREFIX}-${STAGE}-joinRoom"   "rooms/{roomId}/join"
-setup_endpoint "$MY_ROOMS_ID" "GET"  "${PREFIX}-${STAGE}-getMyRooms" "rooms/my"
+setup_endpoint "$MY_ROOMS_ID" "GET"  "${PREFIX}-${STAGE}-getMyRooms" "rooms/me"
 
 # ── CORS 설정 ─────────────────────────────────────────────
 echo ""

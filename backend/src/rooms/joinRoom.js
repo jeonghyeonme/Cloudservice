@@ -33,12 +33,12 @@ exports.handler = async (event) => {
     if (!room.Item) {
       return { 
         statusCode: 404, 
-        headers: HEADERS, // 추가됨
+        headers: HEADERS,
         body: JSON.stringify({ message: "방을 찾을 수 없습니다." }) 
       };
     }
 
-    // 2. RoomMembers 테이블에 멤버십 정보 저장 (배열 업데이트 대신 Put)
+    // 2. RoomMembers 테이블에 멤버십 정보 저장
     await dynamoDb.send(new PutCommand({
       TableName: process.env.ROOM_MEMBERS_TABLE,
       Item: {
@@ -47,20 +47,32 @@ exports.handler = async (event) => {
         role: "MEMBER",
         joinedAt: new Date().toISOString()
       },
-      // 중복 가입 방지
+      // 중복 가입 방지 (이미 userId와 roomId 조합이 있으면 에러 발생)
       ConditionExpression: "attribute_not_exists(userId) AND attribute_not_exists(roomId)"
     }));
 
+    // 3. 정상 응답 (오류 유발 변수 제거)
     return {
       statusCode: 200,
       headers: HEADERS,
       body: JSON.stringify({
-        message: alreadyMember ? "이미 참여 중인 방입니다." : "방 참여 성공",
+        message: "방 참여 성공",
         roomId,
       }),
     };
   } catch (error) {
     console.error("joinRoom Error:", error);
+
+    // 4. 중복 가입 에러 핸들링 (400 Bad Request)
+    if (error.name === "ConditionalCheckFailedException") {
+      return {
+        statusCode: 400,
+        headers: HEADERS,
+        body: JSON.stringify({ message: "이미 참여 중인 방입니다." })
+      };
+    }
+
+    // 5. 진짜 서버 에러 (500 Internal Server Error)
     return {
       statusCode: 500,
       headers: HEADERS,

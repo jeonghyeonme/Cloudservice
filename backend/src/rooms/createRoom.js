@@ -14,7 +14,8 @@ module.exports.handler = async (event) => {
     const roomId = uuidv4();
     const createdAt = new Date().toISOString();
 
-    const params = {
+    // 1. Rooms 테이블에 방 생성 데이터 Put
+    const roomParams = {
       TableName: process.env.ROOMS_TABLE,
       Item: {
         roomId,
@@ -31,7 +32,21 @@ module.exports.handler = async (event) => {
       },
     };
 
-    await dynamoDb.send(new PutCommand(params));
+    await dynamoDb.send(new PutCommand(roomParams));
+
+    // 2. RoomMembers 테이블에 방장(호스트) 자동 가입 처리 (추가된 부분)
+    if (hostId) {
+      const memberParams = {
+        TableName: process.env.ROOM_MEMBERS_TABLE,
+        Item: {
+          userId: hostId,
+          roomId: roomId,
+          role: "HOST", // 방장이므로 권한은 HOST
+          joinedAt: createdAt
+        }
+      };
+      await dynamoDb.send(new PutCommand(memberParams));
+    }
 
     return {
       statusCode: 200,
@@ -49,6 +64,11 @@ module.exports.handler = async (event) => {
     console.error(error);
     return {
       statusCode: 500,
+      headers: { // 프론트엔드에서 에러 메시지를 읽을 수 있도록 CORS 헤더 추가
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Credentials": true,
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({ message: "방 생성 실패", error: error.message }),
     };
   }

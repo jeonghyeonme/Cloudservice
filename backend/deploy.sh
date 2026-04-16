@@ -33,6 +33,7 @@ ENV_VARS="{
     \"CONNECTIONS_TABLE\": \"${PREFIX}-Connections\",
     \"MESSAGES_TABLE\": \"${PREFIX}-Messages\",
     \"REFRESH_TOKENS_TABLE\": \"${PREFIX}-RefreshTokens\",
+    \"ROOM_MEMBERS_TABLE\": \"${PREFIX}-RoomMembers\",
     \"RESOURCES_BUCKET\": \"inhatc-team3-2-resources\",
     \"ALLOWED_ORIGIN\": \"*\"
   }
@@ -152,9 +153,5 @@ echo ""
 echo "════════════════════════════════════════"
 echo "🎉 배포 완료!"
 echo ""
-echo "⚠️  API Gateway 연동은 AWS 콘솔에서 수동 설정 필요:"
-echo "   1. API Gateway → REST API 생성"
-echo "   2. 각 Lambda 함수를 엔드포인트에 연결"
-echo "   3. WebSocket API 생성 후 chatHandler 연결"
-echo "   4. API 배포 (Deploy to stage: dev)"
+echo "⚠️  API Gateway 연동은 setup-api.sh 실행 필요"
 echo "════════════════════════════════════════"

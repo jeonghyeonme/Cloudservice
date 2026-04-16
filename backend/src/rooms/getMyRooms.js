@@ -1,4 +1,4 @@
-const { QueryCommand, BatchGetItemCommand } = require("@aws-sdk/lib-dynamodb");
+const { QueryCommand, BatchGetCommand } = require("@aws-sdk/lib-dynamodb");
 const dynamoDb = require("../dynamodbClient");
 const { verifyAccessToken } = require("../utils");
 const { HEADERS } = require("../utils/response");
@@ -25,19 +25,26 @@ exports.handler = async (event) => {
 
     const myRoomIds = membership.Items?.map(item => item.roomId) || [];
 
+    // 가입한 방이 없을 경우 (빈 배열 반환 시에도 CORS 헤더 필수)
     if (myRoomIds.length === 0) {
-      return { statusCode: 200, body: JSON.stringify({ items: [] }) };
+      return { 
+        statusCode: 200, 
+        headers: HEADERS, 
+        body: JSON.stringify({ items: [] }) 
+      };
     }
 
     // 2. 방 ID 목록으로 실제 방 상세 정보 일괄 조회
-    const roomsResult = await dynamoDb.send(new BatchGetItemCommand({
+    const uniqueRoomIds = [...new Set(myRoomIds)]; // 중복 ID 안전하게 제거
+    const roomsResult = await dynamoDb.send(new BatchGetCommand({
       RequestItems: {
         [process.env.ROOMS_TABLE]: {
-          Keys: myRoomIds.map(id => ({ roomId: id }))
+          Keys: uniqueRoomIds.map(id => ({ roomId: id }))
         }
       }
     }));
 
+    // 데이터를 담는 변수명은 'rooms'
     const rooms = roomsResult.Responses[process.env.ROOMS_TABLE] || [];
     
     // 최신순 정렬
@@ -46,7 +53,8 @@ exports.handler = async (event) => {
     return {
       statusCode: 200,
       headers: HEADERS,
-      body: JSON.stringify({ items: myRooms }),
+      // [수정 완료] myRooms가 아닌 rooms를 반환하도록 수정! ✅
+      body: JSON.stringify({ items: rooms }), 
     };
   } catch (error) {
     console.error("getMyRooms Error:", error);

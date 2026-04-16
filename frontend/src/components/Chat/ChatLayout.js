@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { PATHS } from "../../constants/path";
 import { getRoomDetail, getRoomMessages } from "../../lib/rooms";
+import { useAuth } from "../../contexts/AuthContext";
 import { useRooms } from "../../contexts/RoomContext";
 import "./ChatLayout.css";
 import ServerSidebar from "../layout/ServerSidebar";
@@ -13,13 +14,28 @@ import CreateRoomModal from "../Rooms/CreateRoomModal";
 const ChatLayout = () => {
   const { roomId } = useParams();
   const navigate = useNavigate();
-  const { setActiveRoomId, upsertJoinedRoom } = useRooms();
+  const { logout, refreshToken } = useAuth();
+  const { setActiveRoomId, upsertJoinedRoom, clearJoinedRooms } = useRooms();
 
   const [currentRoom, setCurrentRoom] = useState(null);
   const [loading, setLoading] = useState(true);
-
   const [activeChannel, setActiveChannel] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleLogout = async () => {
+    try {
+      if (refreshToken) {
+        const { logout: logoutApi } = await import("../../lib/auth");
+        await logoutApi(refreshToken);
+      }
+    } catch (error) {
+      console.error("Logout failed:", error);
+    } finally {
+      clearJoinedRooms();
+      logout();
+      navigate(PATHS.onboarding, { replace: true });
+    }
+  };
 
   useEffect(() => {
     setLoading(true);
@@ -27,7 +43,6 @@ const ChatLayout = () => {
 
     Promise.all([getRoomDetail(roomId), getRoomMessages(roomId)])
       .then(([roomData, messagesData]) => {
-        // messages가 배열인지 items 안에 있는지 처리
         const messages = Array.isArray(messagesData)
           ? messagesData
           : messagesData?.items || [];
@@ -60,7 +75,6 @@ const ChatLayout = () => {
       });
   }, [roomId, setActiveRoomId, upsertJoinedRoom]);
 
-  // 로딩 중일 때 처리
   if (loading)
     return (
       <div style={{ color: "white", padding: "20px" }}>
@@ -68,7 +82,6 @@ const ChatLayout = () => {
       </div>
     );
 
-  // 진짜로 방이 없을 때 처리 (서버에도 없을 때)
   if (!currentRoom) {
     return (
       <div style={{ padding: "20px", color: "white" }}>
@@ -86,6 +99,7 @@ const ChatLayout = () => {
         activeView="chat"
         onServerClick={() => {}}
         onAddClick={() => setIsModalOpen(true)}
+        onLogout={handleLogout}
       />
 
       <SidebarLeft

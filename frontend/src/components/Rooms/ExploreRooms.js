@@ -25,13 +25,11 @@ const RoomCard = ({ room, onJoin }) => {
   return (
     <div className={`room-card ${isFull ? "room-full" : ""}`}>
       <div className="room-cover">
-        {/* 이미지가 있으면 <img> 태그를, 없으면 기존처럼 이모지를 보여줌 */}
         {coverImage ? (
           <img src={coverImage} alt={name} className="room-cover-img" />
         ) : (
           <div className="room-cover-emoji">{emoji}</div>
         )}
-
         <span className={`room-badge badge-${displayStatus.toLowerCase()}`}>
           {displayStatus}
         </span>
@@ -79,17 +77,26 @@ const RoomCard = ({ room, onJoin }) => {
 
 const ExploreRooms = () => {
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, refreshToken } = useAuth();
   const { clearJoinedRooms, setActiveRoomId, upsertJoinedRoom } = useRooms();
   const [rooms, setRooms] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [inviteCode, setInviteCode] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const handleLogout = () => {
-    console.log("로그아웃 로직 실행");
-    clearJoinedRooms();
-    logout();
-    navigate(PATHS.onboarding);
+
+  const handleLogout = async () => {
+    try {
+      if (refreshToken) {
+        const { logout: logoutApi } = await import("../../lib/auth");
+        await logoutApi(refreshToken);
+      }
+    } catch (error) {
+      console.error("Logout failed:", error);
+    } finally {
+      clearJoinedRooms();
+      logout();
+      navigate(PATHS.onboarding, { replace: true });
+    }
   };
 
   useEffect(() => {
@@ -111,7 +118,6 @@ const ExploreRooms = () => {
     );
   });
 
-  // 방 입장 시 해당 ID의 주소로 이동
   const handleJoinRoom = async (room) => {
     try {
       await joinRoom(room.roomId);
