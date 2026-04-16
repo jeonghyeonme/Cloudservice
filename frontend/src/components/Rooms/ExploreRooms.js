@@ -120,10 +120,12 @@ const ExploreRooms = () => {
 
   const handleJoinRoom = async (room) => {
     try {
-      await joinRoom(room.roomId);
+      const result = await joinRoom(room.roomId);
       upsertJoinedRoom(room);
+      // alreadyMember 플래그 관계없이 그냥 방으로 이동
       navigate(getRoomPath(room.roomId));
     } catch (error) {
+      // 정원 초과 같은 진짜 에러만 alert
       console.error("방 참여 실패:", error);
       alert(error.message || "방 입장 중 오류가 발생했습니다.");
     }

@@ -1,4 +1,4 @@
-const { PutCommand } = require("@aws-sdk/lib-dynamodb");
+const { PutCommand, GetCommand } = require("@aws-sdk/lib-dynamodb");
 const { v4: uuidv4 } = require("uuid");
 const dynamoDb = require("../dynamodbClient");
 const { verifyAccessToken } = require("../utils");
@@ -14,7 +14,17 @@ module.exports.handler = async (event) => {
     const roomId = uuidv4();
     const createdAt = new Date().toISOString();
 
-    // 1. Rooms 테이블에 방 생성 데이터 Put
+    // ✅ 호스트의 nickname을 Users 테이블에서 조회
+    let hostNickname = "Unknown";
+    if (hostId) {
+      const userResult = await dynamoDb.send(new GetCommand({
+        TableName: process.env.USERS_TABLE,
+        Key: { userId: hostId },
+      }));
+      hostNickname = userResult.Item?.nickname || "Unknown";
+    }
+
+    // 1. Rooms 테이블에 방 생성
     const roomParams = {
       TableName: process.env.ROOMS_TABLE,
       Item: {
@@ -24,26 +34,28 @@ module.exports.handler = async (event) => {
         roomName: body.roomName || "기본 스터디룸",
         description: body.description || "",
         hostId: hostId || null,
+        hostNickname,
         maxCapacity: body.maxCapacity || 10,
-        currentCount: hostId ? 1 : 0, // 호스트가 있으면 1명, 없으면 0명으로 초기화
+        currentCount: hostId ? 1 : 0,
         members: hostId
-          ? [{ userId: hostId, role: "HOST", joinedAt: createdAt }]
+          ? [{ userId: hostId, nickname: hostNickname, role: "HOST", joinedAt: createdAt }]
           : [],
       },
     };
 
     await dynamoDb.send(new PutCommand(roomParams));
 
-    // 2. RoomMembers 테이블에 방장(호스트) 자동 가입 처리 (추가된 부분)
+    // 2. RoomMembers 테이블에 방장 가입 처리
     if (hostId) {
       const memberParams = {
         TableName: process.env.ROOM_MEMBERS_TABLE,
         Item: {
           userId: hostId,
           roomId: roomId,
-          role: "HOST", // 방장이므로 권한은 HOST
-          joinedAt: createdAt
-        }
+          nickname: hostNickname,
+          role: "HOST",
+          joinedAt: createdAt,
+        },
       };
       await dynamoDb.send(new PutCommand(memberParams));
     }
@@ -64,7 +76,7 @@ module.exports.handler = async (event) => {
     console.error(error);
     return {
       statusCode: 500,
-      headers: { // 프론트엔드에서 에러 메시지를 읽을 수 있도록 CORS 헤더 추가
+      headers: {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Credentials": true,
         "Content-Type": "application/json",

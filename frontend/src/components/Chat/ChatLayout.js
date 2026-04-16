@@ -107,6 +107,8 @@ const ChatLayout = () => {
         channels={currentRoom?.channels || []}
         activeChannel={activeChannel}
         onChannelClick={setActiveChannel}
+        members={currentRoom?.members || []}
+        hostId={currentRoom?.hostId}
       />
 
       <main

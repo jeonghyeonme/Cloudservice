@@ -18,6 +18,7 @@ const CreateRoomModal = ({ onClose }) => {
     description: description,
     maxCapacity: Number(maxParticipants), // 정원 정보도 백엔드 필드명에 맞춤
     status: 'ACTIVE',
+    isPrivate: privacy === 'Private',
   };
 
     console.log("🚀 [STEP 1] 서버로 보낼 데이터(Payload):", newRoomData);

@@ -1,6 +1,14 @@
 import React from 'react';
+import { useAuth } from "../../contexts/AuthContext";
 
-const SidebarLeft = ({ roomName, channels, activeChannel, onChannelClick }) => {
+const SidebarLeft = ({ roomName, channels, activeChannel, onChannelClick, members = [], hostId }) => {
+  const { user } = useAuth();
+  const currentNickname = user?.nickname;
+
+  // 멤버를 온라인/오프라인으로 분류 (WebSocket 연결 전이라 일단 현재 유저만 온라인 처리)
+  const onlineMembers = members.filter(m => m.nickname === currentNickname);
+  const offlineMembers = members.filter(m => m.nickname !== currentNickname);
+
   return (
     <aside className="sidebar-left">
       <h2 className="logo">{roomName}</h2>
@@ -25,35 +33,43 @@ const SidebarLeft = ({ roomName, channels, activeChannel, onChannelClick }) => {
 
       {/* 멤버 목록 */}
       <div className="member-panel">
-        <div className="member-panel-header">참여자 — 1명 온라인</div>
+        <div className="member-panel-header">
+          참여자 — {onlineMembers.length}명 온라인
+        </div>
         <div className="member-list">
-          <div className="member online">
-            <div className="avatar-wrapper">
-              <div className="avatar"></div>
-              <div className="status-dot"></div>
+          {onlineMembers.map(m => (
+            <div key={m.userId} className="member online">
+              <div className="avatar-wrapper">
+                <div className="avatar">{m.nickname?.charAt(0).toUpperCase()}</div>
+                <div className="status-dot"></div>
+              </div>
+              <span className="name green-text">
+                {m.nickname}
+                {m.userId === hostId && <span className="bot-tag" style={{ marginLeft: '6px' }}>방장</span>}
+              </span>
             </div>
-            <span className="name green-text">사용자</span>
-            {/* <span className="my-name">사용자</span> */}
-          </div>
-          
-          <div className="member-category mt-20">오프라인 — 1명</div>
-          <div className="member offline">
-            <div className="avatar-wrapper"><div className="avatar dummy-offline">AI</div></div>
-            <span className="name">SAGE AI <span className="bot-tag">봇</span></span>
-          </div>
+          ))}
+
+          {offlineMembers.length > 0 && (
+            <>
+              <div className="member-category mt-20">오프라인 — {offlineMembers.length}명</div>
+              {offlineMembers.map(m => (
+                <div key={m.userId} className="member offline">
+                  <div className="avatar-wrapper">
+                    <div className="avatar">{m.nickname?.charAt(0).toUpperCase()}</div>
+                  </div>
+                  <span className="name">
+                    {m.nickname}
+                    {m.userId === hostId && <span className="bot-tag" style={{ marginLeft: '6px' }}>방장</span>}
+                  </span>
+                </div>
+              ))}
+            </>
+          )}
         </div>
       </div>
-
-      {/* 하단 내 프로필 */}
-      {/* <div className="my-profile">
-        <div className="avatar my-avatar"></div>
-        <div className="my-info">
-          <span className="my-name">사용자</span>
-          <span className="my-status">온라인</span>
-        </div>
-        <button className="my-settings" title="설정">⚙️</button>
-      </div> */}
     </aside>
   );
 };
+
 export default SidebarLeft;

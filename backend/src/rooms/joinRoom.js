@@ -1,82 +1,125 @@
-const { PutCommand, GetCommand } = require("@aws-sdk/lib-dynamodb");
+const { GetCommand, PutCommand, UpdateCommand } = require("@aws-sdk/lib-dynamodb");
 const dynamoDb = require("../dynamodbClient");
 const { verifyAccessToken } = require("../utils");
-const { HEADERS } = require("../utils/response");
 
 exports.handler = async (event) => {
   try {
     const { roomId } = event.pathParameters || {};
-    const authHeader = event.headers?.Authorization || event.headers?.authorization || "";
+    const authHeader =
+      event.headers?.Authorization || event.headers?.authorization || "";
     const { userId } = verifyAccessToken(authHeader);
 
     if (!userId) {
       return {
         statusCode: 401,
-        headers: HEADERS,
+        headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" },
         body: JSON.stringify({ message: "인증이 필요합니다." }),
       };
     }
+
     if (!roomId) {
-      return { 
-        statusCode: 400, 
-        headers: HEADERS,
-        body: JSON.stringify({ message: "roomId 누락" }) 
+      return {
+        statusCode: 400,
+        headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" },
+        body: JSON.stringify({ message: "roomId가 필요합니다." }),
       };
     }
 
-    // 1. 방 존재 여부 먼저 확인
-    const room = await dynamoDb.send(new GetCommand({
+    // 1. 방 존재 여부 확인
+    const roomResult = await dynamoDb.send(new GetCommand({
       TableName: process.env.ROOMS_TABLE,
-      Key: { roomId }
+      Key: { roomId },
     }));
 
-    if (!room.Item) {
-      return { 
-        statusCode: 404, 
-        headers: HEADERS,
-        body: JSON.stringify({ message: "방을 찾을 수 없습니다." }) 
+    if (!roomResult.Item) {
+      return {
+        statusCode: 404,
+        headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" },
+        body: JSON.stringify({ message: "해당 방을 찾을 수 없습니다." }),
       };
     }
 
-    // 2. RoomMembers 테이블에 멤버십 정보 저장
+    // 2. 이미 참여 중인지 RoomMembers 테이블에서 확인
+    const membershipResult = await dynamoDb.send(new GetCommand({
+      TableName: process.env.ROOM_MEMBERS_TABLE,
+      Key: { userId, roomId },
+    }));
+
+    if (membershipResult.Item) {
+      return {
+        statusCode: 200,
+        headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: "이미 참여 중인 방입니다.",
+          roomId,
+          alreadyMember: true,
+        }),
+      };
+    }
+
+    // 3. 정원 초과 체크
+    const currentCount = roomResult.Item.currentCount || 0;
+    const maxCapacity = roomResult.Item.maxCapacity || 10;
+    if (currentCount >= maxCapacity) {
+      return {
+        statusCode: 403,
+        headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" },
+        body: JSON.stringify({ message: "방 정원이 가득 찼습니다." }),
+      };
+    }
+
+    // 4. ✅ Users 테이블에서 nickname 조회
+    const userResult = await dynamoDb.send(new GetCommand({
+      TableName: process.env.USERS_TABLE,
+      Key: { userId },
+    }));
+    const nickname = userResult.Item?.nickname || "Unknown";
+
+    // 5. RoomMembers 테이블에 멤버십 추가 (nickname 포함)
+    const joinedAt = new Date().toISOString();
     await dynamoDb.send(new PutCommand({
       TableName: process.env.ROOM_MEMBERS_TABLE,
       Item: {
-        userId: userId,
-        roomId: roomId,
+        userId,
+        roomId,
+        nickname,
         role: "MEMBER",
-        joinedAt: new Date().toISOString()
+        joinedAt,
       },
-      // 중복 가입 방지 (이미 userId와 roomId 조합이 있으면 에러 발생)
-      ConditionExpression: "attribute_not_exists(userId) AND attribute_not_exists(roomId)"
     }));
 
-    // 3. 정상 응답 (오류 유발 변수 제거)
+    // 6. Rooms 테이블의 members 배열과 currentCount 업데이트
+    const currentMembers = Array.isArray(roomResult.Item.members) ? roomResult.Item.members : [];
+    const newMembers = [
+      ...currentMembers,
+      { userId, nickname, role: "MEMBER", joinedAt },
+    ];
+
+    await dynamoDb.send(new UpdateCommand({
+      TableName: process.env.ROOMS_TABLE,
+      Key: { roomId },
+      UpdateExpression: "SET members = :members, currentCount = :count",
+      ExpressionAttributeValues: {
+        ":members": newMembers,
+        ":count": newMembers.length,
+      },
+    }));
+
     return {
       statusCode: 200,
-      headers: HEADERS,
+      headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" },
       body: JSON.stringify({
         message: "방 참여 성공",
         roomId,
+        alreadyMember: false,
       }),
     };
   } catch (error) {
     console.error("joinRoom Error:", error);
-
-    // 4. 중복 가입 에러 핸들링 (400 Bad Request)
-    if (error.name === "ConditionalCheckFailedException") {
-      return {
-        statusCode: 400,
-        headers: HEADERS,
-        body: JSON.stringify({ message: "이미 참여 중인 방입니다." })
-      };
-    }
-
-    // 5. 진짜 서버 에러 (500 Internal Server Error)
     return {
       statusCode: 500,
-      headers: HEADERS,
-      body: JSON.stringify({ message: "방 참여 중 오류 발생", error: error.message }),
+      headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" },
+      body: JSON.stringify({ message: "방 참여 실패", error: error.message }),
     };
   }
 };
