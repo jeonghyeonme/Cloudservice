@@ -146,6 +146,12 @@ echo "  /token/refresh → $REFRESH_ID"
 ROOM_ID_PARAM_ID=$(create_resource "$ROOMS_ID" "{roomId}")
 echo "  /rooms/{roomId} → $ROOM_ID_PARAM_ID"
 
+JOIN_ID=$(create_resource "$ROOM_ID_PARAM_ID" "join")
+echo "  /rooms/{roomId}/join → $JOIN_ID"
+
+MY_ROOMS_ID=$(create_resource "$ROOMS_ID" "my")
+echo "  /rooms/my → $MY_ROOMS_ID"
+
 CHANNELS_ID=$(create_resource "$ROOM_ID_PARAM_ID" "channels")
 echo "  /rooms/{roomId}/channels → $CHANNELS_ID"
 
@@ -192,6 +198,8 @@ setup_endpoint "$FILES_ID"         "POST" "${PREFIX}-${STAGE}-saveFileMetadata" 
 setup_endpoint "$LINKS_ID"         "POST" "${PREFIX}-${STAGE}-saveLink"         "rooms/{roomId}/links"
 setup_endpoint "$ROOM_ID_PARAM_ID" "DELETE" "${PREFIX}-${STAGE}-deleteRoom" "rooms/{roomId}"
 setup_endpoint "$ANALYZE_ID"       "POST" "${PREFIX}-${STAGE}-aiRouter"         "ai/analyze"
+setup_endpoint "$JOIN_ID"     "POST" "${PREFIX}-${STAGE}-joinRoom"   "rooms/{roomId}/join"
+setup_endpoint "$MY_ROOMS_ID" "GET"  "${PREFIX}-${STAGE}-getMyRooms" "rooms/my"
 
 # ── CORS 설정 ─────────────────────────────────────────────
 echo ""
@@ -210,6 +218,8 @@ setup_cors "$MESSAGES_ID"
 setup_cors "$FILES_ID"
 setup_cors "$LINKS_ID"
 setup_cors "$ANALYZE_ID"
+setup_cors "$JOIN_ID"
+setup_cors "$MY_ROOMS_ID"
 
 echo "  ✅ CORS OPTIONS 설정 완료"
 

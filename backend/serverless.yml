@@ -12,6 +12,7 @@ custom:
   connectionsTableName: "${self:custom.prefix}-Connections"
   messagesTableName: "${self:custom.prefix}-Messages"
   refreshTokensTableName: "${self:custom.prefix}-RefreshTokens"
+  roomMembersTableName: "${self:custom.prefix}-RoomMembers"
 
 provider:
   name: aws
@@ -27,12 +28,12 @@ provider:
     # 암호화 관련
 
     # 로컬 환경을 위해 수정
-    JWT_SECRET_KEY: "local-secret-key-for-dev"
-    SALT: "local-salt-value"
+    # JWT_SECRET_KEY: "local-secret-key-for-dev"
+    # SALT: "local-salt-value"
 
     # 로컬 환경이 아닐 경우
-    # JWT_SECRET_KEY:    ${ssm:/smartstudy/dev/jwt-secret-key}
-    # SALT:              ${ssm:/smartstudy/dev/salt}
+    JWT_SECRET_KEY:    ${ssm:/smartstudy/dev/jwt-secret-key}
+    SALT:              ${ssm:/smartstudy/dev/salt}
     HASHING_ALGORITHM: HS256
     S3_BUCKET: ${env:S3_BUCKET, ""}
     ALLOWED_ORIGIN: ${env:ALLOWED_ORIGIN, "https://your-cloudfront-domain.net"}
@@ -43,6 +44,7 @@ provider:
     CONNECTIONS_TABLE: ${self:custom.connectionsTableName}
     MESSAGES_TABLE: ${self:custom.messagesTableName}
     REFRESH_TOKENS_TABLE: ${self:custom.refreshTokensTableName}
+    ROOM_MEMBERS_TABLE: ${self:custom.roomMembersTableName}
 
   # ── IAM 최소 권한 (SafeRole) ──────────────────────────────
   # iamRoleStatements:
@@ -292,118 +294,146 @@ functions:
 # -------------------------------------------------------
 # DynamoDB 테이블 정의 (CloudFormation)
 # -------------------------------------------------------
-# resources:
-#   Resources:
+resources:
+  Resources:
 
-#     # 1. Users 테이블
-#     UsersTable:
-#       Type: AWS::DynamoDB::Table
-#       Properties:
-#         TableName: ${self:custom.usersTableName}
-#         BillingMode: PAY_PER_REQUEST
-#         AttributeDefinitions:
-#           - AttributeName: userId
-#             AttributeType: S
-#           - AttributeName: email
-#             AttributeType: S
-#         KeySchema:
-#           - AttributeName: userId
-#             KeyType: HASH
-#         GlobalSecondaryIndexes:
-#           - IndexName: email-index
-#             KeySchema:
-#               - AttributeName: email
-#                 KeyType: HASH
-#             Projection:
-#               ProjectionType: ALL
+    # 1. Users 테이블
+    UsersTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.usersTableName}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: email
+            AttributeType: S
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: email-index
+            KeySchema:
+              - AttributeName: email
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
 
-#     # 2. Rooms 테이블
-#     RoomsTable:
-#       Type: AWS::DynamoDB::Table
-#       Properties:
-#         TableName: ${self:custom.roomsTableName}
-#         BillingMode: PAY_PER_REQUEST
-#         AttributeDefinitions:
-#           - AttributeName: roomId
-#             AttributeType: S
-#           - AttributeName: status
-#             AttributeType: S
-#           - AttributeName: createdAt
-#             AttributeType: S
-#         KeySchema:
-#           - AttributeName: roomId
-#             KeyType: HASH
-#         GlobalSecondaryIndexes:
-#           - IndexName: status-createdAt-index
-#             KeySchema:
-#               - AttributeName: status
-#                 KeyType: HASH
-#               - AttributeName: createdAt
-#                 KeyType: RANGE
-#             Projection:
-#               ProjectionType: ALL
-#         TimeToLiveSpecification:
-#           AttributeName: expiresAt
-#           Enabled: true
+    # 2. Rooms 테이블
+    RoomsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.roomsTableName}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: roomId
+            AttributeType: S
+          - AttributeName: status
+            AttributeType: S
+          - AttributeName: createdAt
+            AttributeType: S
+        KeySchema:
+          - AttributeName: roomId
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: status-createdAt-index
+            KeySchema:
+              - AttributeName: status
+                KeyType: HASH
+              - AttributeName: createdAt
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+        TimeToLiveSpecification:
+          AttributeName: expiresAt
+          Enabled: true
 
-#     # 3. Connections 테이블
-#     ConnectionsTable:
-#       Type: AWS::DynamoDB::Table
-#       Properties:
-#         TableName: ${self:custom.connectionsTableName}
-#         BillingMode: PAY_PER_REQUEST
-#         AttributeDefinitions:
-#           - AttributeName: connectionId
-#             AttributeType: S
-#           - AttributeName: roomId
-#             AttributeType: S
-#         KeySchema:
-#           - AttributeName: connectionId
-#             KeyType: HASH
-#         GlobalSecondaryIndexes:
-#           - IndexName: roomId-index
-#             KeySchema:
-#               - AttributeName: roomId
-#                 KeyType: HASH
-#             Projection:
-#               ProjectionType: ALL
-#         TimeToLiveSpecification:
-#           AttributeName: expiresAt
-#           Enabled: true
+    # 3. Connections 테이블
+    ConnectionsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.connectionsTableName}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: connectionId
+            AttributeType: S
+          - AttributeName: roomId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: connectionId
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: roomId-index
+            KeySchema:
+              - AttributeName: roomId
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+        TimeToLiveSpecification:
+          AttributeName: expiresAt
+          Enabled: true
 
-#     # 4. Messages 테이블
-#     MessagesTable:
-#       Type: AWS::DynamoDB::Table
-#       Properties:
-#         TableName: ${self:custom.messagesTableName}
-#         BillingMode: PAY_PER_REQUEST
-#         AttributeDefinitions:
-#           - AttributeName: roomId
-#             AttributeType: S
-#           - AttributeName: messageId
-#             AttributeType: S
-#         KeySchema:
-#           - AttributeName: roomId
-#             KeyType: HASH
-#           - AttributeName: messageId
-#             KeyType: RANGE
+    # 4. Messages 테이블
+    MessagesTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.messagesTableName}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: roomId
+            AttributeType: S
+          - AttributeName: messageId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: roomId
+            KeyType: HASH
+          - AttributeName: messageId
+            KeyType: RANGE
 
-#     # 5. RefreshTokens 테이블
-#     RefreshTokensTable:
-#       Type: AWS::DynamoDB::Table
-#       Properties:
-#         TableName: ${self:custom.refreshTokensTableName}
-#         BillingMode: PAY_PER_REQUEST
-#         AttributeDefinitions:
-#           - AttributeName: userId
-#             AttributeType: S
-#           - AttributeName: refreshToken
-#             AttributeType: S
-#         KeySchema:
-#           - AttributeName: userId
-#             KeyType: HASH
-#           - AttributeName: refreshToken
-#             KeyType: RANGE
-#         TimeToLiveSpecification:
-#           AttributeName: expiresAt
-#           Enabled: true
+    # 5. RefreshTokens 테이블
+    RefreshTokensTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.refreshTokensTableName}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: refreshToken
+            AttributeType: S
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+          - AttributeName: refreshToken
+            KeyType: RANGE
+        TimeToLiveSpecification:
+          AttributeName: expiresAt
+          Enabled: true
+
+      # 6. RoomMembers 테이블
+    RoomMembersTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.roomMembersTableName}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: roomId
+            AttributeType: S
+          - AttributeName: joinedAt
+            AttributeType: S
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+          - AttributeName: roomId
+            KeyType: RANGE
+        GlobalSecondaryIndexes:
+          - IndexName: roomId-index # [참여자 조회용 GSI]
+            KeySchema:
+              - AttributeName: roomId
+                KeyType: HASH
+              - AttributeName: joinedAt
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL

@@ -1,89 +1,59 @@
-const { GetCommand, UpdateCommand } = require("@aws-sdk/lib-dynamodb");
+const { PutCommand, GetCommand } = require("@aws-sdk/lib-dynamodb");
 const dynamoDb = require("../dynamodbClient");
 const { verifyAccessToken } = require("../utils");
+const { HEADERS } = require("../utils/response");
 
-// 방 참여 시 유저 정보 저장 핸들러
 exports.handler = async (event) => {
   try {
     const { roomId } = event.pathParameters || {};
-    const authHeader =
-      event.headers?.Authorization || event.headers?.authorization || "";
+    const authHeader = event.headers?.Authorization || event.headers?.authorization || "";
     const { userId } = verifyAccessToken(authHeader);
 
     if (!userId) {
       return {
         statusCode: 401,
-        headers: {
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Credentials": true,
-          "Content-Type": "application/json",
-        },
+        headers: HEADERS,
         body: JSON.stringify({ message: "인증이 필요합니다." }),
       };
     }
-
     if (!roomId) {
-      return {
-        statusCode: 400,
-        headers: {
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Credentials": true,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ message: "roomId가 필요합니다." }),
+      return { 
+        statusCode: 400, 
+        headers: HEADERS,
+        body: JSON.stringify({ message: "roomId 누락" }) 
       };
     }
 
-    const roomResult = await dynamoDb.send(
-      new GetCommand({
-        TableName: process.env.ROOMS_TABLE,
-        Key: { roomId },
-      }),
-    );
+    // 1. 방 존재 여부 먼저 확인
+    const room = await dynamoDb.send(new GetCommand({
+      TableName: process.env.ROOMS_TABLE,
+      Key: { roomId }
+    }));
 
-    const room = roomResult.Item;
-
-    if (!room) {
-      return {
-        statusCode: 404,
-        headers: {
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Credentials": true,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ message: "해당 방을 찾을 수 없습니다." }),
+    if (!room.Item) {
+      return { 
+        statusCode: 404, 
+        headers: HEADERS, // 추가됨
+        body: JSON.stringify({ message: "방을 찾을 수 없습니다." }) 
       };
     }
 
-    const members = Array.isArray(room.members) ? room.members : [];
-    const alreadyMember = members.some((member) => member?.userId === userId);
-
-    if (!alreadyMember) {
-      const nextMembers = [
-        ...members,
-        { userId, role: "MEMBER", joinedAt: new Date().toISOString() },
-      ];
-
-      await dynamoDb.send(
-        new UpdateCommand({
-          TableName: process.env.ROOMS_TABLE,
-          Key: { roomId },
-          UpdateExpression: "SET members = :members, currentCount = :count",
-          ExpressionAttributeValues: {
-            ":members": nextMembers,
-            ":count": nextMembers.length,
-          },
-        }),
-      );
-    }
+    // 2. RoomMembers 테이블에 멤버십 정보 저장 (배열 업데이트 대신 Put)
+    await dynamoDb.send(new PutCommand({
+      TableName: process.env.ROOM_MEMBERS_TABLE,
+      Item: {
+        userId: userId,
+        roomId: roomId,
+        role: "MEMBER",
+        joinedAt: new Date().toISOString()
+      },
+      // 중복 가입 방지
+      ConditionExpression: "attribute_not_exists(userId) AND attribute_not_exists(roomId)"
+    }));
 
     return {
       statusCode: 200,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Credentials": true,
-        "Content-Type": "application/json",
-      },
+      headers: HEADERS,
       body: JSON.stringify({
         message: alreadyMember ? "이미 참여 중인 방입니다." : "방 참여 성공",
         roomId,
@@ -93,12 +63,8 @@ exports.handler = async (event) => {
     console.error("joinRoom Error:", error);
     return {
       statusCode: 500,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Credentials": true,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ message: "방 참여 실패", error: error.message }),
+      headers: HEADERS,
+      body: JSON.stringify({ message: "방 참여 중 오류 발생", error: error.message }),
     };
   }
 };
