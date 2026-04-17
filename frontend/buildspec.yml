@@ -5,16 +5,29 @@ phases:
     runtime-versions:
       nodejs: 18
     commands:
+      - echo "Installing dependencies..."
       - cd frontend && npm install
 
   build:
     commands:
-      - cd frontend
-      - npm run build
+      - echo "Building project..."
+      - cd frontend && npm run build
 
   post_build:
     commands:
-      # S3에 빌드 결과물 업로드
-      - aws s3 sync build/ s3://$S3_BUCKET_FRONTEND --delete
-      # CloudFront 캐시 무효화
-      - aws cloudfront create-invalidation --distribution-id $CF_DISTRIBUTION_ID --paths "/*"
+      - echo "Deploying to S3..."
+      # frontend 폴더 내의 build 결과물을 S3 버킷으로 동기화합니다.
+      - cd frontend && aws s3 sync build/ s3://$S3_BUCKET_FRONTEND --delete
+      # CloudFront ID가 설정된 경우에만 캐시 무효화를 진행합니다.
+      - |
+        if [ "$CF_DISTRIBUTION_ID" != "none" ] && [ -n "$CF_DISTRIBUTION_ID" ]; then
+          echo "Invalidating CloudFront cache..."
+          aws cloudfront create-invalidation --distribution-id $CF_DISTRIBUTION_ID --paths "/*"
+        else
+          echo "Skipping CloudFront invalidation (ID not set)."
+        fi
+
+artifacts:
+  files:
+    - '**/*'
+  base-directory: 'frontend/build'
