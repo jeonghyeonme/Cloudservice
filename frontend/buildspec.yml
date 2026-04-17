@@ -5,42 +5,21 @@ phases:
     runtime-versions:
       nodejs: 18
     commands:
-      - echo "--- Debug: Current Working Directory ---"
-      - pwd
-      - echo "--- Debug: List All Files Recursively ---"
-      - ls -R | head -n 20 # 너무 많을 수 있으니 상단 20줄만 출력
-      - |
-        if [ -d "frontend" ]; then
-          echo "Found 'frontend' directory. Moving into it..."
-          cd frontend
-        else
-          echo "'frontend' directory not found. Staying in current directory."
-        fi
+      - echo "Current directory contents:"
+      - ls -F
       - echo "Installing dependencies..."
-      - npm install
+      - if [ -d "frontend" ]; then cd frontend && npm install; else npm install; fi
 
   build:
     commands:
       - echo "Building project..."
-      - |
-        if [ -d "frontend" ] && [ "$(pwd)" != "*/frontend" ]; then
-          cd frontend
-        fi
-      - npm run build
+      - if [ -d "frontend" ]; then cd frontend && npm run build; else npm run build; fi
 
   post_build:
     commands:
       - echo "Deploying to S3..."
-      - |
-        if [ -d "frontend" ] && [ "$(pwd)" != "*/frontend" ]; then
-          cd frontend
-        fi
-      - aws s3 sync build/ s3://$S3_BUCKET_FRONTEND --delete
-      - |
-        if [ "$CF_DISTRIBUTION_ID" != "none" ] && [ -n "$CF_DISTRIBUTION_ID" ]; then
-          echo "Invalidating CloudFront cache..."
-          aws cloudfront create-invalidation --distribution-id $CF_DISTRIBUTION_ID --paths "/*"
-        fi
+      - if [ -d "frontend" ]; then cd frontend && aws s3 sync build/ s3://$S3_BUCKET_FRONTEND --delete; else aws s3 sync build/ s3://$S3_BUCKET_FRONTEND --delete; fi
+      - echo "Build completed on `date`"
 
 artifacts:
   files:
