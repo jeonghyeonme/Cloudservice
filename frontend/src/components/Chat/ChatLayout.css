@@ -25,9 +25,10 @@
 
 /* 좌측 채널 목록 */
 .logo {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   padding: 20px;
   font-size: 14px;
   color: #00ff66;
@@ -35,6 +36,42 @@
   margin: 0;
   border-bottom: 1px solid #27272a;
 }
+
+.logo-text {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.logo-add-button {
+  width: 28px;
+  height: 28px;
+  border: 1px solid #14532d;
+  border-radius: 999px;
+  background-color: #111315;
+  color: #00ff66;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  font-size: 16px;
+  line-height: 1;
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.logo-add-button:hover {
+  background-color: #00ff66;
+  color: #000000;
+  border-color: #00ff66;
+}
+
+.logo-add-button:focus-visible {
+  outline: 2px solid #00ff66;
+  outline-offset: 2px;
+}
+
 .channel-list { padding: 8px 10px; }
 .channel {
   padding: 8px 10px;
