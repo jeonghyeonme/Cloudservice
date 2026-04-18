@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+﻿import React, { useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { uploadFile, saveLink } from '../../lib/resources';
 
@@ -23,7 +23,7 @@ const getFileIcon = (fileName) => {
  */
 const ResourceHub = ({ serverResources }) => {
   const [activeHubTab, setActiveHubTab] = useState('Files');
-  const { roomId } = useParams();
+  const { serverId } = useParams();
   const fileInputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
 
@@ -43,7 +43,7 @@ const ResourceHub = ({ serverResources }) => {
 
     setUploading(true);
     try {
-      await uploadFile(roomId, file);
+      await uploadFile(serverId, file);
       alert(`${file.name} 업로드 완료!`);
       window.location.reload(); // 임시, 나중에 state 갱신으로 교체
     } catch (error) {
@@ -61,7 +61,7 @@ const ResourceHub = ({ serverResources }) => {
     if (!url) return;
 
     try {
-      await saveLink(roomId, url);
+      await saveLink(serverId, url);
       alert('링크가 저장되었습니다!');
       window.location.reload();
     } catch (error) {
