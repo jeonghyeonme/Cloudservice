@@ -6,17 +6,25 @@ const CreateRoomModal = ({ onClose }) => {
   const [groupName, setGroupName] = useState('');
   const [description, setDescription] = useState('');
   const [privacy, setPrivacy] = useState('Public');
+  const [roomPassword, setRoomPassword] = useState('');
   const [maxParticipants, setMaxParticipants] = useState(12);
   const [coverImage, setCoverImage] = useState(null);
 
   const handleSubmit = async (e) => {
   e.preventDefault();
 
+  if(privacy === 'Private' && !roomPassword) {
+    alert("비공개 방은 비밀번호 설정이 필수입니다.");
+    return;
+  }
+
   // 서버가 기대하는 이름표(title)로 데이터를 포장합니다.
   const newRoomData = {
     roomName: groupName,        // title -> roomName
     description: description,
     maxCapacity: Number(maxParticipants), // 정원 정보도 백엔드 필드명에 맞춤
+    isPrivate: privacy === 'Private', // 비공개 여부 추가
+    roomPassword: privacy ==='Private' ? roomPassword : '', // 비밀번호 추가
     status: 'ACTIVE',
   };
 
@@ -74,7 +82,10 @@ const CreateRoomModal = ({ onClose }) => {
                 <button 
                   type="button" 
                   className={privacy === 'Public' ? 'active' : ''}
-                  onClick={() => setPrivacy('Public')}
+                  onClick={() => {
+                    setPrivacy('Public');
+                    setRoomPassword(''); // 공개 전환 시 비밀번호 초기화
+                  }}
                 >
                   공개
                 </button>
@@ -100,6 +111,21 @@ const CreateRoomModal = ({ onClose }) => {
               </select>
             </div>
           </div>
+
+          {/* 5. 비공개 선택 시에만 나타나는 비밀번호 입력란 */}
+          {privacy === 'Private' && (
+            <div className="form-group animate-fade-in">
+              <label>방 비밀번호</label>
+              <input 
+                type="password" 
+                placeholder="입장 시 사용할 비밀번호를 입력하세요"
+                value={roomPassword}
+                onChange={(e) => setRoomPassword(e.target.value)}
+                required={privacy === 'Private'}
+                autoComplete="new-password"
+              />
+            </div>
+          )}
 
           <div className="form-group">
             <label>커버 이미지 업로드</label>
