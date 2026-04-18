@@ -4,14 +4,14 @@ import "./App.css";
 
 // Context
 import { AuthProvider, useAuth } from "../contexts/AuthContext";
-import { RoomProvider, useRooms } from "../contexts/RoomContext";
+import { ServerProvider, useServers } from "../contexts/ServerContext";
 
 // Components
 import Onboarding from "../components/Onboarding/Onboarding";
 import Login from "../components/Auth/Login";
 import Register from "../components/Auth/Register";
 import ChatLayout from "../components/Chat/ChatLayout";
-import ExploreRooms from "../components/Rooms/ExploreRooms";
+import ExploreServers from "../components/Servers/ExploreServers";
 import NotFound from "../components/NotFound/NotFound";
 import SharedLayout from "../components/layout/SharedLayout";
 import { PATHS } from "../constants/path";
@@ -30,7 +30,7 @@ const ProtectedRoute = ({ children }) => {
 function AppRoutes() {
   const navigate = useNavigate();
   const { isLoggedIn, refreshToken, logout } = useAuth();
-  const { clearJoinedRooms } = useRooms();
+  const { clearJoinedServers } = useServers();
 
   const handleLogout = async () => {
     try {
@@ -41,7 +41,7 @@ function AppRoutes() {
     } catch (error) {
       console.error("Logout failed:", error);
     } finally {
-      clearJoinedRooms();
+      clearJoinedServers();
       logout();
       navigate(PATHS.onboarding, { replace: true });
     }
@@ -51,18 +51,54 @@ function AppRoutes() {
     <SharedLayout isLoggedIn={isLoggedIn} onLogout={handleLogout}>
       <Routes>
         {/* 기존 라우팅 로직 유지 (이미 로그인한 사용자가 로그인/회원가입 페이지 접근 방지) */}
-        <Route path={PATHS.home} element={isLoggedIn ? <Navigate to={PATHS.explore} replace /> : <Navigate to={PATHS.onboarding} replace />} />
-        <Route path={PATHS.onboarding} element={isLoggedIn ? <Navigate to={PATHS.explore} replace /> : <Onboarding />} />
+        <Route
+          path={PATHS.home}
+          element={
+            isLoggedIn ? (
+              <Navigate to={PATHS.explore} replace />
+            ) : (
+              <Navigate to={PATHS.onboarding} replace />
+            )
+          }
+        />
+        <Route
+          path={PATHS.onboarding}
+          element={
+            isLoggedIn ? (
+              <Navigate to={PATHS.explore} replace />
+            ) : (
+              <Onboarding />
+            )
+          }
+        />
         <Route
           path={PATHS.login}
-          element={isLoggedIn ? <Navigate to={PATHS.explore} replace /> : <Login />}
+          element={
+            isLoggedIn ? <Navigate to={PATHS.explore} replace /> : <Login />
+          }
         />
         <Route
           path={PATHS.register}
-          element={isLoggedIn ? <Navigate to={PATHS.explore} replace /> : <Register />}
+          element={
+            isLoggedIn ? <Navigate to={PATHS.explore} replace /> : <Register />
+          }
         />
-        <Route path={PATHS.room} element={<ProtectedRoute><ChatLayout /></ProtectedRoute>} />
-        <Route path={PATHS.explore} element={<ProtectedRoute><ExploreRooms /></ProtectedRoute>} />
+        <Route
+          path={PATHS.server}
+          element={
+            <ProtectedRoute>
+              <ChatLayout />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path={PATHS.explore}
+          element={
+            <ProtectedRoute>
+              <ExploreServers />
+            </ProtectedRoute>
+          }
+        />
         {/* 404 Not Found 페이지 처리 */}
         <Route path="*" element={<NotFound />} />
       </Routes>
@@ -73,9 +109,9 @@ function AppRoutes() {
 function App() {
   return (
     <AuthProvider>
-      <RoomProvider>
+      <ServerProvider>
         <AppRoutes />
-      </RoomProvider>
+      </ServerProvider>
     </AuthProvider>
   );
 }

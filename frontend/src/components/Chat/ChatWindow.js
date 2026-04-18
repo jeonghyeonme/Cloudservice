@@ -3,7 +3,9 @@ import { useAuth } from "../../contexts/AuthContext";
 
 const ChatWindow = ({ activeChannel, channels }) => {
   const { user } = useAuth();
-  const currentChannel = channels?.find(c => c.id === activeChannel);
+  const currentChannel = channels?.find(
+    (channel) => (channel.chId || channel.id) === activeChannel
+  );
   const messages = currentChannel?.messages || [];
 
   // 현재 사용자 이름 (Auth 정보에서 가져옴)

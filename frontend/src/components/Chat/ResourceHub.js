@@ -14,16 +14,24 @@ const getFileIcon = (fileName) => {
   return '📁';
 };
 
-const ResourceHub = ({ roomResources }) => {
+/**
+ * @title 리소스 허브 — 파일 업로드/링크 공유 사이드바
+ * @param {object} roomResources - 서버 상세 데이터 (files, links 배열 포함)
+ * @modified S3 Pre-signed URL 기반 파일 업로드 + OG 메타데이터 링크 저장 연동
+ *           백엔드 필드명 맞춤: fileName, fileType, fileUrl, linkId, title, url, image, siteName
+ *           serverId 기반으로 업로드/링크 저장 API 호출
+ */
+const ResourceHub = ({ serverResources }) => {
   const [activeHubTab, setActiveHubTab] = useState('Files');
   const { roomId } = useParams();
   const fileInputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
 
   // 데이터가 없을 경우를 대비한 기본값 설정
-  const files = roomResources?.files || [];
-  const links = roomResources?.links || [];
+  const files = serverResources?.files || [];
+  const links = serverResources?.links || [];
 
+  // S3 업로드 플로우: Pre-signed URL 발급 → S3 PUT (인증 헤더 없이) → 메타데이터 DB 저장
   const handleFileSelect = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -47,6 +55,7 @@ const ResourceHub = ({ roomResources }) => {
     }
   };
 
+  // 링크 저장 플로우: URL 입력 → 백엔드에서 OG 메타데이터 자동 스크랩 → Servers 테이블 links 배열에 추가
   const handleLinkAdd = async () => {
     const url = prompt('공유할 URL을 입력하세요:');
     if (!url) return;
