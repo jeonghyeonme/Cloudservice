@@ -2,7 +2,6 @@ import React from "react";
 import { createServer } from "../../lib/servers";
 import FormModal from "../common/FormModal";
 
-// 서버 생성 폼 필드 정의
 const serverFields = [
   {
     name: "serverName",
@@ -50,10 +49,11 @@ const serverFields = [
 const CreateServerModal = ({ onClose }) => {
   const handleSubmit = async (values) => {
     const newServerData = {
-      roomName: values.serverName,
+      serverName: values.serverName,
       description: values.description,
       maxCapacity: Number(values.maxParticipants),
       status: "ACTIVE",
+      isPrivate: values.privacy === "Private",
     };
 
     try {
@@ -62,7 +62,7 @@ const CreateServerModal = ({ onClose }) => {
       onClose();
       window.location.reload();
     } catch (error) {
-      console.error("🚨 서버 생성 실패:", error);
+      console.error("서버 생성 실패:", error);
       alert(error.message || "서버 통신 중 오류가 발생했습니다.");
     }
   };
