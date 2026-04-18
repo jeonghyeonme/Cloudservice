@@ -98,7 +98,7 @@ const ChatLayout = () => {
 
       <main className="chat-content-wrapper" style={{ display: "flex", flex: 1, minWidth: 0 }}>
         <ChatWindow activeChannel={activeChannel} channels={currentServer.channels} />
-        <ResourceHub serverResources={currentServer} />
+        <ResourceHub serverResources={currentServer} setCurrentServer={setCurrentServer} />
       </main>
 
       {isServerModalOpen && (

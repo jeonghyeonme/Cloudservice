@@ -4,48 +4,45 @@ import { uploadFile, saveLink } from '../../lib/resources';
 
 const getFileIcon = (fileName) => {
   if (!fileName) return '📁';
-  
   const extension = fileName.split('.').pop().toLowerCase();
-
   if (['docx', 'hwp', 'doc'].includes(extension)) return '📝';
   if (extension === 'pdf') return '📄';
   if (['csv', 'xlsx', 'xls'].includes(extension)) return '📊';
-  
   return '📁';
 };
 
 /**
  * @title 리소스 허브 — 파일 업로드/링크 공유 사이드바
- * @param {object} roomResources - 서버 상세 데이터 (files, links 배열 포함)
- * @modified S3 Pre-signed URL 기반 파일 업로드 + OG 메타데이터 링크 저장 연동
- *           백엔드 필드명 맞춤: fileName, fileType, fileUrl, linkId, title, url, image, siteName
- *           serverId 기반으로 업로드/링크 저장 API 호출
+ * @param {object} serverResources - 서버 상세 데이터 (files, links 배열 포함)
+ * @param {function} setCurrentServer - 서버 state 업데이트 함수 (업로드 후 즉시 반영용)
  */
-const ResourceHub = ({ serverResources }) => {
+const ResourceHub = ({ serverResources, setCurrentServer }) => {
   const [activeHubTab, setActiveHubTab] = useState('Files');
   const { serverId } = useParams();
   const fileInputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
 
-  // 데이터가 없을 경우를 대비한 기본값 설정
   const files = serverResources?.files || [];
   const links = serverResources?.links || [];
 
-  // S3 업로드 플로우: Pre-signed URL 발급 → S3 PUT (인증 헤더 없이) → 메타데이터 DB 저장
+  // S3 업로드 플로우: Pre-signed URL 발급 → S3 PUT → 메타데이터 DB 저장 → state 즉시 반영
   const handleFileSelect = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     if (file.size > 10 * 1024 * 1024) {
       alert('10MB 이하의 파일만 업로드 가능합니다.');
       return;
     }
-
     setUploading(true);
     try {
-      await uploadFile(serverId, file);
-      alert(`${file.name} 업로드 완료!`);
-      window.location.reload(); // 임시, 나중에 state 갱신으로 교체
+      const savedFile = await uploadFile(serverId, file);
+      // state 갱신으로 즉시 목록에 추가 (페이지 새로고침 없음)
+      if (setCurrentServer && savedFile) {
+        setCurrentServer(prev => ({
+          ...prev,
+          files: [...(prev?.files || []), savedFile],
+        }));
+      }
     } catch (error) {
       console.error('업로드 실패:', error);
       alert(error.message || '업로드 실패');
@@ -55,47 +52,85 @@ const ResourceHub = ({ serverResources }) => {
     }
   };
 
-  // 링크 저장 플로우: URL 입력 → 백엔드에서 OG 메타데이터 자동 스크랩 → Servers 테이블 links 배열에 추가
+  // 링크 저장 플로우: URL 입력 → 백엔드에서 OG 메타데이터 스크랩 → state 즉시 반영
   const handleLinkAdd = async () => {
     const url = prompt('공유할 URL을 입력하세요:');
     if (!url) return;
-
     try {
-      await saveLink(serverId, url);
-      alert('링크가 저장되었습니다!');
-      window.location.reload();
+      const result = await saveLink(serverId, url);
+      // state 갱신으로 즉시 목록에 추가
+      if (setCurrentServer && result?.link) {
+        setCurrentServer(prev => ({
+          ...prev,
+          links: [...(prev?.links || []), result.link],
+        }));
+      }
     } catch (error) {
       console.error('링크 저장 실패:', error);
       alert(error.message || '링크 저장 실패');
     }
   };
 
+  const renderFileItem = (file, i) => {
+    const displayName = file.fileName || file.name;
+    const fileExt = displayName ? displayName.split('.').pop().toLowerCase() : '';
+    const fileTypeClass = ['pdf', 'docx', 'csv'].includes(fileExt) ? fileExt : 'default';
+    const displayMeta = file.fileType || file.meta || fileExt.toUpperCase();
+
+    return (
+      <a key={file.fileId || i} href={file.fileUrl || '#'} target="_blank" rel="noopener noreferrer" className="hub-file-item" style={{ textDecoration: 'none', color: 'inherit' }}>
+        <div className={'hub-file-icon ' + fileTypeClass}>{getFileIcon(displayName)}</div>
+        <div className="hub-file-info">
+          <span className="hub-file-name">{displayName}</span>
+          <span className="hub-file-meta">{displayMeta}</span>
+        </div>
+      </a>
+    );
+  };
+
+  const renderLinkItem = (link, i) => {
+    return (
+      <a key={link.linkId || i} href={link.url} target="_blank" rel="noopener noreferrer" className="hub-file-item" style={{ textDecoration: 'none', color: 'inherit' }}>
+        <div className="hub-file-icon" style={{ backgroundColor: '#1a2a3a' }}>
+          {link.image
+            ? <img src={link.image} alt="" style={{ width: '100%', height: '100%', borderRadius: '6px', objectFit: 'cover' }} />
+            : '🔗'
+          }
+        </div>
+        <div className="hub-file-info">
+          <span className="hub-file-name">{link.title}</span>
+          <span className="hub-file-meta">{link.siteName || link.url}</span>
+        </div>
+      </a>
+    );
+  };
+
   return (
     <aside className="sidebar-right">
       <div className="resource-hub">
-        {/* 탭 헤더 */}
         <div className="hub-header">
           <h3 className="hub-title">리소스 허브</h3>
           <div className="hub-tabs">
-            {[{ en: 'Files', ko: '파일' }, { en: 'Links', ko: '링크' }].map(tab => (
-              <button
-                key={tab.en}
-                className={"hub-tab" + (activeHubTab === tab.en ? " active" : "")}
-                onClick={() => setActiveHubTab(tab.en)}
-              >
-                {tab.ko}
-              </button>
-            ))}
+            {[{ en: 'Files', ko: '파일' }, { en: 'Links', ko: '링크' }].map(function(tab) {
+              return (
+                <button
+                  key={tab.en}
+                  className={'hub-tab' + (activeHubTab === tab.en ? ' active' : '')}
+                  onClick={function() { setActiveHubTab(tab.en); }}
+                >
+                  {tab.ko}
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        {/* ── Files 탭 ── */}
         {activeHubTab === 'Files' && (
           <div className="hub-section">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
               <p className="hub-section-label">최근 파일</p>
               <button
-                onClick={() => fileInputRef.current?.click()}
+                onClick={function() { fileInputRef.current && fileInputRef.current.click(); }}
                 disabled={uploading}
                 style={{
                   background: '#00ff66',
@@ -119,34 +154,14 @@ const ResourceHub = ({ serverResources }) => {
               />
             </div>
             <div className="hub-file-list">
-              {files.length > 0 ? files.map((file, i) => {
-                const displayName = file.fileName || file.name;
-                const fileExt = displayName?.split('.').pop()?.toLowerCase();
-                const fileTypeClass = ['pdf', 'docx', 'csv'].includes(fileExt) ? fileExt : 'default';
-                const displayMeta = file.fileType || file.meta || fileExt?.toUpperCase();
-
-                return (
-                  <a
-                    key={file.fileId || i}
-                    href={file.fileUrl || '#'}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="hub-file-item"
-                    style={{ textDecoration: 'none', color: 'inherit' }}
-                  >
-                    <div className={`hub-file-icon ${fileTypeClass}`}>{getFileIcon(displayName)}</div>
-                    <div className="hub-file-info">
-                      <span className="hub-file-name">{displayName}</span>
-                      <span className="hub-file-meta">{displayMeta}</span>
-                    </div>
-                  </a>
-                );
-              }) : <div className="empty-msg">공유된 파일이 없습니다.</div>}
+              {files.length > 0
+                ? files.map(renderFileItem)
+                : <div className="empty-msg">공유된 파일이 없습니다.</div>
+              }
             </div>
           </div>
         )}
 
-        {/* ── Links 탭 ── */}
         {activeHubTab === 'Links' && (
           <div className="hub-section">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
@@ -168,30 +183,10 @@ const ResourceHub = ({ serverResources }) => {
               </button>
             </div>
             <div className="hub-file-list">
-              {links.length > 0 ? links.map((link, i) => (
-                <a
-                  key={link.linkId || i}
-                  href={link.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hub-file-item"
-                  style={{ textDecoration: 'none', color: 'inherit' }}
-                >
-                  <div className="hub-file-icon" style={{ backgroundColor: '#1a2a3a' }}>
-                    {link.image ? (
-                      <img
-                        src={link.image}
-                        alt=""
-                        style={{ width: '100%', height: '100%', borderRadius: '6px', objectFit: 'cover' }}
-                      />
-                    ) : '🔗'}
-                  </div>
-                  <div className="hub-file-info">
-                    <span className="hub-file-name">{link.title}</span>
-                    <span className="hub-file-meta">{link.siteName || link.url}</span>
-                  </div>
-                </a>
-              )) : <div className="empty-msg">공유된 링크가 없습니다.</div>}
+              {links.length > 0
+                ? links.map(renderLinkItem)
+                : <div className="empty-msg">공유된 링크가 없습니다.</div>
+              }
             </div>
           </div>
         )}
