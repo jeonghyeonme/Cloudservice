@@ -38,6 +38,9 @@ module.exports.handler = async (event) => {
         maxCapacity: body.maxCapacity || 10,
         currentCount: hostId ? 1 : 0,
         isPrivate: body.isPrivate || false,
+        channels: [
+          { chId: uuidv4(), name: "일반", label: "일반", topic: "" },
+        ],
         members: hostId
           ? [{ userId: hostId, nickname: hostNickname, role: "HOST", joinedAt: createdAt }]
           : [],
