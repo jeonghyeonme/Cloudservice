@@ -6,14 +6,14 @@ const CreateRoomModal = ({ onClose }) => {
   const [groupName, setGroupName] = useState('');
   const [description, setDescription] = useState('');
   const [privacy, setPrivacy] = useState('Public');
-  const [roomPassword, setRoomPassword] = useState('');
+  const [serverPassword, setServerPassword] = useState('');
   const [maxParticipants, setMaxParticipants] = useState(12);
   const [coverImage, setCoverImage] = useState(null);
 
   const handleSubmit = async (e) => {
   e.preventDefault();
 
-  if(privacy === 'Private' && !roomPassword) {
+  if(privacy === 'Private' && !serverPassword) {
     alert("비공개 방은 비밀번호 설정이 필수입니다.");
     return;
   }
@@ -24,7 +24,7 @@ const CreateRoomModal = ({ onClose }) => {
     description: description,
     maxCapacity: Number(maxParticipants), // 정원 정보도 백엔드 필드명에 맞춤
     isPrivate: privacy === 'Private', // 비공개 여부 추가
-    roomPassword: privacy ==='Private' ? roomPassword : '', // 비밀번호 추가
+    serverPassword: privacy ==='Private' ? serverPassword : '', // 비밀번호 추가
     status: 'ACTIVE',
   };
 
@@ -84,7 +84,7 @@ const CreateRoomModal = ({ onClose }) => {
                   className={privacy === 'Public' ? 'active' : ''}
                   onClick={() => {
                     setPrivacy('Public');
-                    setRoomPassword(''); // 공개 전환 시 비밀번호 초기화
+                    setServerPassword(''); // 공개 전환 시 비밀번호 초기화
                   }}
                 >
                   공개
@@ -119,8 +119,8 @@ const CreateRoomModal = ({ onClose }) => {
               <input 
                 type="password" 
                 placeholder="입장 시 사용할 비밀번호를 입력하세요"
-                value={roomPassword}
-                onChange={(e) => setRoomPassword(e.target.value)}
+                value={serverPassword}
+                onChange={(e) => setServerPassword(e.target.value)}
                 required={privacy === 'Private'}
                 autoComplete="new-password"
               />
