@@ -4,9 +4,9 @@ export const PATHS = {
   login: "/login",
   register: "/register",
   explore: "/explore",
-  room: "/rooms/:roomId",
+  server: "/rooms/:serverId",
 };
 
-export function getRoomPath(roomId) {
-  return `/rooms/${roomId}`;
+export function getServerPath(serverId) {
+  return `/rooms/${serverId}`;
 }

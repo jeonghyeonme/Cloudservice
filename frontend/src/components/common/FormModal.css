@@ -1,0 +1,307 @@
+.form-modal__overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background:
+    radial-gradient(circle at center, rgba(0, 255, 102, 0.08), transparent 42%),
+    rgba(4, 5, 7, 0.82);
+  backdrop-filter: blur(10px);
+}
+
+.form-modal {
+  position: relative;
+  width: min(100%, 760px);
+  border-radius: 24px;
+  border: 1px solid rgba(0, 255, 102, 0.35);
+  background:
+    linear-gradient(180deg, rgba(23, 23, 24, 0.98) 0%, rgba(18, 18, 20, 0.98) 100%);
+  box-shadow:
+    0 0 0 1px rgba(0, 255, 102, 0.08),
+    0 24px 90px rgba(0, 0, 0, 0.55),
+    0 0 40px rgba(0, 255, 102, 0.12);
+  animation: form-modal-fade-in 0.2s ease-out;
+}
+
+@keyframes form-modal-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.form-modal::before {
+  content: "";
+  position: absolute;
+  inset: 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(0, 255, 102, 0.16);
+  pointer-events: none;
+}
+
+.form-modal__close {
+  position: absolute;
+  top: 22px;
+  right: 22px;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: #b6b6bc;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.form-modal__close:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+}
+
+.form-modal__header {
+  padding: 40px 44px 20px;
+  text-align: center;
+}
+
+.form-modal__header h2 {
+  margin: 0;
+  font-size: 32px;
+  line-height: 1.1;
+  color: #ffffff;
+}
+
+.form-modal__header p {
+  margin: 10px 0 0;
+  color: #9ca3af;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.form-modal__form {
+  padding: 0 44px 34px;
+}
+
+.form-modal__grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px 20px;
+}
+
+.form-modal__group {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.form-modal__group--half {
+  width: calc(50% - 10px);
+}
+
+.form-modal__group label {
+  color: #00ff66;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.form-modal__group input,
+.form-modal__group textarea,
+.form-modal__group select {
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: #2a2a2b;
+  color: #f4f4f5;
+  padding: 14px 16px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-modal__group input::placeholder,
+.form-modal__group textarea::placeholder {
+  color: #7b7b83;
+}
+
+.form-modal__group input:focus,
+.form-modal__group textarea:focus,
+.form-modal__group select:focus {
+  border-color: rgba(0, 255, 102, 0.7);
+  box-shadow: 0 0 0 3px rgba(0, 255, 102, 0.08);
+}
+
+.form-modal__group textarea {
+  min-height: 112px;
+  resize: vertical;
+}
+
+.form-modal__group select {
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, #6d6d74 50%), linear-gradient(135deg, #6d6d74 50%, transparent 50%);
+  background-position: calc(100% - 18px) calc(50% - 2px), calc(100% - 12px) calc(50% - 2px);
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+}
+
+.form-modal__toggle-group {
+  display: inline-flex;
+  width: fit-content;
+  padding: 4px;
+  gap: 4px;
+  border-radius: 999px;
+  background: #262628;
+}
+
+.form-modal__toggle-group button {
+  border: none;
+  border-radius: 999px;
+  padding: 10px 18px;
+  background: transparent;
+  color: #a1a1aa;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.form-modal__toggle-group button.active {
+  background: #4cff83;
+  color: #04110a;
+}
+
+.form-modal__upload-box {
+  min-height: 124px;
+  border-radius: 14px;
+  border: 1px dashed rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.02);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: #8a8a92;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+  text-align: center;
+  padding: 22px;
+}
+
+.form-modal__upload-box:hover {
+  border-color: rgba(0, 255, 102, 0.35);
+  background: rgba(0, 255, 102, 0.04);
+}
+
+.form-modal__upload-box input[type="file"] {
+  display: none;
+}
+
+.form-modal__upload-box p {
+  margin: 0;
+  font-size: 13px;
+}
+
+.form-modal__upload-icon {
+  color: #d4d4d8;
+  display: inline-flex;
+}
+
+.form-modal__file-name {
+  color: #52ff8c;
+  font-size: 13px;
+  font-weight: 600;
+  word-break: break-word;
+}
+
+.form-modal__helper {
+  color: #71717a;
+  font-size: 12px;
+}
+
+.form-modal__footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  margin-top: 20px;
+  padding-top: 22px;
+}
+
+.form-modal__error {
+  margin: 0;
+  color: #ff7b7b;
+  font-size: 13px;
+  line-height: 1.5;
+  flex: 1;
+}
+
+.form-modal__button {
+  min-width: 110px;
+  border: none;
+  border-radius: 999px;
+  padding: 13px 22px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.2s ease, background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.form-modal__button:hover {
+  transform: translateY(-1px);
+}
+
+.form-modal__button--ghost {
+  background: transparent;
+  color: #a1a1aa;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.form-modal__button--ghost:hover {
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.form-modal__button--primary {
+  background: linear-gradient(135deg, #22ff73 0%, #69ff9a 100%);
+  color: #04110a;
+  box-shadow: 0 14px 30px rgba(0, 255, 102, 0.18);
+}
+
+.form-modal__button--primary:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+  transform: none;
+}
+
+@media (max-width: 720px) {
+  .form-modal__header,
+  .form-modal__form {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+
+  .form-modal__group--half {
+    width: 100%;
+  }
+
+  .form-modal__footer {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .form-modal__button {
+    width: 100%;
+  }
+}

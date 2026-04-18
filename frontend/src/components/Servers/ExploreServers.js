@@ -1,54 +1,54 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { getRoomPath } from "../../constants/path";
-import { getRooms, joinRoom } from "../../lib/rooms";
-import "./ExploreRooms.css";
+import { getServerPath } from "../../constants/path";
+import { getServers, joinServer } from "../../lib/servers";
+import "./ExploreServers.css";
 import ServerSidebar from "../layout/ServerSidebar";
-import CreateRoomModal from "./CreateRoomModal";
+import CreateServerModal from "./CreateServerModal";
 import { useAuth } from "../../contexts/AuthContext";
 import { PATHS } from "../../constants/path";
-import { useRooms } from "../../contexts/RoomContext";
+import { useServers } from "../../contexts/ServerContext";
 
-const RoomCard = ({ room, onJoin }) => {
-  const name = room.roomName || room.title || "제목 없음";
-  const description = room.description;
-  const currentMembers = Number(room.currentCount) || 0;
-  const maxMembers = room.maxCapacity || 12;
-  const coverImage = room.imageUrl || room.coverImage;
+const ServerCard = ({ server, onJoin }) => {
+  const name = server.roomName || server.title || "제목 없음";
+  const description = server.description;
+  const currentMembers = Number(server.currentCount) || 0;
+  const maxMembers = server.maxCapacity || 12;
+  const coverImage = server.imageUrl || server.coverImage;
   const emoji = "📚";
 
   const isFull =
-    (maxMembers && currentMembers >= maxMembers) || room.status === "FULL";
-  const isLocked = room.isPrivate && isFull;
-  const displayStatus = isFull ? "FULL" : room.status;
+    (maxMembers && currentMembers >= maxMembers) || server.status === "FULL";
+  const isLocked = server.isPrivate && isFull;
+  const displayStatus = isFull ? "FULL" : server.status;
 
   return (
-    <div className={`room-card ${isFull ? "room-full" : ""}`}>
-      <div className="room-cover">
+    <div className={`servers-card ${isFull ? "servers-full" : ""}`}>
+      <div className="servers-cover">
         {/* 이미지가 있으면 <img> 태그를, 없으면 기존처럼 이모지를 보여줌 */}
         {coverImage ? (
-          <img src={coverImage} alt={name} className="room-cover-img" />
+          <img src={coverImage} alt={name} className="servers-cover-img" />
         ) : (
-          <div className="room-cover-emoji">{emoji}</div>
+          <div className="servers-cover-emoji">{emoji}</div>
         )}
 
-        <span className={`room-badge badge-${displayStatus.toLowerCase()}`}>
+        <span className={`servers-badge badge-${displayStatus.toLowerCase()}`}>
           {displayStatus}
         </span>
       </div>
 
-      <div className="room-body">
-        <div className="room-title-row">
-          <h3 className="room-name">{name}</h3>
+      <div className="servers-body">
+        <div className="servers-title-row">
+          <h3 className="servers-name">{name}</h3>
           {maxMembers && (
-            <span className="room-count">
+            <span className="servers-count">
               {currentMembers}/{maxMembers}
             </span>
           )}
         </div>
-        <p className="room-desc">{description}</p>
+        <p className="servers-desc">{description}</p>
 
-        <div className="room-footer">
+        <div className="servers-footer">
           <div className="member-avatars">
             {[...Array(Math.min(3, currentMembers))].map((_, i) => (
               <div key={i} className="mini-avatar" style={{ zIndex: 3 - i }} />
@@ -59,15 +59,18 @@ const RoomCard = ({ room, onJoin }) => {
           </div>
 
           {isLocked ? (
-            <button className="room-btn btn-locked" disabled>
+            <button className="servers-btn btn-locked" disabled>
               LOCKED
             </button>
           ) : isFull ? (
-            <button className="room-btn btn-locked" disabled>
+            <button className="servers-btn btn-locked" disabled>
               FULL
             </button>
           ) : (
-            <button className="room-btn btn-join" onClick={() => onJoin(room)}>
+            <button
+              className="servers-btn btn-join"
+              onClick={() => onJoin(server)}
+            >
               JOIN
             </button>
           )}
@@ -77,49 +80,50 @@ const RoomCard = ({ room, onJoin }) => {
   );
 };
 
-const ExploreRooms = () => {
+const ExploreServers = () => {
   const navigate = useNavigate();
   const { logout } = useAuth();
-  const { clearJoinedRooms, setActiveRoomId, upsertJoinedRoom } = useRooms();
-  const [rooms, setRooms] = useState([]);
+  const { clearJoinedServers, setActiveServerId, upsertJoinedServer } =
+    useServers();
+  const [servers, setServers] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [inviteCode, setInviteCode] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const handleLogout = () => {
     console.log("로그아웃 로직 실행");
-    clearJoinedRooms();
+    clearJoinedServers();
     logout();
     navigate(PATHS.onboarding);
   };
 
   useEffect(() => {
-    setActiveRoomId(null);
-    getRooms()
-      .then((data) => setRooms(data.items || []))
+    setActiveServerId(null);
+    getServers()
+      .then((data) => setServers(data.items || []))
       .catch((err) => {
         console.error("데이터 로드 실패!", err);
-        setRooms([]);
+        setServers([]);
       });
-  }, [setActiveRoomId]);
+  }, [setActiveServerId]);
 
-  const filteredRooms = rooms.filter((room) => {
-    const title = room.roomName || room.title || "";
-    const description = room.description || "";
+  const filteredServers = servers.filter((server) => {
+    const title = server.roomName || server.title || "";
+    const description = server.description || "";
     return (
       title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       description.toLowerCase().includes(searchQuery.toLowerCase())
     );
   });
 
-  // 방 입장 시 해당 ID의 주소로 이동
-  const handleJoinRoom = async (room) => {
+  // 서버 입장 시 해당 ID의 주소로 이동
+  const handleJoinServer = async (server) => {
     try {
-      await joinRoom(room.roomId);
-      upsertJoinedRoom(room);
-      navigate(getRoomPath(room.roomId));
+      await joinServer(server.roomId);
+      upsertJoinedServer(server);
+      navigate(getServerPath(server.roomId));
     } catch (error) {
-      console.error("방 참여 실패:", error);
-      alert(error.message || "방 입장 중 오류가 발생했습니다.");
+      console.error("서버 참여 실패:", error);
+      alert(error.message || "서버 입장 중 오류가 발생했습니다.");
     }
   };
 
@@ -141,12 +145,12 @@ const ExploreRooms = () => {
 
       <div className="explore-main">
         <div className="explore-topbar">
-          <span className="topbar-title">스터디룸 탐색</span>
+          <span className="topbar-title">서버 탐색</span>
         </div>
 
         <div className="explore-hero">
           <h1 className="hero-title">
-            새로운 <span className="accent">스터디룸</span>을 찾거나{" "}
+            새로운 <span className="accent">서버</span>를 찾거나{" "}
             <span className="accent">생성</span>해보세요!
           </h1>
         </div>
@@ -155,7 +159,7 @@ const ExploreRooms = () => {
           <span className="search-icon">🔍</span>
           <input
             type="text"
-            placeholder="스터디룸 검색..."
+            placeholder="서버 검색..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -174,25 +178,31 @@ const ExploreRooms = () => {
           </button>
         </div>
 
-        <div className="rooms-grid">
-          {filteredRooms.map((room) => (
-            <RoomCard key={room.roomId} room={room} onJoin={handleJoinRoom} />
+        <div className="servers-grid">
+          {filteredServers.map((server) => (
+            <ServerCard
+              key={server.roomId}
+              server={server}
+              onJoin={handleJoinServer}
+            />
           ))}
 
           <div
-            className="room-card create-card"
+            className="servers-card create-card"
             onClick={() => setIsModalOpen(true)}
           >
             <div className="create-plus">+</div>
-            <p className="create-label">방 만들기</p>
+            <p className="create-label">서버 만들기</p>
             <p className="create-sub">새로운 학습 세션 시작하기</p>
           </div>
         </div>
       </div>
 
-      {isModalOpen && <CreateRoomModal onClose={() => setIsModalOpen(false)} />}
+      {isModalOpen && (
+        <CreateServerModal onClose={() => setIsModalOpen(false)} />
+      )}
     </div>
   );
 };
 
-export default ExploreRooms;
+export default ExploreServers;
