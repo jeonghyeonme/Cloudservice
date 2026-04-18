@@ -11,20 +11,33 @@ const SidebarLeft = ({ roomName, channels, activeChannel, onChannelClick, member
 
   return (
     <aside className="sidebar-left">
-      <h2 className="logo">{roomName}</h2>
+      <h2 className="logo">
+        <span className="logo-text">{roomName}</span>
+        <button type="button" className="logo-add-button" aria-label="채널 추가">
+          +
+        </button>
+      </h2>
+
       <div className="channel-list">
         {channels && channels.length > 0 ? (
-          channels.map(ch => (
+          channels.map((ch) => (
             <div
               key={ch.chId || ch.id}
-              className={"channel" + (activeChannel === (ch.chId || ch.id) ? " active" : "")}
+              className={
+                "channel" +
+                (activeChannel === (ch.chId || ch.id) ? " active" : "")
+              }
               onClick={() => onChannelClick(ch.chId || ch.id)}
             >
-              <span className="hash">#</span> {ch.name || ch.label || "이름 없는 채널"}
+              <span className="hash">#</span>{" "}
+              {ch.name || ch.label || "이름 없는 채널"}
             </div>
           ))
         ) : (
-          <div className="no-channels-msg" style={{ padding: '0 20px', fontSize: '0.8rem', color: '#888' }}>
+          <div
+            className="no-channels-msg"
+            style={{ padding: "0 20px", fontSize: "0.8rem", color: "#888" }}
+          >
             채널을 불러오는 중...
           </div>
         )}

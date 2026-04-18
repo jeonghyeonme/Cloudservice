@@ -5,16 +5,23 @@ phases:
     runtime-versions:
       nodejs: 18
     commands:
-      - cd frontend && npm install
+      - echo "Current directory contents:"
+      - ls -F
+      - echo "Installing dependencies..."
+      - if [ -d "frontend" ]; then cd frontend && npm install; else npm install; fi
 
   build:
     commands:
-      - cd frontend
-      - npm run build
+      - echo "Building project..."
+      - if [ -d "frontend" ]; then cd frontend && npm run build; else npm run build; fi
 
   post_build:
     commands:
-      # S3에 빌드 결과물 업로드
-      - aws s3 sync build/ s3://$S3_BUCKET_FRONTEND --delete
-      # CloudFront 캐시 무효화
-      - aws cloudfront create-invalidation --distribution-id $CF_DISTRIBUTION_ID --paths "/*"
+      - echo "Deploying to S3..."
+      - if [ -d "frontend" ]; then cd frontend && aws s3 sync build/ s3://$S3_BUCKET_FRONTEND --delete; else aws s3 sync build/ s3://$S3_BUCKET_FRONTEND --delete; fi
+      - echo "Build completed on `date`"
+
+artifacts:
+  files:
+    - '**/*'
+  base-directory: 'frontend/build'
