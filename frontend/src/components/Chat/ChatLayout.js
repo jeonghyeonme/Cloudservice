@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { PATHS } from "../../constants/path";
 import { getServerDetail, getServerMessages, createChannel } from "../../lib/servers";
@@ -98,7 +98,7 @@ const ChatLayout = () => {
 
       <main className="chat-content-wrapper" style={{ display: "flex", flex: 1, minWidth: 0 }}>
         <ChatWindow activeChannel={activeChannel} channels={currentServer.channels} />
-        <ResourceHub roomResources={currentServer} />
+        <ResourceHub serverResources={currentServer} />
       </main>
 
       {isServerModalOpen && (
@@ -114,7 +114,7 @@ const ChatLayout = () => {
           const trimmedName = values.name.trim();
           if (!trimmedName) throw new Error("채널 이름을 입력해 주세요.");
 
-          const response = await createChannel(serverId, { name: trimmedName });
+          const response = await createChannel(serverId, { name: trimmedName, topic: values.topic?.trim() || "" });
           const newChannel = {
             ...response.channel,
             label: response.channel.name,
