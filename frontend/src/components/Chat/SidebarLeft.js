@@ -1,11 +1,31 @@
 import React from "react";
 
-const SidebarLeft = ({ roomName, channels, activeChannel, onChannelClick }) => {
+/**
+ * @title 채널 목록과 참여자 패널이 있는 서버 내부 사이드바
+ * @param {string} serverName - 현재 서버 이름
+ * @param {Array} channels - 채널 목록 (각 채널은 {id, name} 형태)
+ * @param {string} activeChannel - 현재 활성화된 채널 ID
+ * @param {function} onChannelClick - 채널 클릭 시 실행할 함수 (채널 ID 전달)
+ * @param {function} onAddChannelClick - + 버튼 클릭 시 실행할 함수
+ */
+
+const SidebarLeft = ({
+  serverName,
+  channels,
+  activeChannel,
+  onChannelClick,
+  onAddChannelClick,
+}) => {
   return (
     <aside className="sidebar-left">
       <h2 className="logo">
-        <span className="logo-text">{roomName}</span>
-        <button type="button" className="logo-add-button" aria-label="채널 추가">
+        <span className="logo-text">{serverName}</span>
+        <button
+          type="button"
+          className="logo-add-button"
+          aria-label="채널 추가"
+          onClick={onAddChannelClick}
+        >
           +
         </button>
       </h2>

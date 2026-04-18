@@ -12,12 +12,12 @@ const getFileIcon = (fileName) => {
   return '📁'; // 그 외 기타 파일들
 };
 
-const ResourceHub = ({ roomResources }) => {
+const ResourceHub = ({ serverResources }) => {
   const [activeHubTab, setActiveHubTab] = useState('Files');
 
   // 데이터가 없을 경우를 대비한 기본값 설정
-  const files = roomResources?.files || [];
-  const links = roomResources?.links || [];
+  const files = serverResources?.files || [];
+  const links = serverResources?.links || [];
 
   return (
     <aside className="sidebar-right">
