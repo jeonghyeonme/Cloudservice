@@ -1,24 +1,24 @@
 const { QueryCommand } = require("@aws-sdk/lib-dynamodb");
-const dynamoDb = require("../dynamodbClient"); // 공통 모듈 사용
+const dynamoDb = require("../dynamodbClient");
 
 exports.handler = async (event) => {
   try {
-    const roomId = event.pathParameters.roomId;
+    const serverId = event.pathParameters.serverId;
 
-    if (!roomId) {
+    if (!serverId) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ message: "roomId가 필요합니다." }),
+        body: JSON.stringify({ message: "serverId가 필요합니다." }),
       };
     }
 
     const params = {
-      TableName: process.env.MESSAGES_TABLE, // 환경 변수 적용
-      KeyConditionExpression: "roomId = :roomId",
+      TableName: process.env.MESSAGES_TABLE,
+      KeyConditionExpression: "roomId = :serverId",
       ExpressionAttributeValues: {
-        ":roomId": roomId,
+        ":serverId": serverId,
       },
-      ScanIndexForward: true, 
+      ScanIndexForward: true,
     };
 
     const result = await dynamoDb.send(new QueryCommand(params));
@@ -28,7 +28,7 @@ exports.handler = async (event) => {
       headers: {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Credentials": true,
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
       },
       body: JSON.stringify(result.Items),
     };

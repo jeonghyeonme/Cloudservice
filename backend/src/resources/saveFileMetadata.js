@@ -3,11 +3,10 @@ const { v4: uuidv4 } = require("uuid");
 const dynamoDb = require("../dynamodbClient");
 const { verifyAccessToken } = require("../utils");
 
-const ROOMS_TABLE = process.env.ROOMS_TABLE;
+const SERVERS_TABLE = process.env.SERVERS_TABLE;
 
 exports.handler = async (event) => {
   try {
-    // 인증 확인
     const auth = verifyAccessToken(event.headers?.Authorization || event.headers?.authorization);
     if (auth.error) {
       return {
@@ -17,15 +16,15 @@ exports.handler = async (event) => {
       };
     }
 
-    const { roomId } = event.pathParameters || {};
+    const { serverId } = event.pathParameters || {};
     const body = JSON.parse(event.body || "{}");
     const { fileName, fileUrl, fileType, s3ObjectKey } = body;
 
-    if (!roomId || !fileName || !fileUrl) {
+    if (!serverId || !fileName || !fileUrl) {
       return {
         statusCode: 400,
         headers: { "Access-Control-Allow-Origin": "*" },
-        body: JSON.stringify({ message: "roomId, fileName, fileUrl은 필수입니다." }),
+        body: JSON.stringify({ message: "serverId, fileName, fileUrl은 필수입니다." }),
       };
     }
 
@@ -39,10 +38,9 @@ exports.handler = async (event) => {
       uploadedAt: new Date().toISOString(),
     };
 
-    // Rooms 테이블의 files 배열에 추가
     await dynamoDb.send(new UpdateCommand({
-      TableName: ROOMS_TABLE,
-      Key: { roomId },
+      TableName: SERVERS_TABLE,
+      Key: { serverId },
       UpdateExpression: "SET #files = list_append(if_not_exists(#files, :empty), :newFile)",
       ExpressionAttributeNames: { "#files": "files" },
       ExpressionAttributeValues: {
