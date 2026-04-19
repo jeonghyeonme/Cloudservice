@@ -1,4 +1,4 @@
-﻿import React, { useState, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { uploadFile, saveLink } from '../../lib/resources';
 
