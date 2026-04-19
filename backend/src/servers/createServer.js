@@ -40,7 +40,7 @@ module.exports.handler = async (event) => {
         isPrivate: body.isPrivate || false,
         password: body.password || null,
         channels: [
-          { chId: uuidv4(), name: "일반", label: "일반", topic: "" },
+          { chId: uuidv4(), name: "일반", label: "일반", topic: "", isDefault: true },
         ],
         members: hostId
           ? [{ userId: hostId, nickname: hostNickname, role: "HOST", joinedAt: createdAt }]

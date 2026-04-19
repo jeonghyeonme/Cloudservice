@@ -19,7 +19,20 @@ exports.handler = async (event) => {
     }
 
     const currentChannels = serverData.Item.channels;
-    const updatedChannels = currentChannels.filter((ch) => ch.chId !== chId);
+    const targetChannel = currentChannels.find((ch) => ch.chId === chId);
+
+    if (targetChannel?.isDefault) {
+      return {
+        statusCode: 403,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Credentials": true,
+        },
+        body: JSON.stringify({ message: "기본 채널은 삭제할 수 없습니다." }),
+      };
+    }
+
+const updatedChannels = currentChannels.filter((ch) => ch.chId !== chId);
 
     await dynamoDb.send(new UpdateCommand({
       TableName: process.env.SERVERS_TABLE,
