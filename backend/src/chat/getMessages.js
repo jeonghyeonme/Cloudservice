@@ -1,4 +1,4 @@
-const { QueryCommand } = require("@aws-sdk/lib-dynamodb");
+﻿const { QueryCommand } = require("@aws-sdk/lib-dynamodb");
 const dynamoDb = require("../dynamodbClient");
 
 exports.handler = async (event) => {
@@ -14,7 +14,7 @@ exports.handler = async (event) => {
 
     const params = {
       TableName: process.env.MESSAGES_TABLE,
-      KeyConditionExpression: "roomId = :serverId",
+      KeyConditionExpression: "serverId = :serverId",
       ExpressionAttributeValues: {
         ":serverId": serverId,
       },

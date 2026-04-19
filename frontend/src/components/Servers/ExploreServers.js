@@ -118,7 +118,13 @@ const ExploreServers = () => {
   // 서버 입장 시 해당 ID의 주소로 이동
   const handleJoinServer = async (server) => {
     try {
-      await joinServer(server.serverId);
+      let password = null;
+      // 비공개 서버면 비밀번호 입력 받기
+      if (server.isPrivate) {
+        password = prompt("비공개 서버입니다. 비밀번호를 입력하세요:");
+        if (password === null) return; // 취소 누르면 중단
+      }
+      await joinServer(server.serverId, password);
       upsertJoinedServer(server);
       navigate(getServerPath(server.serverId));
     } catch (error) {

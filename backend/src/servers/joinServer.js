@@ -68,21 +68,33 @@ exports.handler = async (event) => {
       };
     }
 
-    // 4. Users 테이블에서 nickname 조회
+    // 4. 비밀번호 검증 (비공개 서버)
+    if (serverResult.Item.password) {
+      const body = JSON.parse(event.body || "{}");
+      if (!body.password || body.password !== serverResult.Item.password) {
+        return {
+          statusCode: 403,
+          headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" },
+          body: JSON.stringify({ message: "비밀번호가 올바르지 않습니다." }),
+        };
+      }
+    }
+
+    // 5. Users 테이블에서 nickname 조회
     const userResult = await dynamoDb.send(new GetCommand({
       TableName: process.env.USERS_TABLE,
       Key: { userId },
     }));
     const nickname = userResult.Item?.nickname || "Unknown";
 
-    // 5. ServerMembers 테이블에 멤버십 추가
+    // 6. ServerMembers 테이블에 멤버십 추가
     const joinedAt = new Date().toISOString();
     await dynamoDb.send(new PutCommand({
       TableName: process.env.SERVER_MEMBERS_TABLE,
       Item: { userId, serverId, nickname, role: "MEMBER", joinedAt },
     }));
 
-    // 6. Servers 테이블의 members 배열과 currentCount 업데이트
+    // 7. Servers 테이블의 members 배열과 currentCount 업데이트
     const currentMembers = Array.isArray(serverResult.Item.members) ? serverResult.Item.members : [];
     const newMembers = [...currentMembers, { userId, nickname, role: "MEMBER", joinedAt }];
 

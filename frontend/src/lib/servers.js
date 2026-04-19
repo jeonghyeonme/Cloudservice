@@ -32,10 +32,14 @@ export function getServerMessages(serverId) {
   });
 }
 
-export function joinServer(serverId) {
-  return request(`${ENDPOINTS.servers.list}/${serverId}/join`, {
+export function joinServer(serverId, password) {
+  const options = {
     method: "POST",
-  });
+  };
+  if (password) {
+    options.body = JSON.stringify({ password });
+  }
+  return request(`${ENDPOINTS.servers.list}/${serverId}/join`, options);
 }
 
 export function createChannel(serverId, payload) {
