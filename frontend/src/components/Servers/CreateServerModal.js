@@ -27,6 +27,15 @@ const serverFields = [
     ],
   },
   {
+    name: "serverPassword",
+    label: "Server Password",
+    type: "password",
+    width: "half",
+    placeholder: "비밀번호 입력",
+    showIf: (values) => values.privacy === "Private",
+    required: true,
+  },
+  {
     name: "maxParticipants",
     label: "Max Participants",
     type: "select",
@@ -48,12 +57,21 @@ const serverFields = [
 
 const CreateServerModal = ({ onClose }) => {
   const handleSubmit = async (values) => {
+    const isPrivate = values.privacy === "Private";
+
+    if(isPrivate && !values.serverPassword) {
+      alert("비공개 서버는 비밀번호 설정이 필수입니다!");
+      return;
+    }
+
     const newServerData = {
       serverName: values.serverName,
       description: values.description,
       maxCapacity: Number(values.maxParticipants),
+      isPrivate: isPrivate,
+      roomPassword: isPrivate ? values.serverPassword : "",
       status: "ACTIVE",
-      isPrivate: values.privacy === "Private",
+      // isPrivate: values.privacy === "Private",
     };
 
     try {

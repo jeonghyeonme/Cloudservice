@@ -25,9 +25,12 @@ provider:
 
   environment:
     REGION: us-east-1
+    # 로컬 환경을 위해 수정
+    JWT_SECRET_KEY: "local-secret-key-for-dev"
+    SALT: "local-salt-value"
     # 로컬 환경이 아닐 경우
-    JWT_SECRET_KEY:    ${ssm:/smartstudy/dev/jwt-secret-key}
-    SALT:              ${ssm:/smartstudy/dev/salt}
+    # JWT_SECRET_KEY:    ${ssm:/smartstudy/dev/jwt-secret-key}
+    # SALT:              ${ssm:/smartstudy/dev/salt}
     HASHING_ALGORITHM: HS256
     S3_BUCKET: ${env:S3_BUCKET, ""}
     ALLOWED_ORIGIN: ${env:ALLOWED_ORIGIN, "https://your-cloudfront-domain.net"}
