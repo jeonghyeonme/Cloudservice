@@ -1,5 +1,5 @@
 const { HEADERS } = require("../utils/response");
-const { PutCommand } = require("@aws-sdk/lib-dynamodb");
+const { PutCommand, QueryCommand } = require("@aws-sdk/lib-dynamodb");
 const { v4: uuidv4 } = require("uuid");
 
 const dynamoDb = require("../dynamodbClient");
@@ -17,12 +17,10 @@ const USERS_TABLE = process.env.USERS_TABLE;
 // =========================
 module.exports.handler = async (event) => {
   try {
-    // event.body = API Gateway가 전달하는 요청 Body (문자열)
-    // Python: user: User (Pydantic이 자동 파싱) → 여기선 직접 JSON.parse
     const body = JSON.parse(event.body || "{}");
     const { email, password, nickname, profileImageUrl } = body;
 
-    // 필수값 검증 (Python: if not (user.email and user.password and user.nickname))
+    // 필수값 검증
     if (!email || !password || !nickname) {
       return {
         statusCode: 422,
@@ -40,26 +38,41 @@ module.exports.handler = async (event) => {
       };
     }
 
-    const userId    = uuidv4();                  // 유저 고유 ID 생성
-    const createdAt = new Date().toISOString();  // Python: datetime.utcnow().isoformat()
+    // ✅ 이메일 중복 체크 (GSI email-index로 Query)
+    const existing = await dynamoDb.send(new QueryCommand({
+      TableName: USERS_TABLE,
+      IndexName: "email-index",
+      KeyConditionExpression: "email = :email",
+      ExpressionAttributeValues: { ":email": email },
+      Limit: 1,
+    }));
+
+    if (existing.Items && existing.Items.length > 0) {
+      return {
+        statusCode: 409,
+        headers: HEADERS,
+        body: JSON.stringify({ detail: "이미 가입된 이메일입니다." }),
+      };
+    }
+
+    const userId    = uuidv4();
+    const createdAt = new Date().toISOString();
 
     const item = {
       userId,
       email,
-      password:        await hashPassword(password),  // bcrypt 해시 (비가역)
+      password:        await hashPassword(password),
       nickname,
       profileImageUrl: profileImageUrl || null,
-      status:          "ACTIVE", // GSI 키로 사용 (bool 대신 String)
+      status:          "ACTIVE",
       createdAt,
     };
 
-    // DynamoDB에 유저 저장 (Python: table.put_item(Item=item))
     await dynamoDb.send(new PutCommand({
       TableName: USERS_TABLE,
       Item:      item,
     }));
 
-    // 토큰 발급 및 RefreshTokens 테이블에 저장
     const accessToken  = createAccessToken({ sub: userId });
     const refreshToken = createRefreshToken({ sub: userId });
 

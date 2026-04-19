@@ -45,18 +45,18 @@ const ServerSidebar = ({ activeView, onServerClick, onAddClick, onLogout }) => {
   return (
     <nav className="server-nav">
       {joinedServers.map((server) => {
-        const serverName = server.roomName || server.title || "";
+        const serverName = server.serverName || server.title || "";
         const serverInitial = serverName
           ? serverName.trim().charAt(0).toUpperCase()
           : "?";
         const isActiveServer =
-          activeView === "chat" && server.roomId === activeServerId;
+          activeView === "chat" && server.serverId === activeServerId;
 
         return (
           <div
-            key={server.roomId}
+            key={server.serverId}
             className={`server-icon server-entry-icon ${isActiveServer ? "active-server" : ""}`}
-            onClick={() => navigate(getServerPath(server.roomId))}
+            onClick={() => navigate(getServerPath(server.serverId))}
             title={serverName || "접속한 서버"}
           >
             {serverInitial}

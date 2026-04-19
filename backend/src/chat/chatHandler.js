@@ -11,7 +11,7 @@ const { v4: uuidv4 } = require("uuid");
 
 const dynamoDb = require("../dynamodbClient");
 
-const ROOMS_TABLE       = process.env.ROOMS_TABLE;
+const SERVERS_TABLE     = process.env.SERVERS_TABLE;
 const CONNECTIONS_TABLE = process.env.CONNECTIONS_TABLE;
 const MESSAGES_TABLE    = process.env.MESSAGES_TABLE;
 
@@ -33,11 +33,11 @@ async function sendToConnection(apigw, connectionId, data) {
       Data:         Buffer.from(JSON.stringify(data)),
     }));
   } catch {
-    // 연결 끊김 시 Delete 대신 roomId를 'DISCONNECTED'로 바꿔서 방에서 빼냅니다.
+    // 연결 끊김 시 Delete 대신 serverId를 'DISCONNECTED'로 바꿔서 방에서 빼냅니다.
     await dynamoDb.send(new UpdateCommand({
       TableName: CONNECTIONS_TABLE,
       Key:       { connectionId },
-      UpdateExpression: "SET roomId = :none",
+      UpdateExpression: "SET serverId = :none",
       ExpressionAttributeValues: { ":none": "DISCONNECTED" }
     })).catch(() => {}); // 혹시 모를 권한 에러 무시
   }
@@ -73,7 +73,7 @@ async function onDisconnect(event) {
   await dynamoDb.send(new UpdateCommand({
     TableName: CONNECTIONS_TABLE,
     Key:       { connectionId },
-    UpdateExpression: "SET roomId = :none",
+    UpdateExpression: "SET serverId = :none",
     ExpressionAttributeValues: { ":none": "DISCONNECTED" }
   })).catch(() => {});
 
@@ -84,15 +84,15 @@ async function onDisconnect(event) {
 // =========================
 // 방 생성
 // =========================
-async function createRoom(body) {
-  const roomId    = uuidv4();
+async function createServer(body) {
+  const serverId    = uuidv4();
   const createdAt = new Date().toISOString();
 
   await dynamoDb.send(new PutCommand({
-    TableName: ROOMS_TABLE,
+    TableName: SERVERS_TABLE,
     Item: {
-      roomId,
-      roomName:     body.roomName,
+      serverId,
+      serverName:     body.serverName,
       hostId:       body.hostId,
       maxCapacity:  body.maxCapacity ?? 10,
       currentCount: 0,
@@ -104,7 +104,7 @@ async function createRoom(body) {
 
   return {
     statusCode: 200,
-    body: JSON.stringify({ action: "createRoom", roomId }),
+    body: JSON.stringify({ action: "createServer", serverId }),
   };
 }
 
@@ -112,28 +112,28 @@ async function createRoom(body) {
 // =========================
 // 방 입장
 // =========================
-async function joinRoom(connectionId, body) {
-  const { roomId, userId } = body;
+async function joinServer(connectionId, body) {
+  const { serverId, userId } = body;
 
-  // 해당 connection에 roomId, userId 연결
+  // 해당 connection에 serverId, userId 연결
   await dynamoDb.send(new UpdateCommand({
     TableName:                 CONNECTIONS_TABLE,
     Key:                       { connectionId },
-    UpdateExpression:          "SET roomId = :r, userId = :u",
-    ExpressionAttributeValues: { ":r": roomId, ":u": userId },
+    UpdateExpression:          "SET serverId = :r, userId = :u",
+    ExpressionAttributeValues: { ":r": serverId, ":u": userId },
   }));
 
   // 방 인원 +1
   await dynamoDb.send(new UpdateCommand({
-    TableName:                 ROOMS_TABLE,
-    Key:                       { roomId },
+    TableName:                 SERVERS_TABLE,
+    Key:                       { serverId },
     UpdateExpression:          "SET currentCount = currentCount + :inc",
     ExpressionAttributeValues: { ":inc": 1 },
   }));
 
   return {
     statusCode: 200,
-    body: JSON.stringify({ action: "joinRoom", roomId }),
+    body: JSON.stringify({ action: "joinServer", serverId }),
   };
 }
 
@@ -147,13 +147,13 @@ async function sendMessage(event, body) {
   const stage        = event.requestContext.stage;
 
   const apigw   = getApigwClient(domain, stage);
-  const { roomId } = body;
+  const { serverId } = body;
 
   const messageId = uuidv4();
   const createdAt = new Date().toISOString();
 
   const item = {
-    roomId,
+    serverId,
     messageId,
     senderId:       body.senderId,
     senderNickname: body.senderNickname,
@@ -171,12 +171,12 @@ async function sendMessage(event, body) {
     Item:      item,
   }));
 
-  // roomId-index GSI로 같은 방 접속자 전체 조회
+  // serverId-index GSI로 같은 방 접속자 전체 조회
   const response = await dynamoDb.send(new QueryCommand({
     TableName:                 CONNECTIONS_TABLE,
-    IndexName:                 "roomId-index",
-    KeyConditionExpression:    "roomId = :roomId",
-    ExpressionAttributeValues: { ":roomId": roomId },
+    IndexName:                 "serverId-index",
+    KeyConditionExpression:    "serverId = :serverId",
+    ExpressionAttributeValues: { ":serverId": serverId },
   }));
 
   const connections = response.Items || [];
@@ -207,8 +207,8 @@ module.exports.handler = async (event) => {
 
     const body = JSON.parse(event.body || "{}");
 
-    if (routeKey === "createRoom")  return await createRoom(body);
-    if (routeKey === "joinRoom")    return await joinRoom(event.requestContext.connectionId, body);
+    if (routeKey === "createServer")  return await createServer(body);
+    if (routeKey === "joinServer")    return await joinServer(event.requestContext.connectionId, body);
     if (routeKey === "sendMessage") return await sendMessage(event, body);
 
     return { statusCode: 200 };

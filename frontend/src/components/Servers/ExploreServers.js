@@ -10,7 +10,7 @@ import { PATHS } from "../../constants/path";
 import { useServers } from "../../contexts/ServerContext";
 
 const ServerCard = ({ server, onJoin }) => {
-  const name = server.roomName || server.title || "제목 없음";
+  const name = server.serverName || server.title || "제목 없음";
   const description = server.description;
   const currentMembers = Number(server.currentCount) || 0;
   const maxMembers = server.maxCapacity || 12;
@@ -107,7 +107,7 @@ const ExploreServers = () => {
   }, [setActiveServerId]);
 
   const filteredServers = servers.filter((server) => {
-    const title = server.roomName || server.title || "";
+    const title = server.serverName || server.title || "";
     const description = server.description || "";
     return (
       title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -118,9 +118,15 @@ const ExploreServers = () => {
   // 서버 입장 시 해당 ID의 주소로 이동
   const handleJoinServer = async (server) => {
     try {
-      await joinServer(server.roomId);
+      let password = null;
+      // 비공개 서버면 비밀번호 입력 받기
+      if (server.isPrivate) {
+        password = prompt("비공개 서버입니다. 비밀번호를 입력하세요:");
+        if (password === null) return; // 취소 누르면 중단
+      }
+      await joinServer(server.serverId, password);
       upsertJoinedServer(server);
-      navigate(getServerPath(server.roomId));
+      navigate(getServerPath(server.serverId));
     } catch (error) {
       console.error("서버 참여 실패:", error);
       alert(error.message || "서버 입장 중 오류가 발생했습니다.");
@@ -181,7 +187,7 @@ const ExploreServers = () => {
         <div className="servers-grid">
           {filteredServers.map((server) => (
             <ServerCard
-              key={server.roomId}
+              key={server.serverId}
               server={server}
               onJoin={handleJoinServer}
             />
