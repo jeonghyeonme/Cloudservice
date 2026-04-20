@@ -31,7 +31,7 @@ async function run() {
   
   const tables = [
     "smartstudy-Users", 
-    "smartstudy-Rooms", 
+    "smartstudy-Servers", 
     "smartstudy-Connections", 
     "smartstudy-Messages", 
     "smartstudy-RefreshTokens"

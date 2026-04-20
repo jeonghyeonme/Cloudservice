@@ -1,5 +1,5 @@
 const API_HOST = process.env.REACT_APP_API_HOST || "http://localhost:4000";
-const API_STAGE = "";
+const API_STAGE = "/dev";
 
 export const API_BASE_URL = `${API_HOST}${API_STAGE}`;
 export const API_WS_URL = process.env.REACT_APP_WS_HOST || "ws://localhost:4001";
