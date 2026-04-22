@@ -8,6 +8,15 @@ import CreateServerModal from "./CreateServerModal";
 import { useAuth } from "../../contexts/AuthContext";
 import { PATHS } from "../../constants/path";
 import { useServers } from "../../contexts/ServerContext";
+import ContextMenu from "../common/ContextMenu";
+import ConfirmModal from "../common/ConfirmModal";
+import EntitySettingsModal from "../common/EntitySettingsModal";
+import useChatOverlayState from "../Chat/hooks/useChatOverlayState";
+import {
+  createServerDefaultValues,
+  createServerFields,
+} from "../common/entityFormConfig";
+import { buildServerContextMenuItems } from "../Chat/utils/contextMenuFactories";
 
 const ServerCard = ({ server, onJoin }) => {
   const name = server.roomName || server.title || "제목 없음";
@@ -89,6 +98,17 @@ const ExploreServers = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [inviteCode, setInviteCode] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const {
+    contextMenu,
+    settingsModal,
+    confirmModal,
+    openContextMenu,
+    closeContextMenu,
+    openSettingsModal,
+    closeSettingsModal,
+    openConfirmModal,
+    closeConfirmModal,
+  } = useChatOverlayState();
   const handleLogout = () => {
     console.log("로그아웃 로직 실행");
     clearJoinedServers();
@@ -134,6 +154,65 @@ const ExploreServers = () => {
     }
   };
 
+  const resolveServerForMenu = (server) =>
+    servers.find((item) => item.roomId === server.roomId) || server;
+
+  const handleOpenServerMenu = (event, server) => {
+    const resolvedServer = resolveServerForMenu(server);
+
+    openContextMenu(event, {
+      type: "server",
+      targetId: resolvedServer.roomId,
+      title: resolvedServer.roomName || resolvedServer.title || "현재 서버",
+      items: buildServerContextMenuItems({
+        canDelete: true,
+        onOpenSettings: () =>
+          openSettingsModal({
+            type: "server",
+            server: resolvedServer,
+            entityName:
+              resolvedServer.roomName || resolvedServer.title || "현재 서버",
+          }),
+        onOpenDeleteConfirm: () =>
+          openConfirmModal({
+            title: "정말로 삭제하시겠습니까?",
+            description:
+              "프론트 화면에서만 서버가 목록에서 사라집니다. 새로고침하면 원래 데이터가 다시 보일 수 있습니다.",
+            onConfirm: async () => {
+              setServers((prev) =>
+                prev.filter((item) => item.roomId !== resolvedServer.roomId),
+              );
+              closeConfirmModal();
+            },
+          }),
+      }),
+    });
+  };
+
+  const handleServerSettingsSubmit = async (values) => {
+    const trimmedName = values.serverName.trim();
+
+    if (!trimmedName) {
+      throw new Error("서버 이름을 입력해 주세요.");
+    }
+
+    setServers((prev) =>
+      prev.map((server) =>
+        server.roomId === settingsModal?.server?.roomId
+          ? {
+              ...server,
+              roomName: trimmedName,
+              description: values.description?.trim() || "",
+              maxCapacity: Number(values.maxParticipants),
+              isPrivate: values.privacy === "Private",
+              updatedAt: new Date().toISOString(),
+            }
+          : server,
+      ),
+    );
+    closeSettingsModal();
+  };
+
   return (
     <div className="explore-container">
       <ServerSidebar
@@ -141,6 +220,9 @@ const ExploreServers = () => {
         onServerClick={() => {}}
         onAddClick={() => setIsModalOpen(true)}
         onLogout={handleLogout}
+        contextMenuType={contextMenu?.type}
+        contextMenuTargetId={contextMenu?.targetId}
+        onServerContextMenu={handleOpenServerMenu}
       />
 
       <div className="explore-main">
@@ -201,6 +283,33 @@ const ExploreServers = () => {
       {isModalOpen && (
         <CreateServerModal onClose={() => setIsModalOpen(false)} />
       )}
+
+      <ContextMenu
+        open={Boolean(contextMenu)}
+        position={contextMenu?.position}
+        title={contextMenu?.title}
+        items={contextMenu?.items || []}
+        onClose={closeContextMenu}
+      />
+
+      <EntitySettingsModal
+        open={settingsModal?.type === "server"}
+        entityType="server"
+        entityName={settingsModal?.entityName}
+        fields={createServerFields(
+          createServerDefaultValues(settingsModal?.server || {}),
+        )}
+        onClose={closeSettingsModal}
+        onSubmit={handleServerSettingsSubmit}
+      />
+
+      <ConfirmModal
+        open={Boolean(confirmModal)}
+        title={confirmModal?.title}
+        description={confirmModal?.description}
+        onCancel={closeConfirmModal}
+        onConfirm={confirmModal?.onConfirm}
+      />
     </div>
   );
 };

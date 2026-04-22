@@ -7,6 +7,28 @@ const ACCESS_TOKEN_KEY = "accessToken";
 const REFRESH_TOKEN_KEY = "refreshToken";
 const USER_KEY = "user";
 
+function decodeJwtPayload(token) {
+  if (!token) {
+    return null;
+  }
+
+  try {
+    const encodedPayload = token.split(".")[1];
+    const normalizedPayload = encodedPayload
+      .replace(/-/g, "+")
+      .replace(/_/g, "/");
+    const paddedPayload = normalizedPayload.padEnd(
+      normalizedPayload.length + ((4 - (normalizedPayload.length % 4)) % 4),
+      "=",
+    );
+    const decodedPayload = window.atob(paddedPayload);
+
+    return JSON.parse(decodedPayload);
+  } catch (error) {
+    return null;
+  }
+}
+
 /**
  * 전역 인증 상태 제공자 컴포넌트
  * App 전체를 감싸서 로그인 정보 공유
@@ -20,7 +42,16 @@ export const AuthProvider = ({ children }) => {
   );
   const [user, setUser] = useState(() => {
     const savedUser = localStorage.getItem(USER_KEY);
-    return savedUser ? JSON.parse(savedUser) : null;
+    const parsedUser = savedUser ? JSON.parse(savedUser) : null;
+
+    if (parsedUser?.userId) {
+      return parsedUser;
+    }
+
+    const decodedPayload = decodeJwtPayload(localStorage.getItem(ACCESS_TOKEN_KEY));
+    return parsedUser
+      ? { ...parsedUser, userId: decodedPayload?.sub || null }
+      : null;
   });
 
   const isLoggedIn = Boolean(accessToken && refreshToken);
@@ -32,7 +63,12 @@ export const AuthProvider = ({ children }) => {
     accessToken,
     refreshToken,
   }) => {
-    const userData = { nickname, profileImageUrl };
+    const decodedPayload = decodeJwtPayload(accessToken);
+    const userData = {
+      userId: decodedPayload?.sub || null,
+      nickname,
+      profileImageUrl,
+    };
 
     setAccessToken(accessToken);
     setRefreshToken(refreshToken);

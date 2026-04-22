@@ -1,5 +1,11 @@
 import React from "react";
 
+function handleRightClick(event, callback, payload) {
+  event.preventDefault();
+  event.stopPropagation();
+  callback?.(event, payload);
+}
+
 /**
  * @title 채널 목록과 참여자 패널이 있는 서버 내부 사이드바
  * @param {string} serverName - 현재 서버 이름
@@ -15,10 +21,22 @@ const SidebarLeft = ({
   activeChannel,
   onChannelClick,
   onAddChannelClick,
+  onServerContextMenu,
+  onChannelContextMenu,
+  contextMenuTargetId,
+  contextMenuType,
 }) => {
   return (
     <aside className="sidebar-left">
-      <h2 className="logo">
+      <h2
+        className="logo"
+        onMouseDown={(event) => {
+          if (event.button === 2) {
+            handleRightClick(event, onServerContextMenu);
+          }
+        }}
+        onContextMenu={(event) => handleRightClick(event, onServerContextMenu)}
+      >
         <span className="logo-text">{serverName}</span>
         <button
           type="button"
@@ -37,9 +55,21 @@ const SidebarLeft = ({
               key={ch.chId || ch.id}
               className={
                 "channel" +
-                (activeChannel === (ch.chId || ch.id) ? " active" : "")
+                (activeChannel === (ch.chId || ch.id) ? " active" : "") +
+                (contextMenuType === "channel" &&
+                contextMenuTargetId === (ch.chId || ch.id)
+                  ? " context-open"
+                  : "")
               }
               onClick={() => onChannelClick(ch.chId || ch.id)}
+              onMouseDown={(event) => {
+                if (event.button === 2) {
+                  handleRightClick(event, onChannelContextMenu, ch);
+                }
+              }}
+              onContextMenu={(event) =>
+                handleRightClick(event, onChannelContextMenu, ch)
+              }
             >
               <span className="hash">#</span>{" "}
               {ch.name || ch.label || "이름 없는 채널"}

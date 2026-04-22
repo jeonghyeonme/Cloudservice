@@ -93,6 +93,12 @@
   text-transform: uppercase;
 }
 
+.server-entry-icon.context-open {
+  border-radius: 16px;
+  background-color: #00ff66;
+  color: #000000;
+}
+
 /* ── 하단 프로필 영역 ── */
 .profile-wrapper {
   position: relative;

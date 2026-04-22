@@ -51,6 +51,15 @@ export const ServerProvider = ({ children }) => {
     setActiveServerId(null);
   }, []);
 
+  const removeJoinedServer = useCallback((roomId) => {
+    setJoinedServers((prevServers) =>
+      prevServers.filter((server) => server.roomId !== roomId),
+    );
+    setActiveServerId((prevActiveId) =>
+      prevActiveId === roomId ? null : prevActiveId,
+    );
+  }, []);
+
   useEffect(() => {
     if (!isLoggedIn) {
       clearJoinedServers();
@@ -93,9 +102,16 @@ export const ServerProvider = ({ children }) => {
       activeServerId,
       setActiveServerId,
       upsertJoinedServer,
+      removeJoinedServer,
       clearJoinedServers,
     }),
-    [joinedServers, activeServerId, upsertJoinedServer, clearJoinedServers],
+    [
+      joinedServers,
+      activeServerId,
+      upsertJoinedServer,
+      removeJoinedServer,
+      clearJoinedServers,
+    ],
   );
 
   return <ServerContext.Provider value={value}>{children}</ServerContext.Provider>;

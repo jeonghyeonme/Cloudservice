@@ -5,6 +5,12 @@ import { useAuth } from "../../contexts/AuthContext"; //
 import { useServers } from "../../contexts/ServerContext";
 import "./ServerSidebar.css";
 
+function handleRightClick(event, callback, payload) {
+  event.preventDefault();
+  event.stopPropagation();
+  callback?.(event, payload);
+}
+
 /**
  * @title 극좌측 서버 네비게이션 바
  * @param {string} activeView - 현재 활성화된 뷰 ('home', 'chat' 등)
@@ -12,7 +18,15 @@ import "./ServerSidebar.css";
  * @param {function} onAddClick - + 버튼 클릭 시 실행할 함수
  * @param {function} onLogout - 로그아웃 함수
  */
-const ServerSidebar = ({ activeView, onServerClick, onAddClick, onLogout }) => {
+const ServerSidebar = ({
+  activeView,
+  onServerClick,
+  onAddClick,
+  onLogout,
+  onServerContextMenu,
+  contextMenuTargetId,
+  contextMenuType,
+}) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { joinedServers, activeServerId } = useServers();
@@ -51,12 +65,22 @@ const ServerSidebar = ({ activeView, onServerClick, onAddClick, onLogout }) => {
           : "?";
         const isActiveServer =
           activeView === "chat" && server.roomId === activeServerId;
+        const isContextOpen =
+          contextMenuType === "server" && contextMenuTargetId === server.roomId;
 
         return (
           <div
             key={server.roomId}
-            className={`server-icon server-entry-icon ${isActiveServer ? "active-server" : ""}`}
+            className={`server-icon server-entry-icon ${isActiveServer ? "active-server" : ""} ${isContextOpen ? "context-open" : ""}`}
             onClick={() => navigate(getServerPath(server.roomId))}
+            onMouseDown={(event) => {
+              if (event.button === 2) {
+                handleRightClick(event, onServerContextMenu, server);
+              }
+            }}
+            onContextMenu={(event) =>
+              handleRightClick(event, onServerContextMenu, server)
+            }
             title={serverName || "접속한 서버"}
           >
             {serverInitial}
