@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { getServerPath } from "../../constants/path";
-import { getServers, joinServer } from "../../lib/servers";
+import { getServers, joinServer, updateServer } from "../../lib/servers";
 import "./ExploreServers.css";
 import ServerSidebar from "../layout/ServerSidebar";
 import CreateServerModal from "./CreateServerModal";
@@ -196,18 +196,17 @@ const ExploreServers = () => {
       throw new Error("서버 이름을 입력해 주세요.");
     }
 
+    const updatedServer = await updateServer(settingsModal?.server?.roomId, {
+      roomName: trimmedName,
+      description: values.description?.trim() || "",
+      maxCapacity: Number(values.maxParticipants),
+      isPrivate: values.privacy === "Private",
+    });
+    const resolvedServer = updatedServer.room || updatedServer;
+
     setServers((prev) =>
       prev.map((server) =>
-        server.roomId === settingsModal?.server?.roomId
-          ? {
-              ...server,
-              roomName: trimmedName,
-              description: values.description?.trim() || "",
-              maxCapacity: Number(values.maxParticipants),
-              isPrivate: values.privacy === "Private",
-              updatedAt: new Date().toISOString(),
-            }
-          : server,
+        server.roomId === resolvedServer.roomId ? resolvedServer : server,
       ),
     );
     closeSettingsModal();

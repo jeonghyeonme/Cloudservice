@@ -28,7 +28,7 @@ export async function request(path, options = {}) {
 
   if (!response.ok) {
     if (isJsonResponse) {
-      throw new Error(payload.detail || "요청에 실패했습니다.");
+      throw new Error(payload.detail || payload.message || "요청에 실패했습니다.");
     }
 
     throw new Error("서버가 JSON이 아닌 응답을 반환했습니다. API 주소와 백엔드 실행 상태를 확인해 주세요.");

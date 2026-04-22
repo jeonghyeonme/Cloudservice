@@ -26,6 +26,13 @@ export function getServerDetail(serverId) {
   });
 }
 
+export function updateServer(serverId, payload) {
+  return request(`${ENDPOINTS.rooms.list}/${serverId}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
 export function getServerMessages(serverId) {
   return request(`${ENDPOINTS.rooms.list}/${serverId}/messages`, {
     method: "GET",
@@ -42,5 +49,11 @@ export function createChannel(serverId, payload) {
   return request(`${ENDPOINTS.rooms.list}/${serverId}/channels`, {
     method: "POST",
     body: JSON.stringify(payload),
+  });
+}
+
+export function deleteChannel(serverId, channelId) {
+  return request(`${ENDPOINTS.rooms.list}/${serverId}/channels/${channelId}`, {
+    method: "DELETE",
   });
 }

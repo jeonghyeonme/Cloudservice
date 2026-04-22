@@ -3,8 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { PATHS } from "../../../constants/path";
 import {
   createChannel,
+  deleteChannel,
   getServerDetail,
   getServerMessages,
+  updateServer,
 } from "../../../lib/servers";
 
 function normalizeServerWithMessages(serverData, messagesData) {
@@ -12,7 +14,7 @@ function normalizeServerWithMessages(serverData, messagesData) {
     ? messagesData
     : messagesData?.items || [];
   const channels = serverData?.channels || [
-    { id: "ch-general", name: "일반", label: "일반" },
+    { id: "ch-general", name: "일반", label: "일반", isDefault: true },
   ];
 
   return {
@@ -97,6 +99,7 @@ function useChatServerData({
     const newChannel = {
       ...response.channel,
       label: response.channel.label || response.channel.name,
+      isDefault: response.channel.isDefault || false,
       topic: values.topic?.trim() || "새 채널에 대한 첫 대화를 시작해보세요.",
       messages: [],
     };
@@ -115,14 +118,14 @@ function useChatServerData({
       throw new Error("서버 이름을 입력해 주세요.");
     }
 
-    applyServerUpdate({
-      ...currentServer,
+    const updatedServer = await updateServer(serverId, {
       roomName: trimmedName,
       description: values.description?.trim() || "",
       maxCapacity: Number(values.maxParticipants),
       isPrivate: values.privacy === "Private",
-      updatedAt: new Date().toISOString(),
     });
+
+    applyServerUpdate(updatedServer.room || updatedServer);
   };
 
   const saveChannelSettings = async (channel, values) => {
@@ -155,6 +158,22 @@ function useChatServerData({
 
   const removeChannel = async (channel) => {
     const channelId = channel.chId || channel.id;
+
+    if (channel.isDefault) {
+      alert("기본채널은 삭제가 불가합니다.");
+      return;
+    }
+
+    try {
+      await deleteChannel(serverId, channelId);
+    } catch (error) {
+      if (error.message?.includes("기본채널")) {
+        alert("기본채널은 삭제가 불가합니다.");
+        return;
+      }
+
+      throw error;
+    }
 
     setCurrentServer((prev) => {
       const updatedChannels = (prev?.channels || []).filter(
