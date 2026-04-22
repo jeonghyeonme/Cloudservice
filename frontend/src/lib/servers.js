@@ -32,12 +32,12 @@ export function getServerMessages(serverId) {
   });
 }
 
-export function joinServer(serverId, password) {
+export function joinServer(serverId, serverPassword) {
   const options = {
     method: "POST",
   };
-  if (password) {
-    options.body = JSON.stringify({ password });
+  if (serverPassword) {
+    options.body = JSON.stringify({ serverPassword });
   }
   return request(`${ENDPOINTS.servers.list}/${serverId}/join`, options);
 }
@@ -46,5 +46,17 @@ export function createChannel(serverId, payload) {
   return request(`${ENDPOINTS.servers.list}/${serverId}/channels`, {
     method: "POST",
     body: JSON.stringify(payload),
+  });
+}
+
+export function deleteServer(serverId) {
+  return request(`${ENDPOINTS.servers.list}/${serverId}`, {
+    method: "DELETE", // DELETE 메서드 사용
+  });
+}
+
+export function leaveServer(serverId) {
+  return request(`${ENDPOINTS.servers.list}/${serverId}/leave`, {
+    method: "POST",
   });
 }

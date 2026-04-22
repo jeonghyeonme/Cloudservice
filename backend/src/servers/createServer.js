@@ -14,6 +14,11 @@ module.exports.handler = async (event) => {
     const serverId = uuidv4();
     const createdAt = new Date().toISOString();
 
+    const defaultRules = [
+    { text: "서로 존중하기", icon: "✔️" },
+    { text: "비매너 행동 금지", icon: "❌" }
+    ];
+
     // 호스트의 nickname을 Users 테이블에서 조회
     let hostNickname = "Unknown";
     if (hostId) {
@@ -31,14 +36,15 @@ module.exports.handler = async (event) => {
         serverId,
         status: "ACTIVE",
         createdAt,
-        serverName: body.serverName || body.roomName || "기본 스터디 서버",
+        serverName: body.serverName || "기본 스터디 서버",
         description: body.description || "",
         hostId: hostId || null,
         hostNickname,
         maxCapacity: body.maxCapacity || 10,
         currentCount: hostId ? 1 : 0,
         isPrivate: body.isPrivate || false,
-        password: body.password || null,
+        serverPassword: body.serverPassword || null,
+        rules: body.rules || defaultRules,
         channels: [
           { chId: uuidv4(), name: "일반", label: "일반", topic: "", isDefault: true },
         ],

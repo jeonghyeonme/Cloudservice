@@ -1,0 +1,132 @@
+/* frontend/src/components/Servers/JoinServerModal.css */
+.join-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+  backdrop-filter: blur(4px);
+}
+
+.join-modal-content {
+  background: #121212;
+  width: 100%;
+  max-width: 420px;
+  padding: 40px 32px;
+  border-radius: 32px;
+  border: 1px solid #333;
+  position: relative;
+  color: #fff;
+}
+
+.close-x {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: none;
+  border: none;
+  color: #666;
+  font-size: 28px;
+  cursor: pointer;
+}
+
+.private-badge {
+  background: #006400;
+  color: #fff;
+  padding: 4px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  width: fit-content;
+  margin: 0 auto 16px;
+}
+
+.server-desc-small { color: #888; font-size: 14px; margin: 0; }
+.server-name-large { font-size: 26px; margin: 8px 0 24px; }
+
+.server-stats {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  border-bottom: 1px solid #222;
+  padding-bottom: 20px;
+  margin-bottom: 24px;
+}
+
+.host-profile { display: flex; align-items: center; gap: 8px; }
+.avatar-circle { width: 24px; height: 24px; background: #444; border-radius: 50%; }
+.member-status { color: #888; }
+.dot { color: #00ff00; margin-right: 4px; }
+
+.rules-box {
+  background: #1e1e1e;
+  padding: 20px;
+  border-radius: 16px;
+  margin-bottom: 24px;
+  text-align: left;
+}
+
+.rules-title { font-size: 15px; font-weight: bold; margin-bottom: 12px; text-align: center; }
+.rules-list { list-style: none; padding: 0; margin: 0; }
+.rules-list li { display: flex; gap: 10px; margin-bottom: 8px; font-size: 14px; color: #bbb; }
+
+.input-label {
+  display: block;
+  text-align: left;
+  color: #39ff14; /* Neon Green */
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.pw-input {
+  width: 100%;
+  background: #2a2a2a;
+  border: 1px solid #444;
+  padding: 14px;
+  border-radius: 12px;
+  color: #fff;
+  margin-bottom: 24px;
+}
+
+.button-group { display: flex; justify-content: space-between; align-items: center; }
+.btn-cancel { background: none; border: none; color: #888; cursor: pointer; }
+.btn-enter {
+  background: #39ff14;
+  color: #000;
+  padding: 12px 32px;
+  border-radius: 24px;
+  font-weight: bold;
+  border: none;
+  cursor: pointer;
+}
+
+.password-field {
+  margin-bottom: 24px;
+}
+
+/* 공개 서버일 때(비밀번호 칸이 없을 때) 버튼 그룹 상단 여백 */
+.join-input-section {
+  margin-top: 10px;
+}
+
+/* 에러 메시지 텍스트 */
+.error-msg-text {
+  color: #ff4d4d;
+  font-size: 12px;
+  margin-top: 8px;
+  text-align: left;
+  animation: shake 0.2s ease-in-out; /* 살짝 흔들리는 효과(선택) */
+}
+
+/* 에러 시 인풋 테두리 변경 */
+.pw-input.input-error {
+  border: 1px solid #ff4d4d;
+}
+
+/* 에러 났을 때 흔들리는 애니메이션 */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}

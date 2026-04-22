@@ -90,7 +90,12 @@ const seedServers = [
     description: "Next.js와 TypeScript를 활용한 프로젝트 협업",
     status: "ACTIVE",
     isPrivate: true,
-    roomPassword: "1234",
+    serverPassword: "1234",
+    rules: [
+      { text: "1시간 공부 후 10분 휴식", icon: "✔️" },
+      { text: "캠 스터디 필수", icon: "✔️" },
+      { text: "잡담 금지", icon: "❌" }
+    ],
     createdAt: new Date(Date.now() - 3600000).toISOString(),
     expiresAt: Math.floor(Date.now() / 1000) + 86400 * 30,
     channels: [

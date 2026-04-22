@@ -36,6 +36,12 @@ const serverFields = [
     required: true,
   },
   {
+    name: "rulesInput", // 임시 입력 필드
+    label: "서버 규칙 (줄바꿈으로 구분)",
+    type: "textarea", // 텍스트 영역으로 여러 줄 입력
+    placeholder: "예:\n욕설 금지\n1시간 공부 후 10분 휴식\n존재의 위기 느끼기 금지",
+  },
+  {
     name: "maxParticipants",
     label: "Max Participants",
     type: "select",
@@ -62,16 +68,29 @@ const CreateServerModal = ({ onClose }) => {
     if(isPrivate && !values.serverPassword) {
       alert("비공개 서버는 비밀번호 설정이 필수입니다!");
       return;
+    
     }
+
+    const rulesArray = values.rulesInput
+      ? values.rulesInput
+          .split("\n") // 줄바꿈으로 나누기
+          .map((line) => line.trim()) // 공백 제거
+          .filter((line) => line !== "") // 빈 줄 제외
+          .map((line) => ({
+            text: line,
+            // '금지'나 '❌'가 포함되면 ❌ 아이콘, 아니면 ✔️ 아이콘 자동 배정
+            icon: line.includes("금지") || line.includes("❌") || line.includes("안됨") ? "❌" : "✔️",
+          }))
+      : [];
 
     const newServerData = {
       serverName: values.serverName,
       description: values.description,
       maxCapacity: Number(values.maxParticipants),
       isPrivate: isPrivate,
-      roomPassword: isPrivate ? values.serverPassword : "",
+      serverPassword: isPrivate ? values.serverPassword : "",
+      rules: rulesArray,
       status: "ACTIVE",
-      // isPrivate: values.privacy === "Private",
     };
 
     try {

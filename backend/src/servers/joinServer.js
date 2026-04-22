@@ -69,9 +69,10 @@ exports.handler = async (event) => {
     }
 
     // 4. 비밀번호 검증 (비공개 서버)
-    if (serverResult.Item.password) {
+    if (serverResult.Item.serverPassword) {
       const body = JSON.parse(event.body || "{}");
-      if (!body.password || body.password !== serverResult.Item.password) {
+
+      if (!body.serverPassword || body.serverPassword !== serverResult.Item.serverPassword) {
         return {
           statusCode: 403,
           headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" },

@@ -84,7 +84,7 @@ const ServerCard = ({ server, onJoin }) => {
 const ExploreServers = () => {
   const navigate = useNavigate();
   const { logout } = useAuth();
-  const { clearJoinedServers, setActiveServerId, upsertJoinedServer } =
+  const { exploreServers, setExploreServers, clearJoinedServers, setActiveServerId, upsertJoinedServer } =
     useServers();
   const [servers, setServers] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -103,14 +103,14 @@ const ExploreServers = () => {
   useEffect(() => {
     setActiveServerId(null);
     getServers()
-      .then((data) => setServers(data.items || []))
+      .then((data) => { setExploreServers(data.items || []); })
       .catch((err) => {
         console.error("데이터 로드 실패!", err);
         setServers([]);
       });
-  }, [setActiveServerId]);
+  }, [setActiveServerId, setExploreServers]);
 
-  const filteredServers = servers.filter((server) => {
+  const filteredServers = exploreServers.filter((server) => {
     const title = server.serverName || server.title || "";
     const description = server.description || "";
     return (
@@ -128,7 +128,8 @@ const ExploreServers = () => {
     } catch (error) {
       console.error("서버 참여 실패:", error);
       // FormModal의 내부 에러 처리를 위해 에러를 다시 던져줍니다.
-      throw new Error(error.message || "서버 입장 중 오류가 발생했습니다.");
+      // throw new Error(error.message || "서버 입장 중 오류가 발생했습니다.");
+      throw error;
     }
   };
 
@@ -151,14 +152,15 @@ const ExploreServers = () => {
   // };
 
   const handleJoinClick = (server) => {
-    if (server.isPrivate) {
+    // if (server.isPrivate) {
       // 비공개면 모달 띄우기
       setSelectedServer(server);
       setIsJoinModalOpen(true);
-    } else {
-      // 공개면 바로 입장
-      executeJoin(server);
-    }
+    // }
+    // else {
+    //   // 공개면 바로 입장
+    //   executeJoin(server);
+    // }
   };
 
   const handleDirectJoin = () => {
@@ -237,10 +239,9 @@ const ExploreServers = () => {
         <CreateServerModal onClose={() => setIsModalOpen(false)} />
       )}
 
-      {/* ⭐ 4. 서버 참가 비밀번호 모달 추가 */}
       {isJoinModalOpen && (
         <JoinServerModal
-          serverName={selectedServer?.serverName || selectedServer?.title}
+          server={selectedServer}
           onClose={() => setIsJoinModalOpen(false)}
           onSubmit={(password) => executeJoin(selectedServer, password)}
         />
