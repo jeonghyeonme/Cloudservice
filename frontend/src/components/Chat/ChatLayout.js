@@ -38,6 +38,7 @@ const ChatLayout = () => {
 
   const {
     currentServer,
+    setCurrentServer,
     loading,
     activeChannel,
     setActiveChannel,

@@ -197,6 +197,7 @@ function useChatServerData({
 
   return {
     currentServer,
+    setCurrentServer,
     loading,
     activeChannel,
     setActiveChannel,
