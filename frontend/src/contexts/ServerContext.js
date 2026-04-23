@@ -19,6 +19,29 @@ export const ServerProvider = ({ children }) => {
   const { isLoggedIn } = useAuth();
   const [joinedServers, setJoinedServers] = useState([]);
   const [activeServerId, setActiveServerId] = useState(null);
+  const [exploreServers, setExploreServers] = useState([]);
+
+  // 서버 목록을 API로부터 가져오는 함수를 별도로 분리 (재사용 가능하게)
+  const refreshJoinedServers = useCallback(async () => {
+    try {
+      const data = await getMyServers();
+      const servers = Array.isArray(data?.items) ? data.items : [];
+      setJoinedServers(
+        servers.map((server) => ({
+          serverId: server.serverId || server.roomId,
+          serverName: server.serverName || server.roomName || server.title || "",
+        }))
+      );
+    } catch (error) {
+      console.error("내 서버 목록을 갱신하지 못했습니다.", error);
+    }
+  }, []);
+
+  // 리스트에서 특정 서버를 즉시 제거하는 함수 (삭제 성공 시 사용)
+  const removeServerFromList = useCallback((serverId) => {
+    setJoinedServers((prev) => prev.filter((s) => s.serverId !== serverId));
+    setExploreServers((prev) => prev.filter((s) => s.serverId !== serverId));
+  }, []);
 
   // serverId 우선 사용, 기존 roomId 호환을 위해 fallback 처리
   // 백엔드 마이그레이션 완료 후에는 server.serverId만 사용하면 됨
@@ -44,10 +67,8 @@ export const ServerProvider = ({ children }) => {
   }, []);
 
   useEffect(() => {
-    if (!isLoggedIn) {
-      clearJoinedServers();
-      return;
-    }
+    if (isLoggedIn) { refreshJoinedServers(); }
+    else { clearJoinedServers(); }
 
     let isMounted = true;
 
@@ -71,17 +92,21 @@ export const ServerProvider = ({ children }) => {
       });
 
     return () => { isMounted = false; };
-  }, [isLoggedIn, clearJoinedServers]);
+  }, [isLoggedIn, clearJoinedServers, refreshJoinedServers]);
 
   const value = useMemo(
     () => ({
       joinedServers,
+      exploreServers,
       activeServerId,
+      setExploreServers,
       setActiveServerId,
       upsertJoinedServer,
       clearJoinedServers,
+      refreshJoinedServers,
+      removeServerFromList,
     }),
-    [joinedServers, activeServerId, upsertJoinedServer, clearJoinedServers],
+    [joinedServers, exploreServers, activeServerId, upsertJoinedServer, clearJoinedServers, refreshJoinedServers, removeServerFromList],
   );
 
   return <ServerContext.Provider value={value}>{children}</ServerContext.Provider>;
