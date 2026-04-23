@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { getServerPath, PATHS } from "../../constants/path";
-import { useAuth } from "../../contexts/AuthContext"; //
+import { useAuth } from "../../contexts/AuthContext";
 import { useServers } from "../../contexts/ServerContext";
 import "./ServerSidebar.css";
 
@@ -33,9 +33,8 @@ const ServerSidebar = ({
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const menuRef = useRef(null);
 
-  const initial = user?.nickname ? user.nickname.charAt(0) : "프"; // 닉네임의 첫 글자 추출 (정보가 없으면 '?' 표시)
+  const initial = user?.nickname ? user.nickname.charAt(0) : "프";
 
-  // 메뉴 바깥 클릭 시 닫기
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (menuRef.current && !menuRef.current.contains(e.target)) {
@@ -59,20 +58,22 @@ const ServerSidebar = ({
   return (
     <nav className="server-nav">
       {joinedServers.map((server) => {
-        const serverName = server.roomName || server.title || "";
+        const sid = server.serverId || server.roomId;
+        const serverName = server.serverName || server.title || "";
         const serverInitial = serverName
           ? serverName.trim().charAt(0).toUpperCase()
           : "?";
+        
         const isActiveServer =
-          activeView === "chat" && server.roomId === activeServerId;
+          activeView === "chat" && sid === activeServerId;
         const isContextOpen =
-          contextMenuType === "server" && contextMenuTargetId === server.roomId;
+          contextMenuType === "server" && contextMenuTargetId === sid;
 
         return (
           <div
-            key={server.roomId}
+            key={sid}
             className={`server-icon server-entry-icon ${isActiveServer ? "active-server" : ""} ${isContextOpen ? "context-open" : ""}`}
-            onClick={() => navigate(getServerPath(server.roomId))}
+            onClick={() => navigate(getServerPath(sid))}
             onMouseDown={(event) => {
               if (event.button === 2) {
                 handleRightClick(event, onServerContextMenu, server);

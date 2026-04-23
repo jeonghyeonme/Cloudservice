@@ -32,6 +32,7 @@ const ChatLayout = () => {
   const { user } = useAuth();
   const { setActiveServerId, upsertJoinedServer, removeJoinedServer } =
     useServers();
+    
   const [isServerModalOpen, setIsServerModalOpen] = useState(false);
   const [isChannelModalOpen, setIsChannelModalOpen] = useState(false);
 
@@ -76,7 +77,7 @@ const ChatLayout = () => {
       openSettingsModal({
         type: "server",
         entityName:
-          currentServer?.roomName || currentServer?.title || "현재 서버",
+          currentServer?.roomName || currentServer?.serverName || currentServer?.title || "현재 서버",
       }),
     [currentServer, openSettingsModal],
   );
@@ -131,7 +132,6 @@ const ChatLayout = () => {
     setIsChannelModalOpen(false);
   };
 
-  // 로딩 중일 때 처리
   if (loading)
     return (
       <div style={{ color: "white", padding: "20px" }}>
@@ -143,9 +143,7 @@ const ChatLayout = () => {
     return (
       <div style={{ padding: "20px", color: "white" }}>
         <h3>서버를 찾을 수 없습니다. (ID: {serverId})</h3>
-        <button onClick={() => navigate(PATHS.explore)}>
-          목록으로 돌아가기
-        </button>
+        <button onClick={() => navigate(PATHS.explore)}>목록으로 돌아가기</button>
       </div>
     );
   }
@@ -159,30 +157,33 @@ const ChatLayout = () => {
         contextMenuType={contextMenu?.type}
         contextMenuTargetId={contextMenu?.targetId}
         onServerContextMenu={(event, server) => {
+          const sid = server.serverId || server.roomId;
           const resolvedServer =
-            currentServer?.roomId === server.roomId ? currentServer : server;
+            (currentServer?.serverId || currentServer?.roomId) === sid ? currentServer : server;
           openContextMenu(event, {
             type: "server",
-            targetId: server.roomId,
-            title: resolvedServer.roomName || resolvedServer.title || "현재 서버",
+            targetId: sid,
+            title: resolvedServer.roomName || resolvedServer.serverName || resolvedServer.title || "현재 서버",
             items: serverMenuItems,
           });
         }}
       />
 
       <SidebarLeft
-        serverName={currentServer?.roomName || currentServer?.title || "로딩 중..."}
+        serverName={currentServer?.serverName || currentServer?.roomName || currentServer?.title || "로딩 중..."}
         channels={currentServer?.channels || []}
         activeChannel={activeChannel}
         onChannelClick={setActiveChannel}
         onAddChannelClick={() => setIsChannelModalOpen(true)}
         contextMenuType={contextMenu?.type}
         contextMenuTargetId={contextMenu?.targetId}
+        members={currentServer?.members || []}
+        hostId={currentServer?.hostId}
         onServerContextMenu={(event) =>
           openContextMenu(event, {
             type: "server",
             targetId: serverId,
-            title: currentServer?.roomName || currentServer?.title || "현재 서버",
+            title: currentServer?.roomName || currentServer?.serverName || currentServer?.title || "현재 서버",
             items: serverMenuItems,
           })
         }
@@ -207,15 +208,9 @@ const ChatLayout = () => {
         }
       />
 
-      <main
-        className="chat-content-wrapper"
-        style={{ display: "flex", flex: 1, minWidth: 0 }}
-      >
-        <ChatWindow
-          activeChannel={activeChannel}
-          channels={currentServer.channels}
-        />
-        <ResourceHub serverResources={currentServer} />
+      <main className="chat-content-wrapper" style={{ display: "flex", flex: 1, minWidth: 0 }}>
+        <ChatWindow activeChannel={activeChannel} channels={currentServer.channels} />
+        <ResourceHub serverResources={currentServer} setCurrentServer={setCurrentServer} />
       </main>
 
       {isServerModalOpen && (
@@ -224,7 +219,7 @@ const ChatLayout = () => {
 
       <CreateChannelModal
         open={isChannelModalOpen}
-        serverName={currentServer?.roomName || currentServer?.title || "현재 서버"}
+        serverName={currentServer?.serverName || currentServer?.roomName || currentServer?.title || "현재 서버"}
         onClose={() => setIsChannelModalOpen(false)}
         onSubmit={handleCreateChannel}
       />

@@ -59,7 +59,16 @@ function FormModal({
   }
 
   const updateValue = (name, value) => {
-    setValues((prev) => ({ ...prev, [name]: value }));
+    setValues((prev) => { 
+      const nextValues = { ...prev, [name]: value };
+      fields.forEach((field) => {
+        if(field.showIf && !field.showIf(nextValues)) {
+          nextValues[field.name] = field.defaultValue ?? (field.type === "file" ? null : "");
+        }
+      });
+
+      return nextValues;
+    });
   };
 
   const handleOverlayClick = (event) => {
@@ -204,18 +213,24 @@ function FormModal({
 
         <form className="form-modal__form" onSubmit={handleSubmit}>
           <div className="form-modal__grid">
-            {fields.map((field) => (
-              <div
-                key={field.name}
-                className={`form-modal__group ${field.width === "half" ? "form-modal__group--half" : ""}`}
-              >
-                <label htmlFor={field.name}>{field.label}</label>
-                {renderField(field)}
-                {field.helperText ? (
-                  <span className="form-modal__helper">{field.helperText}</span>
-                ) : null}
-              </div>
-            ))}
+            {fields
+              .filter((field) => {
+                if(!field.showIf) return true;
+                return field.showIf(values);
+              })
+              .map((field) => (
+                <div
+                  key={field.name}
+                  className={`form-modal__group ${field.width === "half" ? "form-modal__group--half" : ""}`}
+                >
+                  <label htmlFor={field.name}>{field.label}</label>
+                  {renderField(field)}
+                  {field.helperText ? (
+                    <span className="form-modal__helper">{field.helperText}</span>
+                  ) : null}
+                </div>
+              ))
+            }
           </div>
 
           <div className="form-modal__footer">

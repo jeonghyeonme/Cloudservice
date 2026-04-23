@@ -34,6 +34,16 @@ export function createServerFields(defaultValues = {}) {
       options: PRIVACY_OPTIONS,
     },
     {
+      name: "serverPassword",
+      label: "Server Password",
+      type: "password",
+      width: "half",
+      placeholder: "비밀번호 입력",
+      showIf: (values) => values.privacy === "Private",
+      required: true,
+      defaultValue: "",
+    },
+    {
       name: "maxParticipants",
       label: "Max Participants",
       type: "select",

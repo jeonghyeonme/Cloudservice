@@ -100,11 +100,11 @@
 ### 3.1 API 요청 추가 예상
 | 기능 | Method | Endpoint | 설명 |
 | :--- | :--- | :--- | :--- |
-| **채널 관리** | `POST` | `/rooms/{roomId}/channels` | 새로운 채널 추가 |
-| **채널 관리** | `DELETE` | `/rooms/{roomId}/channels/{chId}` | 특정 채널 삭제 |
+| **채널 관리** | `POST` | `/servers/{serverId}/channels` | 새로운 채널 추가 |
+| **채널 관리** | `DELETE` | `/servers/{serverId}/channels/{chId}` | 특정 채널 삭제 |
 | **리소스 공유** | `GET` | `/resources/upload-url` | S3 업로드용 Pre-signed URL 발급 |
-| **리소스 공유** | `POST` | `/rooms/{roomId}/links` | 외부 학습 링크 메타데이터 저장 |
-| **AI 서비스** | `POST` | `/rooms/{roomId}/summary` | 특정 기간 대화 요약 생성 요청 |
+| **리소스 공유** | `POST` | `/servers/{serverId}/links` | 외부 학습 링크 메타데이터 저장 |
+| **AI 서비스** | `POST` | `/servers/{serverId}/summary` | 특정 기간 대화 요약 생성 요청 |
 
 ### 3.2 DB 스키마 진화 (Expected Schema Evolution)
 - **Rooms 테이블**: 

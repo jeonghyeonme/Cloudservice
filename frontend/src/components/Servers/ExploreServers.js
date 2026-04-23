@@ -17,9 +17,10 @@ import {
   createServerFields,
 } from "../common/entityFormConfig";
 import { buildServerContextMenuItems } from "../Chat/utils/contextMenuFactories";
+import JoinServerModal from "./JoinServerModal";
 
 const ServerCard = ({ server, onJoin }) => {
-  const name = server.roomName || server.title || "제목 없음";
+  const name = server.serverName || server.title || "제목 없음";
   const description = server.description;
   const currentMembers = Number(server.currentCount) || 0;
   const maxMembers = server.maxCapacity || 12;
@@ -34,7 +35,6 @@ const ServerCard = ({ server, onJoin }) => {
   return (
     <div className={`servers-card ${isFull ? "servers-full" : ""}`}>
       <div className="servers-cover">
-        {/* 이미지가 있으면 <img> 태그를, 없으면 기존처럼 이모지를 보여줌 */}
         {coverImage ? (
           <img src={coverImage} alt={name} className="servers-cover-img" />
         ) : (
@@ -109,8 +109,10 @@ const ExploreServers = () => {
     openConfirmModal,
     closeConfirmModal,
   } = useChatOverlayState();
+  const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
+  const [selectedServer, setSelectedServer] = useState(null);
+
   const handleLogout = () => {
-    console.log("로그아웃 로직 실행");
     clearJoinedServers();
     logout();
     navigate(PATHS.onboarding);
@@ -127,7 +129,7 @@ const ExploreServers = () => {
   }, [setActiveServerId]);
 
   const filteredServers = servers.filter((server) => {
-    const title = server.roomName || server.title || "";
+    const title = server.serverName || server.title || "";
     const description = server.description || "";
     return (
       title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -135,15 +137,24 @@ const ExploreServers = () => {
     );
   });
 
-  // 서버 입장 시 해당 ID의 주소로 이동
-  const handleJoinServer = async (server) => {
+  const executeJoin = async (server, password = null) => {
+    const sid = server.serverId || server.roomId;
     try {
-      await joinServer(server.roomId);
+      await joinServer(sid, password);
       upsertJoinedServer(server);
-      navigate(getServerPath(server.roomId));
+      navigate(getServerPath(sid));
     } catch (error) {
       console.error("서버 참여 실패:", error);
-      alert(error.message || "서버 입장 중 오류가 발생했습니다.");
+      throw new Error(error.message || "서버 입장 중 오류가 발생했습니다.");
+    }
+  };
+
+  const handleJoinClick = (server) => {
+    if (server.isPrivate) {
+      setSelectedServer(server);
+      setIsJoinModalOpen(true);
+    } else {
+      executeJoin(server);
     }
   };
 
@@ -154,16 +165,19 @@ const ExploreServers = () => {
     }
   };
 
-  const resolveServerForMenu = (server) =>
-    servers.find((item) => item.roomId === server.roomId) || server;
+  const resolveServerForMenu = (server) => {
+    const sid = server.serverId || server.roomId;
+    return servers.find((item) => (item.serverId || item.roomId) === sid) || server;
+  };
 
   const handleOpenServerMenu = (event, server) => {
     const resolvedServer = resolveServerForMenu(server);
+    const sid = resolvedServer.serverId || resolvedServer.roomId;
 
     openContextMenu(event, {
       type: "server",
-      targetId: resolvedServer.roomId,
-      title: resolvedServer.roomName || resolvedServer.title || "현재 서버",
+      targetId: sid,
+      title: resolvedServer.roomName || resolvedServer.serverName || resolvedServer.title || "현재 서버",
       items: buildServerContextMenuItems({
         canDelete: true,
         onOpenSettings: () =>
@@ -171,7 +185,7 @@ const ExploreServers = () => {
             type: "server",
             server: resolvedServer,
             entityName:
-              resolvedServer.roomName || resolvedServer.title || "현재 서버",
+              resolvedServer.roomName || resolvedServer.serverName || resolvedServer.title || "현재 서버",
           }),
         onOpenDeleteConfirm: () =>
           openConfirmModal({
@@ -180,7 +194,7 @@ const ExploreServers = () => {
               "프론트 화면에서만 서버가 목록에서 사라집니다. 새로고침하면 원래 데이터가 다시 보일 수 있습니다.",
             onConfirm: async () => {
               setServers((prev) =>
-                prev.filter((item) => item.roomId !== resolvedServer.roomId),
+                prev.filter((item) => (item.serverId || item.roomId) !== sid),
               );
               closeConfirmModal();
             },
@@ -190,13 +204,14 @@ const ExploreServers = () => {
   };
 
   const handleServerSettingsSubmit = async (values) => {
+    const sid = settingsModal?.server?.serverId || settingsModal?.server?.roomId;
     const trimmedName = values.serverName.trim();
 
     if (!trimmedName) {
       throw new Error("서버 이름을 입력해 주세요.");
     }
 
-    const updatedServer = await updateServer(settingsModal?.server?.roomId, {
+    const updatedServer = await updateServer(sid, {
       roomName: trimmedName,
       description: values.description?.trim() || "",
       maxCapacity: Number(values.maxParticipants),
@@ -206,7 +221,7 @@ const ExploreServers = () => {
 
     setServers((prev) =>
       prev.map((server) =>
-        server.roomId === resolvedServer.roomId ? resolvedServer : server,
+        (server.serverId || server.roomId) === sid ? resolvedServer : server,
       ),
     );
     closeSettingsModal();
@@ -262,9 +277,9 @@ const ExploreServers = () => {
         <div className="servers-grid">
           {filteredServers.map((server) => (
             <ServerCard
-              key={server.roomId}
+              key={server.serverId || server.roomId}
               server={server}
-              onJoin={handleJoinServer}
+              onJoin={handleJoinClick}
             />
           ))}
 
@@ -309,6 +324,14 @@ const ExploreServers = () => {
         onCancel={closeConfirmModal}
         onConfirm={confirmModal?.onConfirm}
       />
+
+      {isJoinModalOpen && (
+        <JoinServerModal
+          serverName={selectedServer?.serverName || selectedServer?.title}
+          onClose={() => setIsJoinModalOpen(false)}
+          onSubmit={(password) => executeJoin(selectedServer, password)}
+        />
+      )}
     </div>
   );
 };

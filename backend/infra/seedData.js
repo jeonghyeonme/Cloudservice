@@ -61,12 +61,13 @@ const seedUsers = [
 ];
 
 // 2. 다양한 테마의 스터디룸
-const seedRooms = [
+const seedServers = [
   {
-    roomId: "room_algo",
+    serverId: "room_algo",
     title: "🚀 알고리즘 코딩테스트 정복",
     description: "매일 밤 10시, 기출 문제 풀이 및 코드 리뷰",
     status: "ACTIVE",
+    isPrivate: false,
     createdAt: new Date(Date.now() - 86400000 * 2).toISOString(), // 2일 전 생성
     expiresAt: Math.floor(Date.now() / 1000) + 86400 * 7, // 7일 유지
     channels: [
@@ -84,10 +85,12 @@ const seedRooms = [
     ]
   },
   {
-    roomId: "room_fe",
+    serverId: "room_fe",
     title: "🎨 프론트엔드 실무 아키텍처",
     description: "Next.js와 TypeScript를 활용한 프로젝트 협업",
     status: "ACTIVE",
+    isPrivate: true,
+    roomPassword: "1234",
     createdAt: new Date(Date.now() - 3600000).toISOString(),
     expiresAt: Math.floor(Date.now() / 1000) + 86400 * 30,
     channels: [
@@ -107,18 +110,18 @@ const seedRooms = [
 const now = Date.now();
 const seedMessages = [
   // 알고리즘 방 메시지들
-  { roomId: "room_algo", messageId: `msg-${now - 10000}`, author: "알고리즘깎는노인", type: "text", text: "여러분 오늘 문제는 DFS/BFS 기초입니다.", createdAt: new Date(now - 10000).toISOString() },
-  { roomId: "room_algo", messageId: `msg-${now - 9000}`, author: "파이썬초보", type: "text", text: "저는 아직 재귀가 어려워요 ㅠㅠ", createdAt: new Date(now - 9000).toISOString() },
-  { roomId: "room_algo", messageId: `msg-${now - 8000}`, author: "알고리즘깎는노인", type: "file", fileName: "DFS_기초_정리.pdf", fileMeta: "800KB | PDF", createdAt: new Date(now - 8000).toISOString() },
-  { roomId: "room_algo", messageId: `msg-${now - 7000}`, author: "인프라요정", type: "text", text: "이 파일 참고해보세요! 그림으로 잘 설명되어 있습니다.", createdAt: new Date(now - 7000).toISOString() },
-  { roomId: "room_algo", messageId: `msg-${now - 6000}`, author: "SAGE AI", avatar: "🤖", type: "ai-summary", title: "학습 세션 요약", points: ["DFS는 재귀 또는 스택 사용", "BFS는 큐를 사용한 최단 거리 탐색에 유리", "방문 체크(visited) 배열은 필수"], createdAt: new Date(now - 6000).toISOString() },
-  { roomId: "room_algo", messageId: `msg-${now - 5000}`, author: "취준생_A", type: "link", linkName: "BFS 추천 문제", linkUrl: "https://www.acmicpc.net/problem/2178", createdAt: new Date(now - 5000).toISOString() },
+  { serverId: "room_algo", messageId: `msg-${now - 10000}`, author: "알고리즘깎는노인", type: "text", text: "여러분 오늘 문제는 DFS/BFS 기초입니다.", createdAt: new Date(now - 10000).toISOString() },
+  { serverId: "room_algo", messageId: `msg-${now - 9000}`, author: "파이썬초보", type: "text", text: "저는 아직 재귀가 어려워요 ㅠㅠ", createdAt: new Date(now - 9000).toISOString() },
+  { serverId: "room_algo", messageId: `msg-${now - 8000}`, author: "알고리즘깎는노인", type: "file", fileName: "DFS_기초_정리.pdf", fileMeta: "800KB | PDF", createdAt: new Date(now - 8000).toISOString() },
+  { serverId: "room_algo", messageId: `msg-${now - 7000}`, author: "인프라요정", type: "text", text: "이 파일 참고해보세요! 그림으로 잘 설명되어 있습니다.", createdAt: new Date(now - 7000).toISOString() },
+  { serverId: "room_algo", messageId: `msg-${now - 6000}`, author: "SAGE AI", avatar: "🤖", type: "ai-summary", title: "학습 세션 요약", points: ["DFS는 재귀 또는 스택 사용", "BFS는 큐를 사용한 최단 거리 탐색에 유리", "방문 체크(visited) 배열은 필수"], createdAt: new Date(now - 6000).toISOString() },
+  { serverId: "room_algo", messageId: `msg-${now - 5000}`, author: "취준생_A", type: "link", linkName: "BFS 추천 문제", linkUrl: "https://www.acmicpc.net/problem/2178", createdAt: new Date(now - 5000).toISOString() },
   
   // 프론트엔드 방 메시지들
-  { roomId: "room_fe", messageId: `msg-${now - 20000}`, author: "리액트장인", type: "text", text: "Next.js 14 서버 컴포넌트 써보신 분?", createdAt: new Date(now - 20000).toISOString() },
-  { roomId: "room_fe", messageId: `msg-${now - 18000}`, author: "인프라요정", type: "text", text: "성능은 확실히 좋은데 배포 설정이 좀 까다롭네요.", createdAt: new Date(now - 18000).toISOString() },
-  { roomId: "room_fe", messageId: `msg-${now - 15000}`, author: "리액트장인", type: "file", fileName: "서버컴포넌트_비교.png", fileMeta: "1.2MB | Image", createdAt: new Date(now - 15000).toISOString() },
-  { roomId: "room_fe", messageId: `msg-${now - 10000}`, author: "SAGE AI", avatar: "🤖", type: "ai-summary", title: "기술 토론 요약", points: ["App Router의 장점 논의", "서버 컴포넌트와 클라이언트 컴포넌트 분리 기준", "로딩/에러 바운더리 활용 팁"], createdAt: new Date(now - 10000).toISOString() }
+  { serverId: "room_fe", messageId: `msg-${now - 20000}`, author: "리액트장인", type: "text", text: "Next.js 14 서버 컴포넌트 써보신 분?", createdAt: new Date(now - 20000).toISOString() },
+  { serverId: "room_fe", messageId: `msg-${now - 18000}`, author: "인프라요정", type: "text", text: "성능은 확실히 좋은데 배포 설정이 좀 까다롭네요.", createdAt: new Date(now - 18000).toISOString() },
+  { serverId: "room_fe", messageId: `msg-${now - 15000}`, author: "리액트장인", type: "file", fileName: "서버컴포넌트_비교.png", fileMeta: "1.2MB | Image", createdAt: new Date(now - 15000).toISOString() },
+  { serverId: "room_fe", messageId: `msg-${now - 10000}`, author: "SAGE AI", avatar: "🤖", type: "ai-summary", title: "기술 토론 요약", points: ["App Router의 장점 논의", "서버 컴포넌트와 클라이언트 컴포넌트 분리 기준", "로딩/에러 바운더리 활용 팁"], createdAt: new Date(now - 10000).toISOString() }
 ];
 
 async function seedTable(tableName, data) {
@@ -145,7 +148,7 @@ async function run() {
   
   // 테이블명(smartstudy-*)과 정확히 일치시키기.
   await seedTable("smartstudy-Users", seedUsers);
-  await seedTable("smartstudy-Rooms", seedRooms);
+  await seedTable("smartstudy-Servers", seedServers);
   await seedTable("smartstudy-Messages", seedMessages);
   
   console.log("\n🎉 시드 데이터 삽입 완료!");

@@ -11,10 +11,10 @@ module.exports.handler = async (event) => {
       event.headers?.Authorization || event.headers?.authorization || "";
     const { userId: hostId } = verifyAccessToken(authHeader);
 
-    const roomId = uuidv4();
+    const serverId = uuidv4();
     const createdAt = new Date().toISOString();
 
-    // ✅ 호스트의 nickname을 Users 테이블에서 조회
+    // 호스트의 nickname을 Users 테이블에서 조회
     let hostNickname = "Unknown";
     if (hostId) {
       const userResult = await dynamoDb.send(new GetCommand({
@@ -24,40 +24,44 @@ module.exports.handler = async (event) => {
       hostNickname = userResult.Item?.nickname || "Unknown";
     }
 
-    // 1. Rooms 테이블에 방 생성
-    const roomParams = {
-      TableName: process.env.ROOMS_TABLE,
+    // 1. Servers 테이블에 서버 생성
+    const serverParams = {
+      TableName: process.env.SERVERS_TABLE,
       Item: {
-        roomId,
+        serverId,
         status: "ACTIVE",
         createdAt,
-        roomName: body.roomName || "기본 스터디룸",
+        serverName: body.serverName || body.roomName || "기본 스터디 서버",
         description: body.description || "",
         hostId: hostId || null,
         hostNickname,
         maxCapacity: body.maxCapacity || 10,
         currentCount: hostId ? 1 : 0,
+        isPrivate: body.isPrivate || false,
+        password: body.password || null,
+        channels: [
+          { chId: uuidv4(), name: "일반", label: "일반", topic: "", isDefault: true },
+        ],
         members: hostId
           ? [{ userId: hostId, nickname: hostNickname, role: "HOST", joinedAt: createdAt }]
           : [],
       },
     };
 
-    await dynamoDb.send(new PutCommand(roomParams));
+    await dynamoDb.send(new PutCommand(serverParams));
 
-    // 2. RoomMembers 테이블에 방장 가입 처리
+    // 2. ServerMembers 테이블에 방장 가입 처리
     if (hostId) {
-      const memberParams = {
-        TableName: process.env.ROOM_MEMBERS_TABLE,
+      await dynamoDb.send(new PutCommand({
+        TableName: process.env.SERVER_MEMBERS_TABLE,
         Item: {
           userId: hostId,
-          roomId: roomId,
+          serverId,
           nickname: hostNickname,
           role: "HOST",
           joinedAt: createdAt,
         },
-      };
-      await dynamoDb.send(new PutCommand(memberParams));
+      }));
     }
 
     return {
@@ -68,8 +72,8 @@ module.exports.handler = async (event) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        message: "방 생성 성공",
-        roomId,
+        message: "서버 생성 성공",
+        serverId,
       }),
     };
   } catch (error) {
@@ -81,7 +85,7 @@ module.exports.handler = async (event) => {
         "Access-Control-Allow-Credentials": true,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ message: "방 생성 실패", error: error.message }),
+      body: JSON.stringify({ message: "서버 생성 실패", error: error.message }),
     };
   }
 };

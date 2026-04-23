@@ -12,9 +12,9 @@ export const ENDPOINTS = {
     refresh: "/token/refresh",
     logout: "/userLogout",
   },
-  rooms: {
-    list: "/rooms",
-    mine: "/rooms/me",
+  servers: {
+    list: "/servers",
+    mine: "/servers/me",
   },
 };
 

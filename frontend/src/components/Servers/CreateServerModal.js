@@ -5,11 +5,14 @@ import { createServerFields } from "../common/entityFormConfig";
 
 const CreateServerModal = ({ onClose }) => {
   const handleSubmit = async (values) => {
+    const isPrivate = values.privacy === "Private";
+
     const newServerData = {
-      roomName: values.serverName,
+      serverName: values.serverName,
       description: values.description,
       maxCapacity: Number(values.maxParticipants),
-      isPrivate: values.privacy === "Private",
+      isPrivate: isPrivate,
+      roomPassword: isPrivate ? values.serverPassword : "",
       status: "ACTIVE",
     };
 
@@ -19,7 +22,7 @@ const CreateServerModal = ({ onClose }) => {
       onClose();
       window.location.reload();
     } catch (error) {
-      console.error("🚨 서버 생성 실패:", error);
+      console.error("서버 생성 실패:", error);
       alert(error.message || "서버 통신 중 오류가 발생했습니다.");
     }
   };

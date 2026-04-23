@@ -50,19 +50,19 @@ async function createUsersTable() {
 
 
 // =========================
-// 2. Rooms 테이블
+// 2. server 테이블
 // PK: roomId / GSI: status-createdAt-index (방 목록 최신순 조회)
 // TTL: expiresAt (24시간 후 자동 삭제)
 // status는 GSI 키라 String 타입 사용 ("ACTIVE")
 // =========================
-async function createRoomsTable() {
+async function createServersTable() {
   await client.send(new CreateTableCommand({
-    TableName: "smartstudy-Rooms",
+    TableName: "smartstudy-Servers",
     KeySchema: [
-      { AttributeName: "roomId", KeyType: "HASH" },
+      { AttributeName: "serverId", KeyType: "HASH" },
     ],
     AttributeDefinitions: [
-      { AttributeName: "roomId",    AttributeType: "S" },
+      { AttributeName: "serverId",    AttributeType: "S" },
       { AttributeName: "status",    AttributeType: "S" },
       { AttributeName: "createdAt", AttributeType: "S" },
     ],
@@ -82,11 +82,11 @@ async function createRoomsTable() {
 
   // TTL 활성화 — Python: update_time_to_live(...)
   await client.send(new UpdateTimeToLiveCommand({
-    TableName: "smartstudy-Rooms",
+    TableName: "smartstudy-Servers",
     TimeToLiveSpecification: { Enabled: true, AttributeName: "expiresAt" },
   }));
 
-  console.log("✅ Rooms 테이블 생성 + TTL 설정 완료");
+  console.log("✅ Servers 테이블 생성 + TTL 설정 완료");
 }
 
 
@@ -103,13 +103,13 @@ async function createConnectionsTable() {
     ],
     AttributeDefinitions: [
       { AttributeName: "connectionId", AttributeType: "S" },
-      { AttributeName: "roomId",       AttributeType: "S" },
+      { AttributeName: "serverId",       AttributeType: "S" },
     ],
     GlobalSecondaryIndexes: [
       {
-        IndexName: "roomId-index",
+        IndexName: "serverId-index",
         KeySchema: [
-          { AttributeName: "roomId", KeyType: "HASH" },
+          { AttributeName: "serverId", KeyType: "HASH" },
         ],
         Projection: { ProjectionType: "ALL" },
       },
@@ -134,11 +134,11 @@ async function createMessagesTable() {
   await client.send(new CreateTableCommand({
     TableName: "smartstudy-Messages",
     KeySchema: [
-      { AttributeName: "roomId",    KeyType: "HASH"  },
+      { AttributeName: "serverId",    KeyType: "HASH"  },
       { AttributeName: "messageId", KeyType: "RANGE" },
     ],
     AttributeDefinitions: [
-      { AttributeName: "roomId",    AttributeType: "S" },
+      { AttributeName: "serverId",    AttributeType: "S" },
       { AttributeName: "messageId", AttributeType: "S" },
     ],
     BillingMode: "PAY_PER_REQUEST",
@@ -220,6 +220,22 @@ async function addEmailGSI() {
   console.log("✅ Users GSI (email-index) 생성 완료");
 }
 
+async function createServerMembersTable() {
+  await client.send(new CreateTableCommand({
+    TableName: "smartstudy-ServerMembers", // 실제 테이블 이름
+    KeySchema: [
+      { AttributeName: "userId", KeyType: "HASH" },  // PK
+      { AttributeName: "serverId", KeyType: "RANGE" }, // SK
+    ],
+    AttributeDefinitions: [
+      { AttributeName: "userId", AttributeType: "S" },
+      { AttributeName: "serverId", AttributeType: "S" },
+    ],
+    BillingMode: "PAY_PER_REQUEST",
+  }));
+  console.log("✅ ServerMembers 테이블 생성 완료");
+}
+
 
 // =========================
 // 전체 실행
@@ -227,27 +243,59 @@ async function addEmailGSI() {
 async function run() {
   console.log("\n🚀 모든 테이블 생성을 시작합니다...\n");
 
-  try {
-    await createUsersTable();
-    await createRoomsTable();
-    await createConnectionsTable();
-    await createMessagesTable();
-    await createRefreshTokensTable();
+  // try {
+  //   await createUsersTable();
+  //   await createServersTable();
+  //   await createConnectionsTable();
+  //   await createMessagesTable();
+  //   await createRefreshTokensTable();
 
-    console.log("\n✅ 모든 테이블 생성 요청 완료\n");
+  //   console.log("\n✅ 모든 테이블 생성 요청 완료\n");
 
-    await addEmailGSI();
+  //   await addEmailGSI();
 
-    console.log("\n🎉 모든 설정이 완료되었습니다!\n");
+  //   console.log("\n🎉 모든 설정이 완료되었습니다!\n");
 
-  } catch (error) {
-    // 이미 테이블이 존재하는 경우 무시
-    if (error.name === "ResourceInUseException") {
-      console.log("⚠️  이미 존재하는 테이블이 있습니다. 스킵합니다.");
-    } else {
-      console.error("❌ 에러 발생:", error.message);
+  // } catch (error) {
+  //   // 이미 테이블이 존재하는 경우 무시
+  //   if (error.name === "ResourceInUseException") {
+  //     console.log("⚠️  이미 존재하는 테이블이 있습니다. 스킵합니다.");
+  //   } else {
+  //     console.error("❌ 에러 발생:", error.message);
+  //   }
+  // }
+
+  const createFunctions = [
+    { name: "Users", fn: createUsersTable },
+    { name: "Servers", fn: createServersTable },
+    { name: "ServerMembers", fn: createServerMembersTable },
+    { name: "Connections", fn: createConnectionsTable },
+    { name: "Messages", fn: createMessagesTable },
+    { name: "RefreshTokens", fn: createRefreshTokensTable },
+  ];
+
+  for (const task of createFunctions) {
+    try {
+      await task.fn();
+    } catch (error) {
+      if (error.name === "ResourceInUseException") {
+        console.log(`⚠️  [${task.name}] 이미 존재하는 테이블입니다. 건너뜁니다.`);
+      } else {
+        console.error(`❌ [${task.name}] 생성 중 에러 발생:`, error.message);
+      }
     }
   }
+
+  console.log("\n✅ 개별 테이블 생성 시도 완료\n");
+
+  // GSI(인덱스) 추가 시도
+  try {
+    await addEmailGSI();
+  } catch (error) {
+    console.log("⚠️  GSI는 이미 존재하거나 생성 중일 수 있습니다.");
+  }
+
+  console.log("\n🎉 모든 프로세스가 종료되었습니다!\n");
 }
 
 run();
