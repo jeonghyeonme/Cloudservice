@@ -86,7 +86,6 @@ const ExploreServers = () => {
   const { logout } = useAuth();
   const { exploreServers, setExploreServers, clearJoinedServers, setActiveServerId, upsertJoinedServer } =
     useServers();
-  const [servers, setServers] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [inviteCode, setInviteCode] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -106,7 +105,6 @@ const ExploreServers = () => {
       .then((data) => { setExploreServers(data.items || []); })
       .catch((err) => {
         console.error("데이터 로드 실패!", err);
-        setServers([]);
       });
   }, [setActiveServerId, setExploreServers]);
 
@@ -127,40 +125,13 @@ const ExploreServers = () => {
       navigate(getServerPath(server.serverId));
     } catch (error) {
       console.error("서버 참여 실패:", error);
-      // FormModal의 내부 에러 처리를 위해 에러를 다시 던져줍니다.
-      // throw new Error(error.message || "서버 입장 중 오류가 발생했습니다.");
       throw error;
     }
   };
 
-  // 서버 입장 시 해당 ID의 주소로 이동
-  // const handleJoinServer = async (server) => {
-  //   try {
-  //     let password = null;
-  //     // 비공개 서버면 비밀번호 입력 받기
-  //     if (server.isPrivate) {
-  //       password = prompt("비공개 서버입니다. 비밀번호를 입력하세요:");
-  //       if (password === null) return; // 취소 누르면 중단
-  //     }
-  //     await joinServer(server.serverId, password);
-  //     upsertJoinedServer(server);
-  //     navigate(getServerPath(server.serverId));
-  //   } catch (error) {
-  //     console.error("서버 참여 실패:", error);
-  //     alert(error.message || "서버 입장 중 오류가 발생했습니다.");
-  //   }
-  // };
-
   const handleJoinClick = (server) => {
-    // if (server.isPrivate) {
-      // 비공개면 모달 띄우기
       setSelectedServer(server);
       setIsJoinModalOpen(true);
-    // }
-    // else {
-    //   // 공개면 바로 입장
-    //   executeJoin(server);
-    // }
   };
 
   const handleDirectJoin = () => {

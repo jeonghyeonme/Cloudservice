@@ -43,10 +43,6 @@ export const ServerProvider = ({ children }) => {
     setExploreServers((prev) => prev.filter((s) => s.serverId !== serverId));
   }, []);
 
-  const setPublicServers = useCallback((servers) => {
-    setExploreServers(servers);
-  }, []);
-
   // serverId 우선 사용, 기존 roomId 호환을 위해 fallback 처리
   // 백엔드 마이그레이션 완료 후에는 server.serverId만 사용하면 됨
   const upsertJoinedServer = useCallback((server) => {
@@ -96,7 +92,7 @@ export const ServerProvider = ({ children }) => {
       });
 
     return () => { isMounted = false; };
-  }, [isLoggedIn, clearJoinedServers]);
+  }, [isLoggedIn, clearJoinedServers, refreshJoinedServers]);
 
   const value = useMemo(
     () => ({
@@ -110,7 +106,7 @@ export const ServerProvider = ({ children }) => {
       refreshJoinedServers,
       removeServerFromList,
     }),
-    [joinedServers, activeServerId, upsertJoinedServer, clearJoinedServers, refreshJoinedServers, removeServerFromList],
+    [joinedServers, exploreServers, activeServerId, upsertJoinedServer, clearJoinedServers, refreshJoinedServers, removeServerFromList],
   );
 
   return <ServerContext.Provider value={value}>{children}</ServerContext.Provider>;
