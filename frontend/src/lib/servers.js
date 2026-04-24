@@ -26,18 +26,37 @@ export function getServerDetail(serverId) {
   });
 }
 
+export function updateServer(serverId, payload) {
+  return request(`${ENDPOINTS.servers.list}/${serverId}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteServer(serverId) {
+  return request(`${ENDPOINTS.servers.list}/${serverId}`, {
+    method: "DELETE",
+  });
+}
+
+export function leaveServer(serverId) {
+  return request(`${ENDPOINTS.servers.list}/${serverId}/leave`, {
+    method: "POST",
+  });
+}
+
 export function getServerMessages(serverId) {
   return request(`${ENDPOINTS.servers.list}/${serverId}/messages`, {
     method: "GET",
   });
 }
 
-export function joinServer(serverId, serverPassword) {
+export function joinServer(serverId, password) {
   const options = {
     method: "POST",
   };
-  if (serverPassword) {
-    options.body = JSON.stringify({ serverPassword });
+  if (password) {
+    options.body = JSON.stringify({ password });
   }
   return request(`${ENDPOINTS.servers.list}/${serverId}/join`, options);
 }
@@ -49,14 +68,15 @@ export function createChannel(serverId, payload) {
   });
 }
 
-export function deleteServer(serverId) {
-  return request(`${ENDPOINTS.servers.list}/${serverId}`, {
-    method: "DELETE", // DELETE 메서드 사용
+export function deleteChannel(serverId, channelId) {
+  return request(`${ENDPOINTS.servers.list}/${serverId}/channels/${channelId}`, {
+    method: "DELETE",
   });
 }
 
-export function leaveServer(serverId) {
-  return request(`${ENDPOINTS.servers.list}/${serverId}/leave`, {
-    method: "POST",
+export function updateChannel(serverId, channelId, payload) {
+  return request(`${ENDPOINTS.servers.list}/${serverId}/channels/${channelId}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
   });
 }

@@ -1,61 +1,100 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { PATHS } from '../../constants/path';
-import './Onboarding.css';
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import { PATHS } from "../../constants/path";
+import "./Onboarding.css";
 
 const slides = [
   {
     id: 1,
-    badge: '모듈 01',
+    badge: "모듈 01",
     title: (
       <>
-        학습 몰입도를 극대화하는<br />
+        학습 몰입도를 극대화하는
+        <br />
         <span className="text-highlight">서버리스 AI 메신저</span>
       </>
     ),
-    description: '대화와 자료가 섞이지 않는 완벽한 스터디 공간을 경험하세요. SmartStudy는 당신의 집중력을 위해 설계되었습니다.',
-    buttonText: '시작하기',
+    description:
+      "대화와 자료가 섞이지 않는 완벽한 스터디 공간을 경험하세요. SmartStudy는 당신의 집중력을 위해 설계되었습니다.",
+    buttonText: "시작하기",
   },
   {
     id: 2,
-    badge: '모듈 02',
+    badge: "모듈 02",
     title: (
       <>
-        실시간으로 동기화되는<br />
+        실시간으로 동기화되는
+        <br />
         <span className="text-highlight">스마트 협업 공간</span>
       </>
     ),
-    description: '언제 어디서나 팀원들과 끊김 없이 소통하고 자료를 공유하세요. 효율적인 협업의 새로운 기준을 제시합니다.',
-    buttonText: '시작하기',
+    description:
+      "언제 어디서나 팀원들과 끊김 없이 소통하고 자료를 공유하세요. 효율적인 협업의 새로운 기준을 제시합니다.",
+    buttonText: "시작하기",
   },
   {
     id: 3,
-    badge: '모듈 03',
+    badge: "모듈 03",
     title: (
       <>
-        나만의 학습 패턴을 분석하는<br />
+        나만의 학습 패턴을 분석하는
+        <br />
         <span className="text-highlight">맞춤형 AI 비서</span>
       </>
     ),
-    description: 'AI가 당신의 학습 데이터를 분석하여 최적의 학습 경로를 추천합니다. 더 스마트하게 학습 목표를 달성하세요.',
-    buttonText: '시작하기',
-  }
+    description:
+      "AI가 당신의 학습 데이터를 분석하여 최적의 학습 경로를 추천합니다. 더 스마트하게 학습 목표를 달성하세요.",
+    buttonText: "시작하기",
+  },
 ];
 
+// 슬라이드는 3초에 하나씩 넘어가도록 시간 지정
+const AUTO_SLIDE_DELAY = 3000;
+const FIRST_SLIDE_INDEX = 1;
+const LAST_SLIDE_INDEX = slides.length;
+const clonedSlides = [slides[slides.length - 1], ...slides, slides[0]];
+
 const ArrowLeftIcon = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <polyline points="15 18 9 12 15 6" />
   </svg>
 );
 
 const ArrowRightIcon = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <polyline points="9 18 15 12 9 6" />
   </svg>
 );
 
 const DocumentIcon = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
     <polyline points="14 2 14 8 20 8" />
     <line x1="16" y1="13" x2="8" y2="13" />
@@ -65,7 +104,16 @@ const DocumentIcon = () => (
 );
 
 const ChartIcon = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <line x1="18" y1="20" x2="18" y2="10" />
     <line x1="12" y1="20" x2="12" y2="4" />
     <line x1="6" y1="20" x2="6" y2="14" />
@@ -74,6 +122,11 @@ const ChartIcon = () => (
 
 const Onboarding = ({ onLogin, onRegister }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [trackIndex, setTrackIndex] = useState(FIRST_SLIDE_INDEX);
+  const [timerResetKey, setTimerResetKey] = useState(0);
+  const [isTrackTransitionEnabled, setIsTrackTransitionEnabled] =
+    useState(true);
+  const transitionRestoreTimerRef = useRef(null);
   const navigate = useNavigate();
 
   const handleLoginClick = () => {
@@ -85,41 +138,115 @@ const Onboarding = ({ onLogin, onRegister }) => {
     navigate(PATHS.login);
   };
 
+  const restoreTrackTransition = useCallback(() => {
+    if (transitionRestoreTimerRef.current) {
+      clearTimeout(transitionRestoreTimerRef.current);
+    }
+
+    transitionRestoreTimerRef.current = setTimeout(() => {
+      setIsTrackTransitionEnabled(true);
+      transitionRestoreTimerRef.current = null;
+    }, 50);
+  }, []);
+
+  const jumpToTrackIndex = useCallback(
+    (nextTrackIndex) => {
+      setIsTrackTransitionEnabled(false);
+      setTrackIndex(nextTrackIndex);
+      restoreTrackTransition();
+    },
+    [restoreTrackTransition],
+  );
+
+  const moveToSlide = useCallback((targetSlide) => {
+    const normalizedSlide =
+      ((targetSlide % slides.length) + slides.length) % slides.length;
+
+    setIsTrackTransitionEnabled(true);
+    setCurrentSlide(normalizedSlide);
+    setTrackIndex(normalizedSlide + FIRST_SLIDE_INDEX);
+  }, []);
+
   const nextSlide = useCallback(() => {
+    setIsTrackTransitionEnabled(true);
     setCurrentSlide((prev) => (prev === slides.length - 1 ? 0 : prev + 1));
+    setTrackIndex((prev) => prev + 1);
   }, []);
 
   const prevSlide = useCallback(() => {
+    setIsTrackTransitionEnabled(true);
     setCurrentSlide((prev) => (prev === 0 ? slides.length - 1 : prev - 1));
+    setTrackIndex((prev) => prev - 1);
   }, []);
 
   useEffect(() => {
-    const slideInterval = setInterval(nextSlide, 5000);
-    return () => clearInterval(slideInterval);
-  }, [nextSlide]);
+    const slideTimer = setTimeout(() => nextSlide(), AUTO_SLIDE_DELAY);
+
+    return () => clearTimeout(slideTimer);
+  }, [currentSlide, nextSlide, timerResetKey]);
+
+  useEffect(() => {
+    return () => {
+      if (transitionRestoreTimerRef.current) {
+        clearTimeout(transitionRestoreTimerRef.current);
+      }
+    };
+  }, []);
+
+  const resetAutoSlideTimer = () => {
+    setTimerResetKey((prev) => prev + 1);
+  };
 
   const handleManualNav = (direction) => {
-    if (direction === 'next') nextSlide();
-    if (direction === 'prev') prevSlide();
+    if (direction === "next") nextSlide();
+    if (direction === "prev") prevSlide();
+    resetAutoSlideTimer();
+  };
+
+  const handleIndicatorClick = (index) => {
+    if (currentSlide === slides.length - 1 && index === 0) {
+      nextSlide();
+    } else {
+      moveToSlide(index);
+    }
+
+    resetAutoSlideTimer();
+  };
+
+  const handleTrackTransitionEnd = () => {
+    if (trackIndex === LAST_SLIDE_INDEX + 1) {
+      jumpToTrackIndex(FIRST_SLIDE_INDEX);
+    }
+
+    if (trackIndex === 0) {
+      jumpToTrackIndex(LAST_SLIDE_INDEX);
+    }
   };
 
   return (
     <div className="onboarding-container">
       {/* Main Slider Area */}
       <main className="slider-wrapper">
-        <button className="nav-arrow left-arrow" onClick={() => handleManualNav('prev')} aria-label="Previous Slide">
+        <button
+          className="nav-arrow left-arrow"
+          onClick={() => handleManualNav("prev")}
+          aria-label="Previous Slide"
+        >
           <ArrowLeftIcon />
         </button>
 
         <div className="slides-container">
-          <div 
-            className="slides-track" 
-            style={{ transform: `translateX(-${currentSlide * 100}%)` }}
+          <div
+            className="slides-track"
+            style={{
+              transform: `translateX(-${trackIndex * 100}%)`,
+              transition: isTrackTransitionEnabled ? undefined : "none",
+            }}
+            onTransitionEnd={handleTrackTransitionEnd}
           >
-            {slides.map((slide) => (
-              <div className="slide" key={slide.id}>
+            {clonedSlides.map((slide, index) => (
+              <div className="slide" key={`${slide.id}-${index}`}>
                 <div className="slide-content">
-                  
                   {/* Left Side: Mock Graphic */}
                   <div className="slide-graphic">
                     <div className="graphic-backdrop"></div>
@@ -156,14 +283,17 @@ const Onboarding = ({ onLogin, onRegister }) => {
                       {slide.buttonText} <ArrowRightIcon />
                     </button>
                   </div>
-                  
                 </div>
               </div>
             ))}
           </div>
         </div>
 
-        <button className="nav-arrow right-arrow" onClick={() => handleManualNav('next')} aria-label="Next Slide">
+        <button
+          className="nav-arrow right-arrow"
+          onClick={() => handleManualNav("next")}
+          aria-label="Next Slide"
+        >
           <ArrowRightIcon />
         </button>
 
@@ -172,8 +302,8 @@ const Onboarding = ({ onLogin, onRegister }) => {
           {slides.map((_, index) => (
             <button
               key={index}
-              className={`indicator ${index === currentSlide ? 'active' : ''}`}
-              onClick={() => setCurrentSlide(index)}
+              className={`indicator ${index === currentSlide ? "active" : ""}`}
+              onClick={() => handleIndicatorClick(index)}
               aria-label={`Go to slide ${index + 1}`}
             />
           ))}

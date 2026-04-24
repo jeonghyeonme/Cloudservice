@@ -1,13 +1,22 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { getServerPath } from "../../constants/path";
-import { getServers, joinServer } from "../../lib/servers";
+import { getServers, joinServer, updateServer, leaveServer, deleteServer } from "../../lib/servers";
 import "./ExploreServers.css";
 import ServerSidebar from "../layout/ServerSidebar";
 import CreateServerModal from "./CreateServerModal";
 import { useAuth } from "../../contexts/AuthContext";
 import { PATHS } from "../../constants/path";
 import { useServers } from "../../contexts/ServerContext";
+import ContextMenu from "../common/ContextMenu";
+import ConfirmModal from "../common/ConfirmModal";
+import EntitySettingsModal from "../common/EntitySettingsModal";
+import useChatOverlayState from "../Chat/hooks/useChatOverlayState";
+import {
+  createServerDefaultValues,
+  createServerFields,
+} from "../common/entityFormConfig";
+import { buildServerContextMenuItems } from "../Chat/utils/contextMenuFactories";
 import JoinServerModal from "./JoinServerModal";
 
 const ServerCard = ({ server, onJoin }) => {
@@ -26,7 +35,6 @@ const ServerCard = ({ server, onJoin }) => {
   return (
     <div className={`servers-card ${isFull ? "servers-full" : ""}`}>
       <div className="servers-cover">
-        {/* 이미지가 있으면 <img> 태그를, 없으면 기존처럼 이모지를 보여줌 */}
         {coverImage ? (
           <img src={coverImage} alt={name} className="servers-cover-img" />
         ) : (
@@ -83,32 +91,53 @@ const ServerCard = ({ server, onJoin }) => {
 
 const ExploreServers = () => {
   const navigate = useNavigate();
-  const { logout } = useAuth();
-  const { exploreServers, setExploreServers, clearJoinedServers, setActiveServerId, upsertJoinedServer } =
+  const { logout, refreshToken, user } = useAuth();
+  const { clearJoinedServers, setActiveServerId, upsertJoinedServer, removeJoinedServer } =
     useServers();
+  const [servers, setServers] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [inviteCode, setInviteCode] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isJoinModalOpen, setIsJoinModalOpen] = useState(false); // 참가 모달 상태
-  const [selectedServer, setSelectedServer] = useState(null); // 선택된 서버 정보
+  const {
+    contextMenu,
+    settingsModal,
+    confirmModal,
+    openContextMenu,
+    closeContextMenu,
+    openSettingsModal,
+    closeSettingsModal,
+    openConfirmModal,
+    closeConfirmModal,
+  } = useChatOverlayState();
+  const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
+  const [selectedServer, setSelectedServer] = useState(null);
 
-  const handleLogout = () => {
-    console.log("로그아웃 로직 실행");
-    clearJoinedServers();
-    logout();
-    navigate(PATHS.onboarding);
+  const handleLogout = async () => {
+    try {
+      if (refreshToken) {
+        const { logout: logoutApi } = await import("../../lib/auth");
+        await logoutApi(refreshToken);
+      }
+    } catch (error) {
+      console.error("Logout failed:", error);
+    } finally {
+      clearJoinedServers();
+      logout();
+      navigate(PATHS.onboarding, { replace: true });
+    }
   };
 
   useEffect(() => {
     setActiveServerId(null);
     getServers()
-      .then((data) => { setExploreServers(data.items || []); })
+      .then((data) => setServers(data.items || []))
       .catch((err) => {
         console.error("데이터 로드 실패!", err);
+        setServers([]);
       });
-  }, [setActiveServerId, setExploreServers]);
+  }, [setActiveServerId]);
 
-  const filteredServers = exploreServers.filter((server) => {
+  const filteredServers = servers.filter((server) => {
     const title = server.serverName || server.title || "";
     const description = server.description || "";
     return (
@@ -117,12 +146,12 @@ const ExploreServers = () => {
     );
   });
 
-  // 서버 참여 로직 (추출)
   const executeJoin = async (server, password = null) => {
+    const sid = server.serverId || server.roomId;
     try {
-      await joinServer(server.serverId, password);
+      await joinServer(sid, password);
       upsertJoinedServer(server);
-      navigate(getServerPath(server.serverId));
+      navigate(getServerPath(sid));
     } catch (error) {
       console.error("서버 참여 실패:", error);
       throw error;
@@ -130,8 +159,12 @@ const ExploreServers = () => {
   };
 
   const handleJoinClick = (server) => {
+    if (server.isPrivate) {
       setSelectedServer(server);
       setIsJoinModalOpen(true);
+    } else {
+      executeJoin(server);
+    }
   };
 
   const handleDirectJoin = () => {
@@ -141,6 +174,80 @@ const ExploreServers = () => {
     }
   };
 
+  const resolveServerForMenu = (server) => {
+    const sid = server.serverId || server.roomId;
+    return servers.find((item) => (item.serverId || item.roomId) === sid) || server;
+  };
+
+  const handleOpenServerMenu = (event, server) => {
+    const resolvedServer = resolveServerForMenu(server);
+    const sid = resolvedServer.serverId || resolvedServer.roomId;
+    const isHost = user?.userId === resolvedServer.hostId;
+
+    openContextMenu(event, {
+      type: "server",
+      targetId: sid,
+      title: resolvedServer.roomName || resolvedServer.serverName || resolvedServer.title || "현재 서버",
+      items: buildServerContextMenuItems({
+        canDelete: isHost,
+        onOpenSettings: () =>
+          openSettingsModal({
+            type: "server",
+            server: resolvedServer,
+            entityName:
+              resolvedServer.roomName || resolvedServer.serverName || resolvedServer.title || "현재 서버",
+          }),
+        onOpenDeleteConfirm: () =>
+          openConfirmModal({
+            title: "정말로 삭제하시겠습니까?",
+            description: "확인을 누르면 서버가 영구적으로 삭제됩니다.",
+            onConfirm: async () => {
+              await deleteServer(sid);
+              setServers((prev) =>
+                prev.filter((item) => (item.serverId || item.roomId) !== sid),
+              );
+              removeJoinedServer(sid);
+              closeConfirmModal();
+            },
+          }),
+        onLeave: () =>
+          openConfirmModal({
+            title: "서버에서 나가시겠습니까?",
+            description: "확인을 누르면 서버 목록에서 제외됩니다.",
+            onConfirm: async () => {
+              await leaveServer(sid);
+              removeJoinedServer(sid);
+              closeConfirmModal();
+            },
+          }),
+      }),
+    });
+  };
+
+  const handleServerSettingsSubmit = async (values) => {
+    const sid = settingsModal?.server?.serverId || settingsModal?.server?.roomId;
+    const trimmedName = values.serverName.trim();
+
+    if (!trimmedName) {
+      throw new Error("서버 이름을 입력해 주세요.");
+    }
+
+    const updatedServer = await updateServer(sid, {
+      roomName: trimmedName,
+      description: values.description?.trim() || "",
+      maxCapacity: Number(values.maxParticipants),
+      isPrivate: values.privacy === "Private",
+    });
+    const resolvedServer = updatedServer.room || updatedServer;
+
+    setServers((prev) =>
+      prev.map((server) =>
+        (server.serverId || server.roomId) === sid ? resolvedServer : server,
+      ),
+    );
+    closeSettingsModal();
+  };
+
   return (
     <div className="explore-container">
       <ServerSidebar
@@ -148,6 +255,9 @@ const ExploreServers = () => {
         onServerClick={() => {}}
         onAddClick={() => setIsModalOpen(true)}
         onLogout={handleLogout}
+        contextMenuType={contextMenu?.type}
+        contextMenuTargetId={contextMenu?.targetId}
+        onServerContextMenu={handleOpenServerMenu}
       />
 
       <div className="explore-main">
@@ -188,9 +298,8 @@ const ExploreServers = () => {
         <div className="servers-grid">
           {filteredServers.map((server) => (
             <ServerCard
-              key={server.serverId}
+              key={server.serverId || server.roomId}
               server={server}
-              // onJoin={handleJoinServer}
               onJoin={handleJoinClick}
             />
           ))}
@@ -209,6 +318,33 @@ const ExploreServers = () => {
       {isModalOpen && (
         <CreateServerModal onClose={() => setIsModalOpen(false)} />
       )}
+
+      <ContextMenu
+        open={Boolean(contextMenu)}
+        position={contextMenu?.position}
+        title={contextMenu?.title}
+        items={contextMenu?.items || []}
+        onClose={closeContextMenu}
+      />
+
+      <EntitySettingsModal
+        open={settingsModal?.type === "server"}
+        entityType="server"
+        entityName={settingsModal?.entityName}
+        fields={createServerFields(
+          createServerDefaultValues(settingsModal?.server || {}),
+        )}
+        onClose={closeSettingsModal}
+        onSubmit={handleServerSettingsSubmit}
+      />
+
+      <ConfirmModal
+        open={Boolean(confirmModal)}
+        title={confirmModal?.title}
+        description={confirmModal?.description}
+        onCancel={closeConfirmModal}
+        onConfirm={confirmModal?.onConfirm}
+      />
 
       {isJoinModalOpen && (
         <JoinServerModal

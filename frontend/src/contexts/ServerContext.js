@@ -1,64 +1,40 @@
-import React, {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
-import { useAuth } from "./AuthContext";
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from "react";
 import { getMyServers } from "../lib/servers";
+import { useAuth } from "./AuthContext";
 
-const ServerContext = createContext(null);
+const ServerContext = createContext();
 
-/**
- * @title 서버 입장/퇴장 추적 및 활성 서버 관리 컨텍스트
- * @modified Room→Server 마이그레이션, serverId/roomId 호환 처리
- */
 export const ServerProvider = ({ children }) => {
   const { isLoggedIn } = useAuth();
   const [joinedServers, setJoinedServers] = useState([]);
+  const [exploreServers, setExploreServers] = useState([]); // ExploreServers 페이지용 공유 상태
   const [activeServerId, setActiveServerId] = useState(null);
-  const [exploreServers, setExploreServers] = useState([]);
 
-  // 서버 목록을 API로부터 가져오는 함수를 별도로 분리 (재사용 가능하게)
   const refreshJoinedServers = useCallback(async () => {
     try {
       const data = await getMyServers();
-      const servers = Array.isArray(data?.items) ? data.items : [];
-      setJoinedServers(
-        servers.map((server) => ({
-          serverId: server.serverId || server.roomId,
-          serverName: server.serverName || server.roomName || server.title || "",
-        }))
-      );
+      setJoinedServers(data.items || []);
     } catch (error) {
-      console.error("내 서버 목록을 갱신하지 못했습니다.", error);
+      console.error("Failed to refresh joined servers:", error);
     }
   }, []);
 
-  // 리스트에서 특정 서버를 즉시 제거하는 함수 (삭제 성공 시 사용)
-  const removeServerFromList = useCallback((serverId) => {
-    setJoinedServers((prev) => prev.filter((s) => s.serverId !== serverId));
-    setExploreServers((prev) => prev.filter((s) => s.serverId !== serverId));
+  const upsertJoinedServer = useCallback((server) => {
+    setJoinedServers((prev) => {
+      const exists = prev.find((s) => (s.serverId || s.roomId) === (server.serverId || server.roomId));
+      if (exists) {
+        return prev.map((s) => ((s.serverId || s.roomId) === (server.serverId || server.roomId) ? { ...s, ...server } : s));
+      }
+      return [...prev, server];
+    });
   }, []);
 
-  // serverId 우선 사용, 기존 roomId 호환을 위해 fallback 처리
-  // 백엔드 마이그레이션 완료 후에는 server.serverId만 사용하면 됨
-  const upsertJoinedServer = useCallback((server) => {
-    const id = server?.serverId || server?.roomId;
-    if (!id) return;
+  const removeJoinedServer = useCallback((serverId) => {
+    setJoinedServers((prev) => prev.filter((s) => (s.serverId || s.roomId) !== serverId));
+  }, []);
 
-    const normalizedServer = {
-      serverId: id,
-      serverName: server.serverName || server.roomName || server.title || "",
-    };
-
-    setJoinedServers((prev) => {
-      const existingIndex = prev.findIndex((s) => s.serverId === normalizedServer.serverId);
-      if (existingIndex === -1) return [...prev, normalizedServer];
-      return prev.map((s, i) => i === existingIndex ? { ...s, ...normalizedServer } : s);
-    });
+  const removeServerFromList = useCallback((serverId) => {
+    setJoinedServers((prev) => prev.filter((s) => s.serverId !== serverId));
   }, []);
 
   const clearJoinedServers = useCallback(() => {
@@ -67,32 +43,23 @@ export const ServerProvider = ({ children }) => {
   }, []);
 
   useEffect(() => {
-    if (isLoggedIn) { refreshJoinedServers(); }
-    else { clearJoinedServers(); }
-
     let isMounted = true;
+    if (!isLoggedIn) {
+      clearJoinedServers();
+      return;
+    }
 
-    // 로그인 시 내가 참여 중인 서버 목록을 ServerMembers 테이블에서 조회
-    // serverId/roomId 둘 다 호환 (백엔드 마이그레이션 과도기)
     getMyServers()
       .then((data) => {
-        if (!isMounted) return;
-        const servers = Array.isArray(data?.items) ? data.items : [];
-        setJoinedServers(
-          servers.map((server) => ({
-            serverId: server.serverId || server.roomId,
-            serverName: server.serverName || server.roomName || server.title || "",
-          })),
-        );
+        if (isMounted) setJoinedServers(data.items || []);
       })
-      .catch((error) => {
-        if (!isMounted) return;
-        console.error("내 서버 목록을 불러오지 못했습니다.", error);
-        setJoinedServers([]);
+      .catch((err) => {
+        console.error("Failed to load joined servers:", err);
+        if (isMounted) setJoinedServers([]);
       });
 
     return () => { isMounted = false; };
-  }, [isLoggedIn, clearJoinedServers, refreshJoinedServers]);
+  }, [isLoggedIn, clearJoinedServers]);
 
   const value = useMemo(
     () => ({
@@ -102,11 +69,21 @@ export const ServerProvider = ({ children }) => {
       setExploreServers,
       setActiveServerId,
       upsertJoinedServer,
+      removeJoinedServer,
       clearJoinedServers,
       refreshJoinedServers,
       removeServerFromList,
     }),
-    [joinedServers, exploreServers, activeServerId, upsertJoinedServer, clearJoinedServers, refreshJoinedServers, removeServerFromList],
+    [
+      joinedServers,
+      exploreServers,
+      activeServerId,
+      upsertJoinedServer,
+      removeJoinedServer,
+      clearJoinedServers,
+      refreshJoinedServers,
+      removeServerFromList,
+    ],
   );
 
   return <ServerContext.Provider value={value}>{children}</ServerContext.Provider>;
