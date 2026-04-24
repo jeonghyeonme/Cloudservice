@@ -1,4 +1,4 @@
-﻿export const PRIVACY_OPTIONS = [
+export const PRIVACY_OPTIONS = [
   { value: "Public", label: "공개" },
   { value: "Private", label: "비공개" },
 ];
