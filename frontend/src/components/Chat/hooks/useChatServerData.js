@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PATHS } from "../../../constants/path";
 import {
@@ -122,7 +122,7 @@ function useChatServerData({
     }
 
     const updatedServer = await updateServer(serverId, {
-      roomName: trimmedName,
+      serverName: trimmedName,
       description: values.description?.trim() || "",
       maxCapacity: Number(values.maxParticipants),
       isPrivate: values.privacy === "Private",

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { getServerPath } from "../../constants/path";
 import { getServers, joinServer, updateServer, leaveServer, deleteServer } from "../../lib/servers";
@@ -233,7 +233,7 @@ const ExploreServers = () => {
     }
 
     const updatedServer = await updateServer(sid, {
-      roomName: trimmedName,
+      serverName: trimmedName,
       description: values.description?.trim() || "",
       maxCapacity: Number(values.maxParticipants),
       isPrivate: values.privacy === "Private",

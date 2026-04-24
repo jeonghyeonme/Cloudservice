@@ -1,4 +1,4 @@
-export const PRIVACY_OPTIONS = [
+﻿export const PRIVACY_OPTIONS = [
   { value: "Public", label: "공개" },
   { value: "Private", label: "비공개" },
 ];
@@ -92,7 +92,7 @@ export function createChannelFields(defaultValues = {}) {
 
 export function createServerDefaultValues(server = {}) {
   return {
-    serverName: server.roomName || server.title || "",
+    serverName: server.serverName || server.roomName || server.title || "",
     description: server.description || "",
     privacy: server.isPrivate ? "Private" : "Public",
     maxParticipants: Number(server.maxCapacity) || 12,
