@@ -44,6 +44,13 @@ export function createServerFields(defaultValues = {}) {
       defaultValue: "",
     },
     {
+      name: "rulesInput",
+      label: "서버 규칙 (줄바꿈으로 구분)",
+      type: "textarea",
+      placeholder: "예:\n욕설 금지\n1시간 공부 후 10분 휴식",
+      defaultValue: defaultValues.rulesInput || "",
+    },
+    {
       name: "maxParticipants",
       label: "Max Participants",
       type: "select",

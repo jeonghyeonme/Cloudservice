@@ -7,12 +7,29 @@ const CreateServerModal = ({ onClose }) => {
   const handleSubmit = async (values) => {
     const isPrivate = values.privacy === "Private";
 
+    if (isPrivate && !values.serverPassword) {
+      alert("비공개 서버는 비밀번호 설정이 필수입니다!");
+      return;
+    }
+
+    const rulesArray = values.rulesInput
+      ? values.rulesInput
+          .split("\n")
+          .map((line) => line.trim())
+          .filter((line) => line !== "")
+          .map((line) => ({
+            text: line,
+            icon: line.includes("금지") || line.includes("❌") || line.includes("안됨") ? "❌" : "✔️",
+          }))
+      : [];
+
     const newServerData = {
       serverName: values.serverName,
       description: values.description,
       maxCapacity: Number(values.maxParticipants),
       isPrivate: isPrivate,
-      roomPassword: isPrivate ? values.serverPassword : "",
+      serverPassword: isPrivate ? values.serverPassword : "",
+      rules: rulesArray,
       status: "ACTIVE",
     };
 

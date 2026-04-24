@@ -1,41 +1,40 @@
-import React, {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
-import { useAuth } from "./AuthContext";
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from "react";
 import { getMyServers } from "../lib/servers";
+import { useAuth } from "./AuthContext";
 
-const ServerContext = createContext(null);
+const ServerContext = createContext();
 
-/**
- * @title 서버 입장/퇴장 추적 및 활성 서버 관리 컨텍스트
- * @modified Room→Server 마이그레이션, serverId/roomId 호환 처리
- */
 export const ServerProvider = ({ children }) => {
   const { isLoggedIn } = useAuth();
   const [joinedServers, setJoinedServers] = useState([]);
+  const [exploreServers, setExploreServers] = useState([]); // ExploreServers 페이지용 공유 상태
   const [activeServerId, setActiveServerId] = useState(null);
 
-  // serverId 우선 사용, 기존 roomId 호환을 위해 fallback 처리
-  // 백엔드 마이그레이션 완료 후에는 server.serverId만 사용하면 됨
+  const refreshJoinedServers = useCallback(async () => {
+    try {
+      const data = await getMyServers();
+      setJoinedServers(data.items || []);
+    } catch (error) {
+      console.error("Failed to refresh joined servers:", error);
+    }
+  }, []);
+
   const upsertJoinedServer = useCallback((server) => {
-    const id = server?.serverId || server?.roomId;
-    if (!id) return;
-
-    const normalizedServer = {
-      serverId: id,
-      serverName: server.serverName || server.roomName || server.title || "",
-    };
-
     setJoinedServers((prev) => {
-      const existingIndex = prev.findIndex((s) => s.serverId === normalizedServer.serverId);
-      if (existingIndex === -1) return [...prev, normalizedServer];
-      return prev.map((s, i) => i === existingIndex ? { ...s, ...normalizedServer } : s);
+      const exists = prev.find((s) => (s.serverId || s.roomId) === (server.serverId || server.roomId));
+      if (exists) {
+        return prev.map((s) => ((s.serverId || s.roomId) === (server.serverId || server.roomId) ? { ...s, ...server } : s));
+      }
+      return [...prev, server];
     });
+  }, []);
+
+  const removeJoinedServer = useCallback((serverId) => {
+    setJoinedServers((prev) => prev.filter((s) => (s.serverId || s.roomId) !== serverId));
+  }, []);
+
+  const removeServerFromList = useCallback((serverId) => {
+    setJoinedServers((prev) => prev.filter((s) => s.serverId !== serverId));
   }, []);
 
   const clearJoinedServers = useCallback(() => {
@@ -43,40 +42,20 @@ export const ServerProvider = ({ children }) => {
     setActiveServerId(null);
   }, []);
 
-  const removeJoinedServer = useCallback((roomId) => {
-    setJoinedServers((prevServers) =>
-      prevServers.filter((server) => server.roomId !== roomId),
-    );
-    setActiveServerId((prevActiveId) =>
-      prevActiveId === roomId ? null : prevActiveId,
-    );
-  }, []);
-
   useEffect(() => {
+    let isMounted = true;
     if (!isLoggedIn) {
       clearJoinedServers();
       return;
     }
 
-    let isMounted = true;
-
-    // 로그인 시 내가 참여 중인 서버 목록을 ServerMembers 테이블에서 조회
-    // serverId/roomId 둘 다 호환 (백엔드 마이그레이션 과도기)
     getMyServers()
       .then((data) => {
-        if (!isMounted) return;
-        const servers = Array.isArray(data?.items) ? data.items : [];
-        setJoinedServers(
-          servers.map((server) => ({
-            serverId: server.serverId || server.roomId,
-            serverName: server.serverName || server.roomName || server.title || "",
-          })),
-        );
+        if (isMounted) setJoinedServers(data.items || []);
       })
-      .catch((error) => {
-        if (!isMounted) return;
-        console.error("내 서버 목록을 불러오지 못했습니다.", error);
-        setJoinedServers([]);
+      .catch((err) => {
+        console.error("Failed to load joined servers:", err);
+        if (isMounted) setJoinedServers([]);
       });
 
     return () => { isMounted = false; };
@@ -85,18 +64,25 @@ export const ServerProvider = ({ children }) => {
   const value = useMemo(
     () => ({
       joinedServers,
+      exploreServers,
       activeServerId,
+      setExploreServers,
       setActiveServerId,
       upsertJoinedServer,
       removeJoinedServer,
       clearJoinedServers,
+      refreshJoinedServers,
+      removeServerFromList,
     }),
     [
       joinedServers,
+      exploreServers,
       activeServerId,
       upsertJoinedServer,
       removeJoinedServer,
       clearJoinedServers,
+      refreshJoinedServers,
+      removeServerFromList,
     ],
   );
 

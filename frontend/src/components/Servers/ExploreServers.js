@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { getServerPath } from "../../constants/path";
-import { getServers, joinServer, updateServer } from "../../lib/servers";
+import { getServers, joinServer, updateServer, leaveServer, deleteServer } from "../../lib/servers";
 import "./ExploreServers.css";
 import ServerSidebar from "../layout/ServerSidebar";
 import CreateServerModal from "./CreateServerModal";
@@ -91,8 +91,8 @@ const ServerCard = ({ server, onJoin }) => {
 
 const ExploreServers = () => {
   const navigate = useNavigate();
-  const { logout } = useAuth();
-  const { clearJoinedServers, setActiveServerId, upsertJoinedServer } =
+  const { logout, refreshToken, user } = useAuth();
+  const { clearJoinedServers, setActiveServerId, upsertJoinedServer, removeJoinedServer } =
     useServers();
   const [servers, setServers] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -112,10 +112,19 @@ const ExploreServers = () => {
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
   const [selectedServer, setSelectedServer] = useState(null);
 
-  const handleLogout = () => {
-    clearJoinedServers();
-    logout();
-    navigate(PATHS.onboarding);
+  const handleLogout = async () => {
+    try {
+      if (refreshToken) {
+        const { logout: logoutApi } = await import("../../lib/auth");
+        await logoutApi(refreshToken);
+      }
+    } catch (error) {
+      console.error("Logout failed:", error);
+    } finally {
+      clearJoinedServers();
+      logout();
+      navigate(PATHS.onboarding, { replace: true });
+    }
   };
 
   useEffect(() => {
@@ -145,7 +154,7 @@ const ExploreServers = () => {
       navigate(getServerPath(sid));
     } catch (error) {
       console.error("서버 참여 실패:", error);
-      throw new Error(error.message || "서버 입장 중 오류가 발생했습니다.");
+      throw error;
     }
   };
 
@@ -173,13 +182,14 @@ const ExploreServers = () => {
   const handleOpenServerMenu = (event, server) => {
     const resolvedServer = resolveServerForMenu(server);
     const sid = resolvedServer.serverId || resolvedServer.roomId;
+    const isHost = user?.userId === resolvedServer.hostId;
 
     openContextMenu(event, {
       type: "server",
       targetId: sid,
       title: resolvedServer.roomName || resolvedServer.serverName || resolvedServer.title || "현재 서버",
       items: buildServerContextMenuItems({
-        canDelete: true,
+        canDelete: isHost,
         onOpenSettings: () =>
           openSettingsModal({
             type: "server",
@@ -190,12 +200,23 @@ const ExploreServers = () => {
         onOpenDeleteConfirm: () =>
           openConfirmModal({
             title: "정말로 삭제하시겠습니까?",
-            description:
-              "프론트 화면에서만 서버가 목록에서 사라집니다. 새로고침하면 원래 데이터가 다시 보일 수 있습니다.",
+            description: "확인을 누르면 서버가 영구적으로 삭제됩니다.",
             onConfirm: async () => {
+              await deleteServer(sid);
               setServers((prev) =>
                 prev.filter((item) => (item.serverId || item.roomId) !== sid),
               );
+              removeJoinedServer(sid);
+              closeConfirmModal();
+            },
+          }),
+        onLeave: () =>
+          openConfirmModal({
+            title: "서버에서 나가시겠습니까?",
+            description: "확인을 누르면 서버 목록에서 제외됩니다.",
+            onConfirm: async () => {
+              await leaveServer(sid);
+              removeJoinedServer(sid);
               closeConfirmModal();
             },
           }),
@@ -327,7 +348,7 @@ const ExploreServers = () => {
 
       {isJoinModalOpen && (
         <JoinServerModal
-          serverName={selectedServer?.serverName || selectedServer?.title}
+          server={selectedServer}
           onClose={() => setIsJoinModalOpen(false)}
           onSubmit={(password) => executeJoin(selectedServer, password)}
         />

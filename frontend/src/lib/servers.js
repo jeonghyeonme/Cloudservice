@@ -33,6 +33,18 @@ export function updateServer(serverId, payload) {
   });
 }
 
+export function deleteServer(serverId) {
+  return request(`${ENDPOINTS.servers.list}/${serverId}`, {
+    method: "DELETE",
+  });
+}
+
+export function leaveServer(serverId) {
+  return request(`${ENDPOINTS.servers.list}/${serverId}/leave`, {
+    method: "POST",
+  });
+}
+
 export function getServerMessages(serverId) {
   return request(`${ENDPOINTS.servers.list}/${serverId}/messages`, {
     method: "GET",

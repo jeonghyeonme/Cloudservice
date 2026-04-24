@@ -29,12 +29,27 @@ import {
 const ChatLayout = () => {
   const { serverId } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const { setActiveServerId, upsertJoinedServer, removeJoinedServer } =
+  const { user, logout, refreshToken } = useAuth();
+  const { setActiveServerId, upsertJoinedServer, removeJoinedServer, clearJoinedServers } =
     useServers();
     
   const [isServerModalOpen, setIsServerModalOpen] = useState(false);
   const [isChannelModalOpen, setIsChannelModalOpen] = useState(false);
+
+  const handleLogout = async () => {
+    try {
+      if (refreshToken) {
+        const { logout: logoutApi } = await import("../../lib/auth");
+        await logoutApi(refreshToken);
+      }
+    } catch (error) {
+      console.error("Logout failed:", error);
+    } finally {
+      clearJoinedServers();
+      logout();
+      navigate(PATHS.onboarding, { replace: true });
+    }
+  };
 
   const {
     currentServer,
@@ -46,6 +61,7 @@ const ChatLayout = () => {
     saveServerSettings,
     saveChannelSettings,
     removeServer,
+    leaveServer,
     removeChannel,
   } = useChatServerData({
     serverId,
@@ -108,6 +124,15 @@ const ChatLayout = () => {
               closeConfirmModal();
             },
           }),
+        onLeave: () =>
+          openConfirmModal({
+            title: "서버에서 나가시겠습니까?",
+            description: "확인을 누르면 서버 목록에서 제외됩니다.",
+            onConfirm: async () => {
+              await leaveServer();
+              closeConfirmModal();
+            },
+          }),
       }),
     [
       closeConfirmModal,
@@ -115,6 +140,7 @@ const ChatLayout = () => {
       openConfirmModal,
       openServerSettings,
       removeServer,
+      leaveServer,
     ],
   );
 
@@ -155,6 +181,7 @@ const ChatLayout = () => {
         activeView="chat"
         onServerClick={() => {}}
         onAddClick={() => setIsServerModalOpen(true)}
+        onLogout={handleLogout}
         contextMenuType={contextMenu?.type}
         contextMenuTargetId={contextMenu?.targetId}
         onServerContextMenu={(event, server) => {

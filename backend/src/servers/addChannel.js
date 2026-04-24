@@ -32,7 +32,7 @@ exports.handler = async (event) => {
       chId: uuidv4(),
       name,
       label: label || name,
-      topic: topic || "",
+      topic: topic || "새 채널에 대한 첫 대화를 시작해보세요.",
     };
 
     await dynamoDb.send(new UpdateCommand({

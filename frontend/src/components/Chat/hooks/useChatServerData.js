@@ -7,6 +7,8 @@ import {
   getServerDetail,
   getServerMessages,
   updateServer,
+  deleteServer,
+  leaveServer as leaveServerApi,
 } from "../../../lib/servers";
 
 function normalizeServerWithMessages(serverData, messagesData) {
@@ -75,6 +77,7 @@ function useChatServerData({
       isMounted = false;
     };
   }, [serverId, setActiveServerId, upsertJoinedServer]);
+
   const applyServerUpdate = (updatedServer) => {
     setCurrentServer((prev) => ({
       ...prev,
@@ -152,6 +155,13 @@ function useChatServerData({
   };
 
   const removeServer = async () => {
+    await deleteServer(serverId);
+    removeJoinedServer(serverId);
+    navigate(PATHS.explore);
+  };
+
+  const leaveServer = async () => {
+    await leaveServerApi(serverId);
     removeJoinedServer(serverId);
     navigate(PATHS.explore);
   };
@@ -205,6 +215,7 @@ function useChatServerData({
     saveServerSettings,
     saveChannelSettings,
     removeServer,
+    leaveServer,
     removeChannel,
   };
 }
