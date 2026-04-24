@@ -2,6 +2,7 @@ const {
   PutCommand,
   UpdateCommand,
   QueryCommand,
+  DeleteCommand,
 } = require("@aws-sdk/lib-dynamodb");
 const {
   ApiGatewayManagementApiClient,
@@ -196,6 +197,144 @@ async function sendMessage(event, body) {
 
 
 // =========================
+// 메시지 수정
+// =========================
+async function updateMessage(event, body) {
+  const domain = event.requestContext.domainName;
+  const stage = event.requestContext.stage;
+  const apigw = getApigwClient(domain, stage);
+
+  const { serverId, messageId, senderId, content } = body;
+
+  if (!serverId || !messageId || !senderId || !content) {
+    return {
+      statusCode: 400,
+      body: JSON.stringify({ message: "serverId, messageId, senderId, content가 필요합니다." }),
+    };
+  }
+
+  const updatedAt = new Date().toISOString();
+
+  const result = await dynamoDb.send(new UpdateCommand({
+    TableName: MESSAGES_TABLE,
+    Key: {
+      serverId,
+      messageId,
+    },
+    UpdateExpression: `
+      SET content = :content,
+          updatedAt = :updatedAt,
+          isEdited = :isEdited
+    `,
+    ConditionExpression: "senderId = :senderId",
+    ExpressionAttributeValues: {
+      ":content": content,
+      ":updatedAt": updatedAt,
+      ":isEdited": true,
+      ":senderId": senderId,
+    },
+    ReturnValues: "ALL_NEW",
+  }));
+
+  const updatedMessage = result.Attributes;
+
+  const response = await dynamoDb.send(new QueryCommand({
+    TableName: CONNECTIONS_TABLE,
+    IndexName: "serverId-index",
+    KeyConditionExpression: "serverId = :serverId",
+    ExpressionAttributeValues: {
+      ":serverId": serverId,
+    },
+  }));
+
+  const connections = response.Items || [];
+
+  await Promise.all(
+    connections.map((conn) =>
+      sendToConnection(apigw, conn.connectionId, {
+        action: "messageUpdated",
+        data: updatedMessage,
+      })
+    )
+  );
+
+  return {
+    statusCode: 200,
+    body: JSON.stringify(updatedMessage),
+  };
+}
+
+
+// =========================
+// 메시지 삭제 - 소프트 삭제
+// =========================
+async function deleteMessage(event, body) {
+  const domain = event.requestContext.domainName;
+  const stage = event.requestContext.stage;
+  const apigw = getApigwClient(domain, stage);
+
+  const { serverId, messageId, senderId } = body;
+
+  if (!serverId || !messageId || !senderId) {
+    return {
+      statusCode: 400,
+      body: JSON.stringify({ message: "serverId, messageId, senderId가 필요합니다." }),
+    };
+  }
+
+  const deletedAt = new Date().toISOString();
+
+  const result = await dynamoDb.send(new UpdateCommand({
+    TableName: MESSAGES_TABLE,
+    Key: {
+      serverId,
+      messageId,
+    },
+    UpdateExpression: `
+      SET isDeleted = :isDeleted,
+          deletedAt = :deletedAt,
+          content = :content
+    `,
+    ConditionExpression: "senderId = :senderId",
+    ExpressionAttributeValues: {
+      ":isDeleted": true,
+      ":deletedAt": deletedAt,
+      ":content": "삭제된 메시지입니다.",
+      ":senderId": senderId,
+    },
+    ReturnValues: "ALL_NEW",
+  }));
+
+  const deletedMessage = result.Attributes;
+
+  const response = await dynamoDb.send(new QueryCommand({
+    TableName: CONNECTIONS_TABLE,
+    IndexName: "serverId-index",
+    KeyConditionExpression: "serverId = :serverId",
+    ExpressionAttributeValues: {
+      ":serverId": serverId,
+    },
+  }));
+
+  const connections = response.Items || [];
+
+  await Promise.all(
+    connections.map((conn) =>
+      sendToConnection(apigw, conn.connectionId, {
+        action: "messageDeleted",
+        data: deletedMessage,
+      })
+    )
+  );
+
+  return {
+    statusCode: 200,
+    body: JSON.stringify(deletedMessage),
+  };
+}
+
+
+// =========================
 // 메인 핸들러 — API Gateway WebSocket 라우팅
 // =========================
 module.exports.handler = async (event) => {
@@ -210,6 +349,8 @@ module.exports.handler = async (event) => {
     if (routeKey === "createServer")  return await createServer(body);
     if (routeKey === "joinServer")    return await joinServer(event.requestContext.connectionId, body);
     if (routeKey === "sendMessage") return await sendMessage(event, body);
+    if (routeKey === "updateMessage") return await updateMessage(event, body);
+    if (routeKey === "deleteMessage") return await deleteMessage(event, body);
 
     return { statusCode: 200 };
 
