@@ -152,6 +152,10 @@ functions:
           route: joinServer
       - websocket:
           route: sendMessage
+      - websocket:
+          route: updateMessage
+      - websocket:
+          route: deleteMessage
 
   # ── 채널 추가/삭제 ───────────────────
   addChannel:
