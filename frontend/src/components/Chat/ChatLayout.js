@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { PATHS } from "../../constants/path";
 import { getServerDetail, getServerMessages, createChannel } from "../../lib/servers";
 import { useServers } from "../../contexts/ServerContext";
+import { useAuth } from "../../contexts/AuthContext";
 import "./ChatLayout.css";
 import ServerSidebar from "../layout/ServerSidebar";
 import SidebarLeft from "./SidebarLeft";
@@ -14,7 +15,23 @@ import CreateChannelModal from "./CreateChannelModal";
 const ChatLayout = () => {
   const { serverId } = useParams();
   const navigate = useNavigate();
-  const { setActiveServerId, upsertJoinedServer } = useServers();
+  const { setActiveServerId, upsertJoinedServer, clearJoinedServers } = useServers();
+  const { logout, refreshToken } = useAuth();
+
+  const handleLogout = async () => {
+    try {
+      if (refreshToken) {
+        const { logout: logoutApi } = await import("../../lib/auth");
+        await logoutApi(refreshToken);
+      }
+    } catch (error) {
+      console.error("Logout failed:", error);
+    } finally {
+      clearJoinedServers();
+      logout();
+      navigate(PATHS.onboarding, { replace: true });
+    }
+  };
 
   const [currentServer, setCurrentServer] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -82,6 +99,7 @@ const ChatLayout = () => {
         activeView="chat"
         onServerClick={() => {}}
         onAddClick={() => setIsServerModalOpen(true)}
+        onLogout={handleLogout}
       />
 
       {/* 백엔드 getServerDetail 응답의 members 배열과 hostId를 SidebarLeft에 전달 */}
