@@ -1,126 +1,197 @@
-# 🚀 프로젝트 현황 및 개발 로드맵 (2026-04-11)
+# 🚀 Cloudservice 프로젝트 전수 조사 로드맵 (Final)
 
-본 문서는 현재까지 완료된 프론트엔드-백엔드 연동 현황을 분석하고, 향후 개발팀이 우선적으로 진행해야 할 기술적 과업과 UX 고도화 방향을 정의합니다.
-
----
-
-## 1. 현재 기술적 현황 (Current Status)
-
-### 1.1 데이터 및 백엔드 (Backend)
-- **방(Room) 데이터 규격 통일**: `title`, `channels`, `files`, `links`를 포함한 확장형 스키마로 정립 완료.
-- **조회 최적화**: `getRooms` API에 GSI(`status-createdAt-index`)를 적용하여 대량 데이터에서도 최신순 정렬 및 고속 조회가 가능함.
-- **방 상세 및 이력 조회**: 특정 방의 모든 정보(`getRoomDetail`)와 채팅 히스토리(`getMessages`)를 가져오는 REST API 구축 완료.
-- **인증(Auth)**: JWT 기반 Access/Refresh 토큰 시스템이 구현되어 있으며, 모든 테이블에 TTL(자동 삭제) 정책이 반영됨.
-
-### 1.2 프론트엔드 (Frontend)
-- **인증 자동화**: `request.js` 공통 모듈에서 `localStorage`의 토큰을 감지하여 `Authorization` 헤더를 자동으로 주입함. 별도의 토큰 관리 로직 없이 API 호출 가능.
-- **데이터 바인딩 완료**: 채팅방 입장 시 상세 정보와 이전 메시지 내역을 병렬로 로드하여 실시간 채팅을 위한 초기 데이터 셋을 구성함.
-- **UI 구조**: `ChatLayout` - `Sidebar` - `ChatWindow` 간의 데이터 흐름이 DB 구조와 일치하도록 매핑됨.
+본 문서는 프로젝트의 모든 소스 코드를 파일 단위로 분석하여 기록하며, 시스템의 전체 구조와 세부 로직을 한눈에 파악하기 위해 작성되었습니다.
 
 ---
 
-### 1.3 인프라 및 클라우드 대응 (Cloud & Infrastructure)
-- **환경 변수 기반 설정 통합**: `config.js`를 통해 모든 보안 키와 인프라 주소를 `process.env`로 관리하며, 로컬/운영 환경에 따른 유연한 설정을 보장함.
-- **DB 연결 최적화**: `dynamodbClient.js`에서 `IS_OFFLINE` 상태를 감지하여 LocalStack과 실제 AWS DynamoDB 엔드포인트를 자동으로 전환함.
-- **API 엔드포인트 정규화**: `constants/endpoint.js`의 경로 생성 로직을 최적화하여 AWS API Gateway의 스테이지명(`/dev`) 중복 문제를 원천 해결함.
-- **WebSocket 연동 체계**: `REACT_APP_WS_HOST` 환경 변수를 통한 `wss://` 프로토콜 대응 로직을 `endpoint.js`에 선제적으로 반영 완료.
-- **SPA 라우팅 최적화**: S3 [오류 문서] 설정을 `index.html`로 지정하여 React Router 사용 시 발생하는 새로고침 404 에러를 인프라 레벨에서 해결함.
+## 📁 전체 디렉토리 구조
+```text
+C:\Users\parad\Cloudservice\
+├── .github/                # GitHub 워크플로우 및 이슈/PR 템플릿
+├── backend/                # 백엔드 서버 (AWS Lambda, Serverless)
+│   ├── infra/              # 로컬 인프라 설정 (Docker, DynamoDB Seed)
+│   └── src/                # 백엔드 핵심 소스 코드
+│       ├── ai/             # AWS AI 서비스 연동 모듈
+│       ├── auth/           # 사용자 인증 및 토큰 관리
+│       ├── chat/           # WebSocket 통신 및 메시지 이력
+│       ├── resources/      # S3 파일 및 외부 링크 관리
+│       ├── rooms/          # 서버/방 관리 로직 (Legacy)
+│       ├── servers/        # 서버/채널/멤버십 관리 로직 (Latest)
+│       └── utils/          # 공통 유틸리티 및 응답 설정
+├── frontend/               # 프론트엔드 (React)
+│   └── src/                # 프론트엔드 핵심 소스 코드
+│       ├── assets/         # 정적 자산 (이미지, 로고)
+│       ├── components/     # UI 컴포넌트 (기능별 분리)
+│       │   ├── Auth/       # 로그인, 회원가입 UI
+│       │   ├── Chat/       # 채팅 레이아웃, 윈도우, 리소스 허브
+│       │   ├── common/     # 모달, 버튼 등 공통 컴포넌트
+│       │   ├── layout/     # 서버 사이드바, 컨텍스트 메뉴
+│       │   ├── NotFound/   # 404 페이지
+│       │   ├── Onboarding/ # 랜딩 페이지
+│       │   └── Servers/    # 서버 탐색, 생성 모달
+│       ├── constants/      # 공통 상수 (경로, 엔드포인트)
+│       ├── contexts/       # 전역 상태 관리 (Context API)
+│       ├── data/           # 개발용 목 데이터 (mockData.js)
+│       ├── lib/            # API 통신(request.js) 및 서비스 라이브러리
+│       ├── pages/          # 앱 진입점(App.js) 및 라우팅 구성
+│       └── styles/         # 전역 스타일(index.css) 및 테마(theme.css)
+└── ROADMAP.md              # 본 관리 문서
+```
 
 ---
 
-## 2. 향후 작업 지시 사항 (Action Items)
+## 🔍 백엔드 소스 상세 분석 (`backend/src/`)
 
-### [우선순위: 상] 실시간 기능 완성 (Real-time Phase)
-1.  **WebSocket 연결 체계 구축 (Frontend Task)**: 
-    - 서비스 전역 또는 `ChatLayout.js`에서 백엔드 WebSocket 엔드포인트에 연결할 것.
-    - 연결 시점에 `joinRoom` 액션을 전송하여 특정 방의 실시간 메시지를 구독해야 함.
-2.  **메시지 전송 UI-WebSocket 연동 (`ChatWindow.js`)**: 
-    - **UI 로직 보완**: 현재 `input` 태그는 제어되지 않는 상태임. `useState`로 입력값을 관리하고, `onKeyDown` (Enter 키) 이벤트 핸들러를 추가할 것.
-    - **전송 데이터 명세**: `sendMessage` 액션 호출 시 다음 JSON 구조를 전송할 것:
+### 1. 루트 공통 모듈 (Core Modules)
+| 파일명 | 상세 역할 및 핵심 로직 |
+| :--- | :--- |
+| **`config.js`** | `process.env` 통합 관리. 로컬(LocalStack)과 운영(AWS) 환경 분기 조건(`IS_OFFLINE`) 포함. |
+| **`dynamodbClient.js`** | `DynamoDBDocumentClient` 생성. 마샬링 자동화 및 환경별 엔드포인트 설정. |
+| **`utils.js`** | `bcrypt` 기반 비밀번호 암호화, `jwt` 토큰 발급/검증, 리프레시 토큰 DB 저장 로직 총괄. |
+
+### 2. AI 분석 모듈 (`ai/`)
+| 파일명 | 상세 역할 및 핵심 로직 |
+| :--- | :--- |
+| **`aiRouter.js`** | **S3 리소스 분석**: PDF/문서(Textract + Bedrock Claude 3 요약), 이미지(Rekognition 라벨링 + Translate 번역). |
+
+### 3. 인증 관리 모듈 (`auth/`)
+| 파일명 | 상세 역할 및 핵심 로직 |
+| :--- | :--- |
+| **`tokenRefresh.js`** | 리프레시 토큰 유효성 및 DB 폐기 여부 검사 후 새로운 Access Token 발급. |
+| **`userLogin.js`** | 이메일 GSI 조회 및 비밀번호 대조를 통한 JWT 발급. 로그인 시 유저 프로필 정보 동시 반환. |
+| **`userLogout.js`** | 전달받은 리프레시 토큰의 DB 상태를 `isRevoked = true`로 변경하여 세션 만료 처리. |
+| **`userRegister.js`** | 신규 유저 생성. 이메일 중복 체크(`email-index`), 비밀번호 해싱 및 초기 토큰 세트 발급. |
+
+### 4. 채팅 및 실시간 통신 모듈 (`chat/`)
+| 파일명 | 상세 역할 및 핵심 로직 |
+| :--- | :--- |
+| **`chatHandler.js`** | **WebSocket 총괄**: `$connect`, `$disconnect`, `joinServer`, `sendMessage`, `updateMessage`, `deleteMessage` 브로드캐스트 로직 구현. |
+| **`getMessages.js`** | 특정 서버/방의 대화 이력을 DynamoDB에서 최신순으로 쿼리하여 반환. |
+
+### 5. 서버 및 채널 관리 모듈 (`servers/`)
+| 파일명 | 상세 역할 및 핵심 로직 |
+| :--- | :--- |
+| **`addChannel.js`** | 특정 서버 내부에 신규 채널 정보를 리스트 형태로 추가. |
+| **`createServer.js`** | 신규 스터디 서버 생성. 초기 생성 시 '일반' 채널 자동 생성 및 호스트 권한 설정. |
+| **`deleteChannel.js`** | 채널 삭제. 단, `isDefault` 속성이 있는 기본 채널은 삭제 방지. |
+| **`deleteServer.js`** | 서버 정보 및 관련 채널/데이터를 DB에서 영구 삭제. |
+| **`getMyServers.js`** | 로그인한 유저가 참여 중인 모든 서버 목록을 `BatchGet`으로 일괄 조회. |
+| **`getServerDetail.js`** | 특정 서버의 상세 정보, 참여자 수, 채널 리스트 등을 단일 조회. |
+| **`getServers.js`** | 탐색 페이지용 전체 공개 서버 목록 제공. GSI를 통한 페이징 지원. |
+| **`joinServer.js`** | 서버 참여. 비공개 서버일 경우 비밀번호 확인 후 `server_members`에 기록. |
+| **`leaveServer.js`** | 참여 중인 서버에서 퇴장 처리. 멤버십 데이터 삭제 및 서버 정원 수 업데이트. |
+
+### 6. 리소스 허브 모듈 (`resources/`)
+| 파일명 | 상세 역할 및 핵심 로직 |
+| :--- | :--- |
+| **`getUploadUrl.js`** | S3에 안전하게 파일을 업로드하기 위한 Pre-signed URL 생성 및 반환. |
+| **`saveFileMetadata.js`** | S3 업로드가 완료된 파일의 메타데이터를 해당 서버 정보에 기록. |
+| **`saveLink.js`** | 외부 학습 자료 URL 링크를 서버 리소스 목록에 저장. |
+
+---
+
+## 🔍 프론트엔드 소스 상세 분석 (`frontend/src/`)
+
+### 1. 기초 설정 및 상수 (`src/`, `constants/`)
+| 파일명 | 상세 역할 및 핵심 로직 |
+| :--- | :--- |
+| **`index.js`** | 앱의 진입점. `BrowserRouter`로 감싸 라우팅 환경을 구축하고 `App.js`를 렌더링. |
+| **`constants/path.js`** | 앱 내 모든 이동 경로(`PATHS`) 관리 및 서버 상세 경로 생성 유틸 제공. |
+| **`constants/endpoint.js`** | API 및 WebSocket(`API_WS_URL`) 통신 주소 정의. 환경별 URL 자동 설정. |
+
+### 2. API 통신 및 서비스 라이브러리 (`lib/`)
+| 파일명 | 상세 역할 및 핵심 로직 |
+| :--- | :--- |
+| **`request.js`** | `fetch` 래퍼. `localStorage` 토큰 자동 주입 및 백엔드 에러 메시지(`detail/message`) 통합 처리. |
+| **`auth.js`** | 회원가입, 로그인, 로그아웃, 토큰 갱신 API 호출 함수 모음. |
+| **`servers.js`** | 서버 목록/상세 조회, 생성, 채널 추가, 서버 나가기/삭제 등 서버 중심 서비스 함수. |
+| **`resources.js`** | **S3 업로드 프로세스**: Pre-signed URL 발급 -> S3 PUT -> 메타데이터 저장 로직 총괄. |
+
+### 3. 전역 상태 관리 (`contexts/`)
+| 파일명 | 상세 역할 및 핵심 로직 |
+| :--- | :--- |
+| **`AuthContext.js`** | 로그인 상태, 유저 정보, 토큰 세트를 앱 전체에 공유하고 세션 유지(Local Storage) 관리. |
+| **`ServerContext.js`** | 참여 서버 목록 및 활성 서버 ID 관리. `serverId/roomId` 명칭 마이그레이션 호환 로직 포함. |
+
+### 4. 주요 레이아웃 및 공통 컴포넌트 (`components/layout/`, `common/`)
+| 파일명 | 상세 역할 및 핵심 로직 |
+| :--- | :--- |
+| **`layout/SharedLayout.js`** | 상단 네비바를 포함한 공통 뼈대. 페이지 위치에 따라 로그인/회원가입 버튼 노출 제어. |
+| **`layout/ServerSidebar.js`** | 좌측 서버 아이콘 목록. 서버 이동, 우클릭 메뉴 트리거, 하단 프로필 팝업 관리. |
+| **`layout/ServerContextMenu.js`** | 서버 우클릭 메뉴. 호스트 여부에 따라 '서버 설정/삭제' 또는 '서버 나가기' 기능 제공. |
+| **`common/FormModal.js`** | 모든 입력 타입(텍스트, 파일, 토글 등)을 지원하는 범용 폼 모달. 동적 필드 노출(`showIf`) 지원. |
+
+### 5. 핵심 기능 페이지 컴포넌트 (`components/Chat/`, `Servers/`)
+| 파일명 | 상세 역할 및 핵심 로직 |
+| :--- | :--- |
+| **`Chat/ChatLayout.js`** | 채팅 메인 컨테이너. 데이터 로드 및 컴포넌트 데이터 배분. |
+| **`Chat/SidebarLeft.js`** | 서버 내부 사이드바. 채널 리스트 및 참여자를 온라인/오프라인으로 자동 분류하여 표시. |
+| **`Chat/ChatWindow.js`** | 대화창 영역. 텍스트, 파일, 링크, **AI 요약(`ai-summary`)** 등 메시지 타입별 커스텀 렌더링. |
+| **`Chat/ResourceHub.js`** | 리소스 관리 사이드바. 파일 업로드 및 링크 공유 시 UI에 즉시 반영하는 상태 업데이트 로직. |
+| **`Servers/ExploreServers.js`** | 서버 탐색 페이지. 공개 서버 검색 및 카드 기반 상세 정보/입장 프로세스 구현. |
+| **`Servers/CreateServerModal.js`** | 서버 생성 전용 모달. 규칙 입력 텍스트를 줄바꿈 기준으로 파싱하여 아이콘 자동 부여. |
+
+### 6. 인증 및 온보딩 (`components/Auth/`, `Onboarding/`, `pages/`)
+| 파일명 | 상세 역할 및 핵심 로직 |
+| :--- | :--- |
+| **`Auth/Login/Register.js`** | 로그인 및 회원가입 페이지. 폼 입력값 검증 및 인증 성공 후 페이지 이동 로직. |
+| **`Onboarding/Onboarding.js`** | 서비스 소개 랜딩 페이지. 인터랙티브 슬라이더를 통한 주요 기능(AI, 협업) 홍보. |
+| **`pages/App.js`** | **중앙 라우터 및 가드**: `ProtectedRoute`를 통한 미인증 접근 차단 및 전체 Context 제공자 설정. |
+
+### 7. 스타일 및 목 데이터 (`styles/`, `data/`)
+| 파일명 | 상세 역할 및 핵심 로직 |
+| :--- | :--- |
+| **`styles/theme.css`** | 다크모드 기반의 전역 테마 정의. 색상, 간격, 둥글기 등 디자인 시스템 CSS 변수 관리. |
+| **`data/mockData.js`** | 개발 및 테스트용 정적 데이터. 서버, 채널, 다양한 타입의 메시지 샘플 포함. |
+
+---
+
+## 🚨 [최우선 과제] 다음 주 목표: 채팅 및 실시간 파일 공유 완성
+> 실사용 가능한 수준의 실시간 채팅과 자료 공유 환경 구축이 최우선입니다.
+
+### 1. 실시간 메시징 및 이미지 즉시 렌더링
+- **[Frontend] `ChatLayout.js`**: `new WebSocket()` 연결 생성 및 재연결 로직 구현.
+- **[Frontend] `ChatWindow.js`**: 메시지 전송 로직을 WebSocket으로 전환.
+    - **Step 1: 서버 입장 (필수)**
+      ```json
+      { "action": "joinServer", "serverId": "서버_ID", "userId": "유저_ID" }
+      ```
+    - **Step 2: 메시지 전송**
       ```json
       {
         "action": "sendMessage",
-        "roomId": "현재_방_ID",
-        "senderId": "내_유저_ID",
-        "senderNickname": "내_닉네임",
-        "messageType": "text",
-        "content": "전송할_메시지_내용"
+        "serverId": "서버_ID",
+        "senderId": "유저_ID",
+        "senderNickname": "닉네임",
+        "messageType": "TEXT",
+        "content": "내용"
       }
       ```
-    - **실시간 수신**: 서버에서 브로드캐스트되는 `receiveMessage` 액션을 감지하여 현재 활성화된 채널의 `messages` 배열에 즉시 추가(Push)하여 UI를 갱신할 것.
-3.  **참여자 목록 및 상태 실시간 동기화 (`SidebarLeft.js`)**: 
-    - **데이터 연동**: 왼쪽 사이드바 하단의 하드코딩된 멤버 목록을 제거하고, 현재 서버(방)에 참여 중인 실제 사용자 리스트(`members`)를 서버로부터 받아와 동적으로 렌더링할 것.
-    - **온라인/오프라인 상태 관리**: 
-        - WebSocket의 `$connect` 및 `$disconnect` 이벤트를 활용하여 사용자의 접속 상태를 실시간으로 감지할 것.
-        - 온라인 사용자는 '온라인' 카테고리에 녹색 점(`status-dot`)과 함께 표시하고, 접속하지 않은 인원은 '오프라인' 카테고리로 자동 분류되도록 동기화 로직을 구현할 것.
-    - **실시간 UI 갱신**: 다른 사용자가 접속하거나 나갈 때마다 브로드캐스트되는 상태 변경 이벤트를 수신하여, 별도의 새로고침 없이도 참여자 목록 UI가 즉시 업데이트되도록 처리할 것.
+    - **이미지 즉시 표시**: 메시지 타입 `IMAGE` 추가 및 업로드 시 `<img>` 태그 자동 렌더링.
+    - **Auto-scroll**: 새 메시지 수신 시 최하단으로 자동 스크롤.
 
-### [우선순위: 중] 콘텐츠 확장 (Resource Phase)
-1.  **채널 관리(CRUD)**: 
-    - 방 내부에 채널을 추가/삭제하는 기능을 구현할 것. (Rooms 테이블의 `channels` 리스트 필드 업데이트 로직 필요)
-2.  **S3 파일 업로드**: 
-    - `ResourceHub` 컴포넌트에서 실제 파일을 업로드할 수 있도록 S3 Pre-signed URL 로직을 백엔드에 추가하고 프론트엔드와 연동할 것.
-3.  **URL 메타데이터 스크랩**: 
-    - 사용자가 링크 공유 시 서버에서 해당 사이트의 OpenGraph 정보를 가져와 `links` 배열에 예쁘게 저장하는 람다 함수 추가 필요.
-
-### [우선순위: 하] AI 지능화 (Intelligence Phase)
-1.  **학습 요약(SAGE AI)**: 
-    - `Messages` 이력을 바탕으로 AI가 요약을 생성하여 채팅창 상단 또는 특정 채널에 `type: 'ai-summary'` 메시지로 적재하는 로직 구현.
-
-### [우선순위: 공통] UI/UX 고도화 및 구조 최적화 (Polishing Phase)
-1.  **용어 표준화 (Server & Channel)**:
-    - 메인 화면의 '방(Room)'을 **'서버(Server)'**로, 서버 내의 방을 **'채널(Channel)'**로 용어를 통일.
-    - 프론트엔드 UI 및 백엔드 API/파일명에서 `room` 키워드를 `server`로 점진적으로 교체하여 개발 편의성 증대.
-2.  **서버/채널 생성 기능 보완**:
-    - **채널 설명(Description)**: 채널 생성 시 간단한 설명을 입력받을 수 있도록 UI 및 API 명세에 필드 추가.
-    - **서버 비밀번호**: 서버 생성 시 비밀번호를 설정할 수 있도록 **DB 스키마(Rooms 테이블)에 `password` 필드 추가** 및 관련 백엔드 로직 구현.
-3.  **전역 Toast 알림 시스템 구축 (Custom UI)**:
-    - **UI 정의**: 브라우저 기본 알림이 아닌, 앱 내부에 직접 구현한 **우측 하단 고정형 플로팅 팝업**을 도입함.
-    - **설계 방식**: `ToastContext`와 `useToast` 커스텀 훅을 기반으로 설계하여, 컴포넌트 어디서든 `showToast("메시지", "success")` 형식으로 호출 가능하게 함.
-    - **기능 명세**:
-        - **위치**: 화면 우측 하단(`bottom: 20px`, `right: 20px`)에 스택 형태로 쌓임.(개수는 3개로 제한.) <-- 이거 위치 애매하면 중앙 상단 에 띄워도 댑니다.
-        - **인터랙션**: 부드러운 Fade-in/Slide-up 애니메이션 적용 및 일정 시간(예: 3초) 후 자동 소멸.
-        - **타입 분류**: 성공(Success/Green), 경고(Warning/Yellow), 에러(Error/Red) 등 시각적 구분 제공.
-    - **활용 사례**: 로그인 성공, 방 생성 완료, 파일 업로드 결과, 백엔드 통신 에러 피드백 등.
-2.  **Explore 페이지 인터랙션 개선**:
-    - **Room Detail Modal 도입**: 현재 카드에서 즉시 입장하는 방식을 변경하여, **[카드 클릭 -> 상세 정보 모달 오픈 -> 모달 내 입장 버튼 클릭]** 패턴으로 고도화할 것.
-    - **모달 구성**: 방의 상세 설명, 현재 참여자 리스트, 리소스(파일/링크) 요약 정보 등을 시각적으로 풍부하게 제공.
-    - **Room Card**: 호버 시 시각적 피드백(그림자, 스케일 업)을 강화하고, 카드 전체를 클릭 가능 영역으로 설정.
-    - **Skeleton UI**: 데이터 로딩 중 실제 카드와 유사한 형태의 스켈레톤을 표시하여 시각적 안정성 확보.
-3.  **채팅 편의 기능**:
-    - **Auto-scroll**: 새 메시지 수신 시 또는 방 입장 시 최신 메시지 위치(최하단)로 자동 스크롤.
-    - **Empty States**: 방 목록이 없거나 검색 결과가 없을 때의 친절한 안내 UI 추가.
+### 2. 리소스 허브 실시간 동기화 (자료 공유)
+- **[Frontend] `ResourceHub.js`**: 
+    - 파일/링크 업로드 완료 시 WebSocket으로 **`resourceUpdated`** 이벤트 전송.
+    - 리소스 업데이트 이벤트를 수신하면 우측 사이드바 목록을 즉시 갱신(새로고침 없이 실시간 동기화).
+- **[Backend] `chatHandler.js`**: 리소스 변경 사항을 서버 내 모든 접속자에게 전파하는 브로드캐스트 로직 보완.
 
 ---
 
-## 3. 기술적 변경 예상도 (Technical Change Forecast)
+## 📅 향후 작업 가이드라인 (Developer Action Items)
 
-향후 기능 확장에 따라 다음과 같은 API 엔드포인트 및 DB 구조의 변화가 예상됩니다. 설계 시 참고하시기 바랍니다.
+### 1. AI 학습 지능화 및 UI 연동
+- **[Frontend] `ResourceHub.js`**: 리스트의 각 파일 옆에 'AI 분석' 버튼 추가 및 클릭 시 `aiRouter` 호출.
+- **[Frontend] `ChatWindow.js`**: AI 요약 결과(`type: ai-summary`) 전용 레이아웃 최적화.
 
-### 3.1 API 요청 추가 예상
-| 기능 | Method | Endpoint | 설명 |
-| :--- | :--- | :--- | :--- |
-| **채널 관리** | `POST` | `/servers/{serverId}/channels` | 새로운 채널 추가 |
-| **채널 관리** | `DELETE` | `/servers/{serverId}/channels/{chId}` | 특정 채널 삭제 |
-| **리소스 공유** | `GET` | `/resources/upload-url` | S3 업로드용 Pre-signed URL 발급 |
-| **리소스 공유** | `POST` | `/servers/{serverId}/links` | 외부 학습 링크 메타데이터 저장 |
-| **AI 서비스** | `POST` | `/servers/{serverId}/summary` | 특정 기간 대화 요약 생성 요청 |
+### 2. 검색 및 필터링 기능 (Discovery)
+- **[Frontend] `ChatWindow.js`**: 현재 채널 내 메시지 키워드 검색 필터바 추가.
+- **[Frontend] `ExploreServers.js`**: 데이터 로딩 중 **Skeleton UI** 및 검색 결과 부재 시 **Empty States** 적용.
+- **[Backend] `getMessages.js`**: 키워드 필터링을 지원하도록 DynamoDB 쿼리 로직 보완.
 
-### 3.2 DB 스키마 진화 (Expected Schema Evolution)
-- **Rooms 테이블**: 
-    - `members`: 참여 중인 사용자 ID 및 권한(Host/Member) 리스트 추가.
-    - `settings`: 방별 알림 설정이나 테마 정보를 담는 Map 객체 추가.
-- **Messages 테이블**: 
-    - `mentions`: `@닉네임` 기능을 위한 사용자 ID 배열 추가.
-    - `reactions`: 메시지별 이모지 반응을 저장하는 Map 객체 추가.
-- **Users 테이블**: 
-    - `bookmarks`: 즐겨찾기한 스터디룸 ID 리스트 추가.
-    - `stats`: 총 학습 시간, 참여 횟수 등 통계 데이터 필드 추가.
+### 3. 사용자 편의성 및 운영 (Polish)
+- **[Frontend] `App.js` & `Toast.js`**: 전역 Toast 알림 시스템 구축.
+- **[DevOps] 운영 배포**: CodePipeline을 통한 정적 웹 배포 및 CloudFront 캐시 무효화 자동화.
 
 ---
-
-## 4. 개발 시 유의사항
-- **에러 핸들링**: `request.js`의 공통 에러 처리 로직을 활용하여 서버 오프라인이나 토큰 만료 시 사용자에게 명확한 피드백을 줄 것.
-
----
-*마지막 업데이트: 2026-04-18*
+*마지막 업데이트: 2026-04-24*
