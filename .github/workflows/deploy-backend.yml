@@ -29,11 +29,20 @@ jobs:
           cd backend
           npm install
 
+      - name: GitHub OIDC 진단 (교수님 확인용)
+        run: |
+          echo "==== GitHub이 AWS에 전달하는 인증 정보 ===="
+          echo "레포지토리 경로 (sub): repo:${{ github.repository }}:*"
+          echo "현재 브랜치 (ref): ${{ github.ref }}"
+          echo "인증 대상 (aud): sts.amazonaws.com"
+          echo "==========================================="
+
       - name: AWS 자격증명 설정 (OIDC 방식)
         uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: arn:aws:iam::269578498605:role/service-role/codepipeline-inhatc-shared
           aws-region: us-east-1
+          audience: sts.amazonaws.com
 
       - name: Lambda 함수 배포
         run: |

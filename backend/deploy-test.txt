@@ -1,2 +1,3 @@
-This is a dummy file to test the Backend auto-deployment workflow via GitHub Actions.
-Last updated: 2026-04-27
+Triggering Backend diagnostic run...
+Testing OIDC claims for repository: jeonghyeonme/CloudService
+Last updated: 2026-04-27 (Diagnostic Update)
