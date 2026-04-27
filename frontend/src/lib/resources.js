@@ -50,13 +50,15 @@ export async function uploadFile(serverId, file) {
 }
 
 export const deleteFile = async (serverId, fileId) => {
-  return await request(`/servers/${serverId}/files/${fileId}`, {
-    method: "DELETE",
+  return await request(`/servers/${serverId}/files`, {
+    method: "POST",
+    body: JSON.stringify({ action: "delete", fileId }), // 람다에 삭제 지시
   });
 };
 
 export const deleteLink = async (serverId, linkId) => {
-  return await request(`/servers/${serverId}/links/${linkId}`, {
-    method: "DELETE",
+  return await request(`/servers/${serverId}/links`, {
+    method: "POST", 
+    body: JSON.stringify({ action: "delete", linkId }),
   });
 };

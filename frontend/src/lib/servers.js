@@ -74,9 +74,12 @@ export function deleteChannel(serverId, channelId) {
   });
 }
 
-export function updateChannel(serverId, channelId, payload) {
-  return request(`${ENDPOINTS.servers.list}/${serverId}/channels/${channelId}`, {
-    method: "PUT",
-    body: JSON.stringify(payload),
+export const updateChannel = async (serverId, chId, data) => {
+  return await request(`/servers/${serverId}/channels/${chId}`, {
+    method: "PATCH",
+    body: JSON.stringify({
+      name: data.name,
+      topic: data.topic
+    }),
   });
-}
+};

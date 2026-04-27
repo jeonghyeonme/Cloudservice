@@ -53,10 +53,6 @@ FUNCTIONS=(
   "${PREFIX}-${STAGE}-deleteServer|src/servers/deleteServer.handler"
   "${PREFIX}-${STAGE}-joinServer|src/servers/joinServer.handler"
   "${PREFIX}-${STAGE}-getMyServers|src/servers/getMyServers.handler"
-  "${PREFIX}-${STAGE}-deleteFile|src/resources/deleteFile.handler"
-  "${PREFIX}-${STAGE}-deleteLink|src/resources/deleteLink.handler"
-  "${PREFIX}-${STAGE}-updateServer|src/servers/updateServer.handler"
-  "${PREFIX}-${STAGE}-leaveServer|src/servers/leaveServer.handler"
   "${PREFIX}-${STAGE}-updateChannel|src/servers/updateChannel.handler"
 )
 
