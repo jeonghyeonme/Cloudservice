@@ -1,3 +1,3 @@
-Triggering Backend diagnostic run...
-Testing OIDC claims for repository: jeonghyeonme/CloudService
-Last updated: 2026-04-27 (Diagnostic Update)
+Final deployment test using the corrected GitHub-actions-specific Role.
+Target Role: github-actions-inhatc-shared
+Last updated: 2026-04-27 (Final Check)
