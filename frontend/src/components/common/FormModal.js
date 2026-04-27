@@ -237,22 +237,24 @@ function FormModal({
             {submitError ? (
               <p className="form-modal__error">{submitError}</p>
             ) : (
-              <span />
+              <span className="form-modal__error-spacer" />
             )}
-            <button
-              type="button"
-              className="form-modal__button form-modal__button--ghost"
-              onClick={onClose}
-            >
-              {cancelLabel}
-            </button>
-            <button
-              type="submit"
-              className="form-modal__button form-modal__button--primary"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? "저장 중..." : submitLabel}
-            </button>
+            <div className="form-modal__actions">
+              <button
+                type="button"
+                className="form-modal__button form-modal__button--ghost"
+                onClick={onClose}
+              >
+                {cancelLabel}
+              </button>
+              <button
+                type="submit"
+                className="form-modal__button form-modal__button--primary"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "저장 중..." : submitLabel}
+              </button>
+            </div>
           </div>
         </form>
       </div>

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { getServerPath, PATHS } from "../../constants/path";
 import { useAuth } from "../../contexts/AuthContext";
 import { useServers } from "../../contexts/ServerContext";
+import { getServerId, getServerName } from "../../lib/serverEntity";
 import "./ServerSidebar.css";
 
 function handleRightClick(event, callback, payload) {
@@ -58,8 +59,8 @@ const ServerSidebar = ({
   return (
     <nav className="server-nav">
       {joinedServers.map((server) => {
-        const sid = server.serverId || server.roomId;
-        const serverName = server.serverName || server.title || "";
+        const sid = getServerId(server);
+        const serverName = getServerName(server, "");
         const serverInitial = serverName
           ? serverName.trim().charAt(0).toUpperCase()
           : "?";
