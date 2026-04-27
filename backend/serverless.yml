@@ -96,6 +96,22 @@ functions:
           method: delete
           cors: true
 
+  updateServer:
+    handler: src/servers/updateServer.handler
+    events:
+      - http:
+          path: /servers/{serverId}
+          method: patch
+          cors: true
+
+  leaveServer:
+    handler: src/servers/leaveServer.handler
+    events:
+      - http:
+          path: /servers/{serverId}/leave
+          method: post
+          cors: true
+
   # ── 인증 관련 ────────────────────────
   userRegister:
     handler: src/auth/userRegister.handler
@@ -157,7 +173,7 @@ functions:
       - websocket:
           route: deleteMessage
 
-  # ── 채널 추가/삭제 ───────────────────
+  # ── 채널 추가/삭제/수정 ───────────────────
   addChannel:
     handler: src/servers/addChannel.handler
     events:
@@ -172,6 +188,14 @@ functions:
       - http:
           path: /servers/{serverId}/channels/{chId}
           method: delete
+          cors: true
+
+  updateChannel:
+    handler: src/servers/updateChannel.handler
+    events:
+      - http:
+          path: /servers/{serverId}/channels/{channelId}
+          method: patch
           cors: true
 
   # ── S3 Pre-signed URL 관련 ───────────────────
@@ -205,6 +229,22 @@ functions:
       - http:
           path: /servers/{serverId}/links
           method: post
+          cors: true
+
+  deleteLink:
+    handler: src/resources/deleteLink.handler
+    events:
+      - http:
+          path: /servers/{serverId}/links/{linkId}
+          method: delete
+          cors: true
+
+  deleteFile:
+    handler: src/resources/deleteFile.handler
+    events:
+      - http:
+          path: /servers/{serverId}/files/{fileId}
+          method: delete
           cors: true
 
 # -------------------------------------------------------
