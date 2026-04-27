@@ -1,2 +1,3 @@
-This is a dummy file to test the Frontend auto-deployment workflow via GitHub Actions.
-Last updated: 2026-04-27
+This is a second dummy file to test the Frontend auto-deployment workflow.
+Triggering after fixing the setup-node action path and verifying the repository casing (CloudService).
+Last updated: 2026-04-27 (Update 2)
