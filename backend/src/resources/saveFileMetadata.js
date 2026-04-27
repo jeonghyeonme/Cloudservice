@@ -1,5 +1,5 @@
 const { UpdateCommand, GetCommand } = require("@aws-sdk/lib-dynamodb");
-const { S3Client, DeleteObjectCommand } = require("@aws-sdk/client-s3");
+const { S3Client, DeleteObjectCommand, HeadObjectCommand } = require("@aws-sdk/client-s3");
 const { v4: uuidv4 } = require("uuid");
 const dynamoDb = require("../dynamodbClient");
 const { verifyAccessToken } = require("../utils");
@@ -57,6 +57,25 @@ exports.handler = async (event) => {
     const { fileName, fileUrl, fileType, s3ObjectKey } = body;
     if (!serverId || !fileName || !fileUrl) {
       return { statusCode: 400, headers: { "Access-Control-Allow-Origin": "*" }, body: JSON.stringify({ message: "필수값 누락" }) };
+    }
+
+    // 파일 검증 로직
+    if (s3ObjectKey) {
+      try {
+        // S3에 해당 파일이 존재하는지 메타데이터만 살짝 요청(Head)해봅니다.
+        await s3Client.send(new HeadObjectCommand({
+          Bucket: RESOURCES_BUCKET,
+          Key: s3ObjectKey,
+        }));
+      } catch (s3Error) {
+        console.error("S3 파일 검증 실패 (파일 없음 또는 접근 불가):", s3Error);
+        // 파일이 없으면 에러를 던져 DB 저장을 차단합니다.
+        return { 
+          statusCode: 400, 
+          headers: { "Access-Control-Allow-Origin": "*" }, 
+          body: JSON.stringify({ message: "S3에 파일이 존재하지 않거나 업로드가 완료되지 않았습니다." }) 
+        };
+      }
     }
 
     const fileItem = {
