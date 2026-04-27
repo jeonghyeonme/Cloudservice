@@ -1,0 +1,59 @@
+name: Deploy Frontend
+
+on:
+  push:
+    branches:
+      - dev
+    paths:
+      - 'frontend/**'
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v3
+
+      - name: Node.js 설정
+        uses: aws-actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: 패키지 설치
+        run: |
+          cd frontend
+          npm install
+
+      - name: 빌드
+        run: |
+          cd frontend
+          npm run build
+        env:
+          CI: false
+
+      - name: AWS 자격증명 설정 (OIDC 방식)
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::269578498605:role/service-role/codepipeline-inhatc-shared
+          aws-region: us-east-1
+
+      - name: S3 동기화 (배포)
+        run: |
+          # 사용자께서 확인해주신 정확한 버킷 명칭 적용
+          aws s3 sync frontend/build/ s3://inhatc-team3-1-frontend --delete
+
+      - name: CloudFront 캐시 무효화
+        run: |
+          # 모든 배포 환경에 적용되도록 Distribution ID를 조회하여 무효화 실행
+          DIST_ID=$(aws cloudfront list-distributions --query "DistributionList.Items[?contains(DefaultCacheBehavior.TargetOriginId, 'inhatc-team3-1-frontend')].Id" --output text)
+          if [ "$DIST_ID" != "None" ] && [ -n "$DIST_ID" ]; then
+            echo "무효화 실행 중: $DIST_ID"
+            aws cloudfront create-invalidation --distribution-id $DIST_ID --paths "/*"
+          else
+            echo "CloudFront Distribution을 찾을 수 없어 무효화를 건너뜁니다."
+          fi
