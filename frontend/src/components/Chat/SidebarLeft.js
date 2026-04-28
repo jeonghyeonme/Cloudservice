@@ -14,8 +14,8 @@ function handleRightClick(event, callback, payload) {
  * @param {string} activeChannel - 현재 활성화된 채널 ID
  * @param {function} onChannelClick - 채널 클릭 시 실행 (채널 ID 전달)
  * @param {function} onAddChannelClick - 채널 추가 버튼 클릭 시 실행
- * @param {Array} members - 서버 멤버 목록 ({userId, nickname, role} 형태, getRoomDetail 응답에서 전달)
- * @param {string} hostId - 방장 userId (방장 태그 표시용)
+ * @param {Array} members - 서버 멤버 목록 ({userId, nickname, role} 형태)
+ * @param {string} hostId - 서버 방장 userId (방장 태그 표시용)
  */
 const SidebarLeft = ({
   serverName,

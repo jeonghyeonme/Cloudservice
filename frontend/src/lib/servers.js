@@ -56,7 +56,7 @@ export function joinServer(serverId, password) {
     method: "POST",
   };
   if (password) {
-    options.body = JSON.stringify({ password });
+    options.body = JSON.stringify({ serverPassword: password });
   }
   return request(`${ENDPOINTS.servers.list}/${serverId}/join`, options);
 }

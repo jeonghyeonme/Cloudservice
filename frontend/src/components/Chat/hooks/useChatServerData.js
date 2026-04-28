@@ -10,17 +10,19 @@ import {
   deleteServer,
   leaveServer as leaveServerApi,
 } from "../../../lib/servers";
+import { normalizeServer } from "../../../lib/serverEntity";
 
 function normalizeServerWithMessages(serverData, messagesData) {
+  const normalizedServer = normalizeServer(serverData);
   const messages = Array.isArray(messagesData)
     ? messagesData
     : messagesData?.items || [];
-  const channels = serverData?.channels || [
+  const channels = normalizedServer.channels || [
     { id: "ch-general", name: "일반", label: "일반", isDefault: true },
   ];
 
   return {
-    ...serverData,
+    ...normalizedServer,
     channels: channels.map((channel, index) => ({
       ...channel,
       label: channel.label || channel.name,
@@ -46,8 +48,13 @@ function useChatServerData({
     setLoading(true);
     setActiveServerId(serverId);
 
-    Promise.all([getServerDetail(serverId), getServerMessages(serverId)])
-      .then(([serverData, messagesData]) => {
+    getServerDetail(serverId)
+      .then(async (serverData) => {
+        const messagesData = await getServerMessages(serverId).catch((error) => {
+          console.error("메시지 정보를 가져오는 중 오류 발생:", error);
+          return [];
+        });
+
         if (!isMounted) {
           return;
         }
@@ -57,7 +64,7 @@ function useChatServerData({
           messagesData,
         );
 
-        upsertJoinedServer(serverData);
+        upsertJoinedServer(normalizedServer);
         setCurrentServer(normalizedServer);
         setActiveChannel(
           normalizedServer.channels[0]?.id || normalizedServer.channels[0]?.chId || "",
@@ -79,12 +86,14 @@ function useChatServerData({
   }, [serverId, setActiveServerId, upsertJoinedServer]);
 
   const applyServerUpdate = (updatedServer) => {
+    const normalizedServer = normalizeServer(updatedServer);
+
     setCurrentServer((prev) => ({
       ...prev,
-      ...updatedServer,
-      channels: updatedServer.channels || prev?.channels || [],
+      ...normalizedServer,
+      channels: normalizedServer.channels || prev?.channels || [],
     }));
-    upsertJoinedServer(updatedServer);
+    upsertJoinedServer(normalizedServer);
   };
 
   const createChannelInServer = async (values) => {
@@ -122,13 +131,13 @@ function useChatServerData({
     }
 
     const updatedServer = await updateServer(serverId, {
-      roomName: trimmedName,
+      serverName: trimmedName,
       description: values.description?.trim() || "",
       maxCapacity: Number(values.maxParticipants),
       isPrivate: values.privacy === "Private",
     });
 
-    applyServerUpdate(updatedServer.room || updatedServer);
+    applyServerUpdate(updatedServer);
   };
 
   const saveChannelSettings = async (channel, values) => {
