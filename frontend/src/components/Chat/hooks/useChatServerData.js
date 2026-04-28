@@ -7,6 +7,7 @@ import {
   getServerDetail,
   getServerMessages,
   updateServer,
+  updateChannel,
   deleteServer,
   leaveServer as leaveServerApi,
 } from "../../../lib/servers";
@@ -147,6 +148,8 @@ function useChatServerData({
       throw new Error("채널 이름을 입력해 주세요.");
     }
 
+    const chId = channel.chId || channel.id;
+    await updateChannel(serverId, chId, { name: trimmedName, topic: values.topic?.trim() || "" });
     setCurrentServer((prev) => ({
       ...prev,
       channels: (prev?.channels || []).map((item) =>

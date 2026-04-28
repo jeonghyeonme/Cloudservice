@@ -1,6 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
-import { uploadFile, saveLink } from '../../lib/resources';
+import { uploadFile, saveLink, deleteFile, deleteLink } from '../../lib/resources';
+
+import './ResourceHub.css';
 
 const getFileIcon = (fileName) => {
   if (!fileName) return '📁';
@@ -11,11 +13,6 @@ const getFileIcon = (fileName) => {
   return '📁';
 };
 
-/**
- * @title 리소스 허브 — 파일 업로드/링크 공유 사이드바
- * @param {object} serverResources - 서버 상세 데이터 (files, links 배열 포함)
- * @param {function} setCurrentServer - 서버 state 업데이트 함수 (업로드 후 즉시 반영용)
- */
 const ResourceHub = ({ serverResources, setCurrentServer }) => {
   const [activeHubTab, setActiveHubTab] = useState('Files');
   const { serverId } = useParams();
@@ -25,7 +22,6 @@ const ResourceHub = ({ serverResources, setCurrentServer }) => {
   const files = serverResources?.files || [];
   const links = serverResources?.links || [];
 
-  // S3 업로드 플로우: Pre-signed URL 발급 → S3 PUT → 메타데이터 DB 저장 → state 즉시 반영
   const handleFileSelect = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -36,7 +32,6 @@ const ResourceHub = ({ serverResources, setCurrentServer }) => {
     setUploading(true);
     try {
       const savedFile = await uploadFile(serverId, file);
-      // state 갱신으로 즉시 목록에 추가 (페이지 새로고침 없음)
       if (setCurrentServer && savedFile) {
         setCurrentServer(prev => ({
           ...prev,
@@ -52,13 +47,11 @@ const ResourceHub = ({ serverResources, setCurrentServer }) => {
     }
   };
 
-  // 링크 저장 플로우: URL 입력 → 백엔드에서 OG 메타데이터 스크랩 → state 즉시 반영
   const handleLinkAdd = async () => {
     const url = prompt('공유할 URL을 입력하세요:');
     if (!url) return;
     try {
       const result = await saveLink(serverId, url);
-      // state 갱신으로 즉시 목록에 추가
       if (setCurrentServer && result?.link) {
         setCurrentServer(prev => ({
           ...prev,
@@ -71,6 +64,50 @@ const ResourceHub = ({ serverResources, setCurrentServer }) => {
     }
   };
 
+  // 파일 삭제 핸들러
+  const handleDeleteFile = async (e, fileId) => {
+    e.preventDefault(); // 삭제 버튼 클릭 시 링크 이동 방지
+    e.stopPropagation(); 
+    
+    if (!window.confirm('파일을 삭제하시겠습니까?')) return;
+    
+    try {
+      await deleteFile(serverId, fileId);
+      if (setCurrentServer) {
+        // 즉시 화면에서 제거
+        setCurrentServer(prev => ({
+          ...prev,
+          files: (prev?.files || []).filter(f => f.fileId !== fileId),
+        }));
+      }
+    } catch (error) {
+      console.error('파일 삭제 실패:', error);
+      alert(error.message || '파일 삭제 실패');
+    }
+  };
+
+  // 링크 삭제 핸들러
+  const handleDeleteLink = async (e, linkId) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!window.confirm('링크를 삭제하시겠습니까?')) return;
+
+    try {
+      await deleteLink(serverId, linkId);
+      if (setCurrentServer) {
+        // 즉시 화면에서 제거
+        setCurrentServer(prev => ({
+          ...prev,
+          links: (prev?.links || []).filter(l => l.linkId !== linkId),
+        }));
+      }
+    } catch (error) {
+      console.error('링크 삭제 실패:', error);
+      alert(error.message || '링크 삭제 실패');
+    }
+  };
+
   const renderFileItem = (file, i) => {
     const displayName = file.fileName || file.name;
     const fileExt = displayName ? displayName.split('.').pop().toLowerCase() : '';
@@ -78,19 +115,23 @@ const ResourceHub = ({ serverResources, setCurrentServer }) => {
     const displayMeta = file.fileType || file.meta || fileExt.toUpperCase();
 
     return (
-      <a key={file.fileId || i} href={file.fileUrl || '#'} target="_blank" rel="noopener noreferrer" className="hub-file-item" style={{ textDecoration: 'none', color: 'inherit' }}>
+      // 호버 클래스(resource-item-hover) 및 position relative
+      <a key={file.fileId || i} href={file.fileUrl || '#'} target="_blank" rel="noopener noreferrer" className="hub-file-item resource-item-hover" style={{ textDecoration: 'none', color: 'inherit', position: 'relative' }}>
         <div className={'hub-file-icon ' + fileTypeClass}>{getFileIcon(displayName)}</div>
         <div className="hub-file-info">
           <span className="hub-file-name">{displayName}</span>
           <span className="hub-file-meta">{displayMeta}</span>
         </div>
+        <button className="delete-btn" onClick={(e) => handleDeleteFile(e, file.fileId)}>
+          ×
+        </button>
       </a>
     );
   };
 
   const renderLinkItem = (link, i) => {
     return (
-      <a key={link.linkId || i} href={link.url} target="_blank" rel="noopener noreferrer" className="hub-file-item" style={{ textDecoration: 'none', color: 'inherit' }}>
+      <a key={link.linkId || i} href={link.url} target="_blank" rel="noopener noreferrer" className="hub-file-item resource-item-hover" style={{ textDecoration: 'none', color: 'inherit', position: 'relative' }}>
         <div className="hub-file-icon" style={{ backgroundColor: '#1a2a3a' }}>
           {link.image
             ? <img src={link.image} alt="" style={{ width: '100%', height: '100%', borderRadius: '6px', objectFit: 'cover' }} />
@@ -101,6 +142,9 @@ const ResourceHub = ({ serverResources, setCurrentServer }) => {
           <span className="hub-file-name">{link.title}</span>
           <span className="hub-file-meta">{link.siteName || link.url}</span>
         </div>
+        <button className="delete-btn" onClick={(e) => handleDeleteLink(e, link.linkId)}>
+          ×
+        </button>
       </a>
     );
   };
