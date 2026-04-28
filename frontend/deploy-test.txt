@@ -1,4 +1,4 @@
-GitHub Actions 환경 변수 주입 테스트
-Target Role: github-actions-inhatc-shared
-API_HOST & WS_HOST 주입 확인용 배포
-Last updated: 2026-04-28 (환경 변수 적용 테스트)
+환경 변수 주입 및 코드 로직 단순화 테스트
+API_BASE_URL에서 /dev 수동 결합 로직 제거
+환경 변수에 전체 URL 직접 주입 방식 적용
+Last updated: 2026-04-28 (배포 로직 최종 최적화)
