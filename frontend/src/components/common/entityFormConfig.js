@@ -92,7 +92,7 @@ export function createChannelFields(defaultValues = {}) {
 
 export function createServerDefaultValues(server = {}) {
   return {
-    serverName: server.serverName || server.roomName || server.title || "",
+    serverName: server.serverName || server.title || "",
     description: server.description || "",
     privacy: server.isPrivate ? "Private" : "Public",
     maxParticipants: Number(server.maxCapacity) || 12,

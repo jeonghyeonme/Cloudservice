@@ -1,8 +1,9 @@
 import React, { useState } from "react";
-import "./JoinServerModal.css"
+import { getServerHostName, getServerName } from "../../lib/serverEntity";
+import "./JoinServerModal.css";
 
 const JoinServerModal = ({ server, onClose, onSubmit }) => {
-  const [serverPassword, setserverPassword] = useState("");
+  const [serverPassword, setServerPassword] = useState("");
   const [error, setError] = useState("");
 
   if (!server) return null;
@@ -10,7 +11,9 @@ const JoinServerModal = ({ server, onClose, onSubmit }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-    try { await onSubmit(server.isPrivate ? serverPassword : null); } 
+    try {
+      await onSubmit(server.isPrivate ? serverPassword : null);
+    }
     catch (err) { setError(err.message || "비밀번호가 올바르지 않습니다."); }
   };
 
@@ -26,13 +29,13 @@ const JoinServerModal = ({ server, onClose, onSubmit }) => {
         
         <header className="modal-header">
           <p className="server-desc-small">{server?.description}</p>
-          <h2 className="server-name-large">{server?.serverName || server?.title}</h2>
+          <h2 className="server-name-large">{getServerName(server)}</h2>
         </header>
 
         <div className="server-stats">
           <div className="host-profile">
             <div className="avatar-circle" />
-            <span><strong>{server?.hostName || "관리자"}</strong> 호스트님</span>
+            <span><strong>{getServerHostName(server)}</strong> 호스트님</span>
           </div>
           <div className="member-status">
             <span className="dot">●</span> 멤버 {server?.currentCount || 0} / {server?.maxCapacity || 12} 명
@@ -64,7 +67,7 @@ const JoinServerModal = ({ server, onClose, onSubmit }) => {
                 className={`pw-input ${error ? "input-error" : ""}`}
                 placeholder="********"
                 value={serverPassword}
-                onChange={(e) => setserverPassword(e.target.value)}
+                onChange={(e) => setServerPassword(e.target.value)}
                 required
               />
               {error && <p className="error-msg-text">{error}</p>}

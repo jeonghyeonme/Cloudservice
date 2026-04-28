@@ -95,6 +95,14 @@ functions:
           path: /servers/{serverId}
           method: delete
           cors: true
+  
+  leaveServer:
+    handler: src/servers/leaveServer.handler
+    events:
+      - http:
+          path: /servers/{serverId}/leave
+          method: post
+          cors: true
 
   updateServer:
     handler: src/servers/updateServer.handler

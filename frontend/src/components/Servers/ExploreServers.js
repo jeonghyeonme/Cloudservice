@@ -18,9 +18,15 @@ import {
 } from "../common/entityFormConfig";
 import { buildServerContextMenuItems } from "../Chat/utils/contextMenuFactories";
 import JoinServerModal from "./JoinServerModal";
+import {
+  getServerId,
+  getServerName,
+  normalizeServer,
+  normalizeServers,
+} from "../../lib/serverEntity";
 
 const ServerCard = ({ server, onJoin }) => {
-  const name = server.serverName || server.title || "제목 없음";
+  const name = getServerName(server, "제목 없음");
   const description = server.description;
   const currentMembers = Number(server.currentCount) || 0;
   const maxMembers = server.maxCapacity || 12;
@@ -130,7 +136,7 @@ const ExploreServers = () => {
   useEffect(() => {
     setActiveServerId(null);
     getServers()
-      .then((data) => setServers(data.items || []))
+      .then((data) => setServers(normalizeServers(data.items || [])))
       .catch((err) => {
         console.error("데이터 로드 실패!", err);
         setServers([]);
@@ -147,10 +153,10 @@ const ExploreServers = () => {
   });
 
   const executeJoin = async (server, password = null) => {
-    const sid = server.serverId || server.roomId;
+    const sid = getServerId(server);
     try {
       await joinServer(sid, password);
-      upsertJoinedServer(server);
+      upsertJoinedServer(normalizeServer(server));
       navigate(getServerPath(sid));
     } catch (error) {
       console.error("서버 참여 실패:", error);
@@ -175,27 +181,26 @@ const ExploreServers = () => {
   };
 
   const resolveServerForMenu = (server) => {
-    const sid = server.serverId || server.roomId;
-    return servers.find((item) => (item.serverId || item.roomId) === sid) || server;
+    const sid = getServerId(server);
+    return servers.find((item) => getServerId(item) === sid) || server;
   };
 
   const handleOpenServerMenu = (event, server) => {
     const resolvedServer = resolveServerForMenu(server);
-    const sid = resolvedServer.serverId || resolvedServer.roomId;
+    const sid = getServerId(resolvedServer);
     const isHost = user?.userId === resolvedServer.hostId;
 
     openContextMenu(event, {
       type: "server",
       targetId: sid,
-      title: resolvedServer.roomName || resolvedServer.serverName || resolvedServer.title || "현재 서버",
+      title: getServerName(resolvedServer),
       items: buildServerContextMenuItems({
         canDelete: isHost,
         onOpenSettings: () =>
           openSettingsModal({
             type: "server",
             server: resolvedServer,
-            entityName:
-              resolvedServer.roomName || resolvedServer.serverName || resolvedServer.title || "현재 서버",
+            entityName: getServerName(resolvedServer),
           }),
         onOpenDeleteConfirm: () =>
           openConfirmModal({
@@ -204,7 +209,7 @@ const ExploreServers = () => {
             onConfirm: async () => {
               await deleteServer(sid);
               setServers((prev) =>
-                prev.filter((item) => (item.serverId || item.roomId) !== sid),
+                prev.filter((item) => getServerId(item) !== sid),
               );
               removeJoinedServer(sid);
               closeConfirmModal();
@@ -225,7 +230,7 @@ const ExploreServers = () => {
   };
 
   const handleServerSettingsSubmit = async (values) => {
-    const sid = settingsModal?.server?.serverId || settingsModal?.server?.roomId;
+    const sid = getServerId(settingsModal?.server);
     const trimmedName = values.serverName.trim();
 
     if (!trimmedName) {
@@ -238,11 +243,11 @@ const ExploreServers = () => {
       maxCapacity: Number(values.maxParticipants),
       isPrivate: values.privacy === "Private",
     });
-    const resolvedServer = updatedServer.room || updatedServer;
+    const resolvedServer = normalizeServer(updatedServer);
 
     setServers((prev) =>
       prev.map((server) =>
-        (server.serverId || server.roomId) === sid ? resolvedServer : server,
+        getServerId(server) === sid ? resolvedServer : server,
       ),
     );
     closeSettingsModal();
@@ -296,12 +301,12 @@ const ExploreServers = () => {
         </div>
 
         <div className="servers-grid">
-          {filteredServers.map((server) => (
-            <ServerCard
-              key={server.serverId || server.roomId}
-              server={server}
-              onJoin={handleJoinClick}
-            />
+            {filteredServers.map((server) => (
+              <ServerCard
+                key={getServerId(server)}
+                server={server}
+                onJoin={handleJoinClick}
+              />
           ))}
 
           <div

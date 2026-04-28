@@ -56,7 +56,7 @@ export function joinServer(serverId, password) {
     method: "POST",
   };
   if (password) {
-    options.body = JSON.stringify({ password });
+    options.body = JSON.stringify({ serverPassword: password });
   }
   return request(`${ENDPOINTS.servers.list}/${serverId}/join`, options);
 }
@@ -76,7 +76,7 @@ export function deleteChannel(serverId, channelId) {
 
 export const updateChannel = async (serverId, chId, data) => {
   return await request(`/servers/${serverId}/channels/${chId}`, {
-    method: "PATCH",
+    method: "PUT",
     body: JSON.stringify({
       name: data.name,
       topic: data.topic
