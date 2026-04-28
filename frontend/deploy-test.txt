@@ -1,3 +1,4 @@
-CloudFront 무효화 단계를 제외한 새로운 배포 워크플로우 테스트
+GitHub Actions 환경 변수 주입 테스트
 Target Role: github-actions-inhatc-shared
-Last updated: 2026-04-28 (CloudFront 무효화 제외 테스트)
+API_HOST & WS_HOST 주입 확인용 배포
+Last updated: 2026-04-28 (환경 변수 적용 테스트)
