@@ -61,7 +61,7 @@ function useWebSocket({ serverId, userId, onMessage }) {
       ws.close();
       wsRef.current = null;
     };
-  }, [serverId, userId]); // onMessage는 의도적으로 제외 (매 렌더마다 재연결 방지)
+  }, [serverId, userId, onMessage]); // onMessage는 의도적으로 제외 (매 렌더마다 재연결 방지)
  
   return { sendMessage, isConnected };
 }
