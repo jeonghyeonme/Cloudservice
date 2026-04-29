@@ -18,17 +18,22 @@ function normalizeServerWithMessages(serverData, messagesData) {
   const messages = Array.isArray(messagesData)
     ? messagesData
     : messagesData?.items || [];
+    
   const channels = normalizedServer.channels || [
     { id: "ch-general", name: "일반", label: "일반", isDefault: true },
   ];
 
   return {
     ...normalizedServer,
-    channels: channels.map((channel, index) => ({
-      ...channel,
-      label: channel.label || channel.name,
-      messages: index === 0 ? messages : [],
-    })),
+    channels: channels.map((channel) => {
+      const cid = channel.chId || channel.id;
+      return {
+        ...channel,
+        label: channel.label || channel.name,
+        // 해당 채널의 메시지만 필터링해서 할당 (channelId가 없으면 ch-general로 간주)
+        messages: messages.filter(m => (m.channelId || "ch-general") === cid),
+      };
+    }),
   };
 }
 

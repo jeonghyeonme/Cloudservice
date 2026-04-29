@@ -144,17 +144,16 @@ async function joinServer(connectionId, body) {
 // =========================
 async function sendMessage(event, body) {
   const connectionId = event.requestContext.connectionId;
-  const domain       = event.requestContext.domainName;
-  const stage        = event.requestContext.stage;
+  const apigw        = getApigwClient(event);
 
-  const apigw   = getApigwClient(domain, stage);
-  const { serverId } = body;
+  const { serverId, channelId } = body;
 
   const messageId = uuidv4();
   const createdAt = new Date().toISOString();
 
   const item = {
     serverId,
+    channelId:      channelId || "ch-general", // 기본 채널 ID
     messageId,
     senderId:       body.senderId,
     senderNickname: body.senderNickname,
@@ -172,7 +171,7 @@ async function sendMessage(event, body) {
     Item:      item,
   }));
 
-  // serverId-index GSI로 같은 방 접속자 전체 조회
+  // serverId-index GSI로 같은 서버 접속자 전체 조회
   const response = await dynamoDb.send(new QueryCommand({
     TableName:                 CONNECTIONS_TABLE,
     IndexName:                 "serverId-index",
@@ -181,8 +180,9 @@ async function sendMessage(event, body) {
   }));
 
   const connections = response.Items || [];
+  console.log(`Broadcasting message to ${connections.length} connections in server ${serverId}`);
 
-  // 같은 방 모든 접속자에게 동시 브로드캐스트
+  // 같은 서버 모든 접속자에게 브로드캐스트 (클라이언트에서 channelId로 필터링)
   await Promise.all(
     connections.map((conn) =>
       sendToConnection(apigw, conn.connectionId, {
@@ -397,6 +397,15 @@ module.exports.handler = async (event) => {
     if (routeKey === "sendMessage") return await sendMessage(event, body);
     if (routeKey === "updateMessage") return await updateMessage(event, body);
     if (routeKey === "deleteMessage") return await deleteMessage(event, body);
+    if (routeKey === "resourceUpdated") return await resourceUpdated(event, body);
+
+    return { statusCode: 200 };
+
+  } catch (error) {
+    console.error("chatHandler Error:", error);
+    return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
+  }
+};dy);
     if (routeKey === "resourceUpdated") return await resourceUpdated(event, body);
 
     return { statusCode: 200 };

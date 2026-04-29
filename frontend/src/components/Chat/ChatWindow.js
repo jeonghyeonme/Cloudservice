@@ -40,27 +40,50 @@ const ChatWindow = ({ activeChannel, channels, onMembersUpdate }) => {
 
   const handleWsMessage = useCallback((parsed) => {
     const { action, data } = parsed;
-    const cid = activeChannelRef.current;
-
+    
     if (action === "receiveMessage" && data) {
-      setChannelMessages((prev) => ({
+      const msgChannelId = data.channelId || "ch-general";
+      
+      setChannelMessages((prev) => {
+        const existing = prev[msgChannelId] || [];
+        // 중복 방지 (temp ID나 실제 ID 체크)
+        const isDuplicate = existing.some(msg => 
+          msg.messageId === data.messageId || 
+          (msg.content === data.content && msg.senderId === data.senderId && msg.messageId?.startsWith('temp-'))
+        );
+        
+        if (isDuplicate) {
+          // 낙관적 업데이트된 메시지를 실제 서버 데이터로 교체
+          return {
+            ...prev,
+            [msgChannelId]: existing.map(msg => 
+              (msg.content === data.content && msg.senderId === data.senderId && msg.messageId?.startsWith('temp-'))
+              ? data : msg
+            )
+          };
+        }
+
+        return {
           ...prev,
-          [cid]: [...(prev[cid] || []), data],
-      }));
+          [msgChannelId]: [...existing, data],
+        };
+      });
     }
 
     if (action === "messageUpdated" && data) {
+      const msgChannelId = data.channelId || "ch-general";
       setChannelMessages((prev) => ({
         ...prev,
-        [cid]: (prev[cid] || []).map((msg) =>
+        [msgChannelId]: (prev[msgChannelId] || []).map((msg) =>
             msg.messageId === data.messageId ? { ...msg, ...data } : msg
           ),
         }));
       };
       if (action === "messageDeleted" && data) {
+        const msgChannelId = data.channelId || "ch-general";
         setChannelMessages((prev) => ({
           ...prev,
-          [cid]: (prev[cid] || []).map((msg) =>
+          [msgChannelId]: (prev[msgChannelId] || []).map((msg) =>
             msg.messageId === data.messageId ? { ...msg, ...data } : msg
         ),
       }));
@@ -89,21 +112,16 @@ const ChatWindow = ({ activeChannel, channels, onMembersUpdate }) => {
     messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
   }, [activeChannel]);
 
-  // 새 메시지 도착 시 스크롤 아래로
-  // const currentMessages = [...(channelMessages[activeChannel] || [])]
-  // .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-
-  // useEffect(() => {
-  //   messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  // }, [currentMessages.length]);
-
   // 메시지 전송
   const handleSend = () => {
     const trimmed = inputText.trim();
     if (!trimmed || !isConnected) return;
 
+    const channelId = activeChannel;
+
     sendMessage("sendMessage", {
       serverId,
+      channelId,
       senderId: user?.userId,
       senderNickname: user?.nickname,
       messageType: "TEXT",
@@ -114,6 +132,7 @@ const ChatWindow = ({ activeChannel, channels, onMembersUpdate }) => {
     const optimisticMsg = {
       messageId: `temp-${Date.now()}`,
       serverId,
+      channelId,
       senderId: user?.userId,
       senderNickname: user?.nickname,
       messageType: "TEXT",
@@ -122,7 +141,7 @@ const ChatWindow = ({ activeChannel, channels, onMembersUpdate }) => {
     };
     setChannelMessages((prev) => ({
       ...prev,
-      [activeChannel]: [...(prev[activeChannel] || []), optimisticMsg],
+      [channelId]: [...(prev[channelId] || []), optimisticMsg],
     }));
  
     setInputText("");
