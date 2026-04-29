@@ -53,6 +53,7 @@ FUNCTIONS=(
   "${PREFIX}-${STAGE}-deleteServer|src/servers/deleteServer.handler"
   "${PREFIX}-${STAGE}-joinServer|src/servers/joinServer.handler"
   "${PREFIX}-${STAGE}-getMyServers|src/servers/getMyServers.handler"
+  "${PREFIX}-${STAGE}-updateChannel|src/servers/updateChannel.handler"
 )
 
 # ── 1단계: 코드 패키징 + S3 업로드 ────────────────────────

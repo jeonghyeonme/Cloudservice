@@ -25,6 +25,7 @@ import {
   buildChannelContextMenuItems,
   buildServerContextMenuItems,
 } from "./utils/contextMenuFactories";
+import { getServerId, getServerName } from "../../lib/serverEntity";
 
 const ChatLayout = () => {
   const { serverId } = useParams();
@@ -93,8 +94,7 @@ const ChatLayout = () => {
     () =>
       openSettingsModal({
         type: "server",
-        entityName:
-          currentServer?.roomName || currentServer?.serverName || currentServer?.title || "현재 서버",
+        entityName: getServerName(currentServer),
       }),
     [currentServer, openSettingsModal],
   );
@@ -185,20 +185,20 @@ const ChatLayout = () => {
         contextMenuType={contextMenu?.type}
         contextMenuTargetId={contextMenu?.targetId}
         onServerContextMenu={(event, server) => {
-          const sid = server.serverId || server.roomId;
+          const sid = getServerId(server);
           const resolvedServer =
-            (currentServer?.serverId || currentServer?.roomId) === sid ? currentServer : server;
+            getServerId(currentServer) === sid ? currentServer : server;
           openContextMenu(event, {
             type: "server",
             targetId: sid,
-            title: resolvedServer.roomName || resolvedServer.serverName || resolvedServer.title || "현재 서버",
+            title: getServerName(resolvedServer),
             items: serverMenuItems,
           });
         }}
       />
 
       <SidebarLeft
-        serverName={currentServer?.serverName || currentServer?.roomName || currentServer?.title || "로딩 중..."}
+        serverName={getServerName(currentServer, "로딩 중...")}
         channels={currentServer?.channels || []}
         activeChannel={activeChannel}
         onChannelClick={setActiveChannel}
@@ -211,7 +211,7 @@ const ChatLayout = () => {
           openContextMenu(event, {
             type: "server",
             targetId: serverId,
-            title: currentServer?.roomName || currentServer?.serverName || currentServer?.title || "현재 서버",
+            title: getServerName(currentServer),
             items: serverMenuItems,
           })
         }
@@ -247,7 +247,7 @@ const ChatLayout = () => {
 
       <CreateChannelModal
         open={isChannelModalOpen}
-        serverName={currentServer?.serverName || currentServer?.roomName || currentServer?.title || "현재 서버"}
+        serverName={getServerName(currentServer)}
         onClose={() => setIsChannelModalOpen(false)}
         onSubmit={handleCreateChannel}
       />
