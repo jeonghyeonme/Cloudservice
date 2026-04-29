@@ -11,6 +11,7 @@ const { v4: uuidv4 } = require("uuid");
 
 const dynamoDb = require("../dynamodbClient");
 const config   = require("../config");
+const { verifyAccessToken } = require("../utils");
 
 const SERVERS_TABLE     = process.env.SERVERS_TABLE;
 const CONNECTIONS_TABLE = process.env.CONNECTIONS_TABLE;
@@ -66,11 +67,24 @@ async function sendToConnection(apigw, connectionId, data) {
 // =========================
 async function onConnect(event) {
   const connectionId = event.requestContext.connectionId;
+  const token = event.queryStringParameters?.token;
+
+  if (!token) {
+    console.log("Connection rejected: No token provided");
+    return { statusCode: 403, body: "Forbidden: No token provided" };
+  }
+
+  const decoded = verifyAccessToken(token);
+  if (decoded.error) {
+    console.log("Connection rejected: Invalid token", decoded.error);
+    return { statusCode: 403, body: `Forbidden: ${decoded.error}` };
+  }
 
   await dynamoDb.send(new PutCommand({
     TableName: CONNECTIONS_TABLE,
     Item: {
       connectionId,
+      userId:      decoded.userId,
       connectedAt: new Date().toISOString(),
       expiresAt:   Math.floor(Date.now() / 1000) + 3600, // 1시간 TTL
     },
