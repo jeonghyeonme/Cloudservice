@@ -4,7 +4,7 @@ import { useParams } from 'react-router-dom';
 import useWebSocket from './hooks/useWebSocket';
 
 const ChatWindow = ({ activeChannel, channels, onMembersUpdate }) => {
-  const { user, accessToken } = useAuth();
+  const { user } = useAuth();
   const { serverId } = useParams();
   const CURRENT_USER = user?.nickname || "";
 
@@ -93,7 +93,6 @@ const ChatWindow = ({ activeChannel, channels, onMembersUpdate }) => {
   const { sendMessage, isConnected } = useWebSocket({
     serverId,
     userId: user?.userId,
-    accessToken,
     onMessage: handleWsMessage,
   });
 

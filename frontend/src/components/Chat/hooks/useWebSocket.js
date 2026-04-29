@@ -5,10 +5,9 @@ import { API_WS_URL } from "../../../constants/endpoint";
  * @title WebSocket 연결 훅
  * @param {string} serverId - 입장할 서버 ID
  * @param {string} userId - 현재 유저 ID
- * @param {string} accessToken - 인증 토큰
  * @param {function} onMessage - 메시지 수신 시 콜백 ({ action, data })
  */
-function useWebSocket({ serverId, userId, accessToken, onMessage }) {
+function useWebSocket({ serverId, userId, onMessage }) {
   const wsRef = useRef(null);
   const [isConnected, setIsConnected] = useState(false);
   const onMessageRef = useRef(onMessage);
@@ -27,29 +26,21 @@ function useWebSocket({ serverId, userId, accessToken, onMessage }) {
   }, []);
  
   useEffect(() => {
-    if (!serverId || !userId || !accessToken) return;
+    if (!serverId || !userId) return;
  
-    // URL 끝에 슬래시가 있으면 제거하고 토큰 추가 (AWS 연결 오류 방지)
-    const baseUrl = API_WS_URL.endsWith('/') ? API_WS_URL.slice(0, -1) : API_WS_URL;
-    const wsUrl = `${baseUrl}?token=${accessToken}`;
-    
-    console.log("🔌 WebSocket 연결 시도 (토큰 포함):", wsUrl.split('?')[0]);
-
-    const ws = new WebSocket(wsUrl);
+    const ws = new WebSocket(API_WS_URL);
     wsRef.current = ws;
  
     ws.onopen = () => {
       console.log("✅ WebSocket 연결됨");
       setIsConnected(true);
  
-      // 서버 입장 알림 (이게 성공해야 브로드캐스트 대상에 포함됨)
-      const joinPayload = {
+      // 서버 입장 알림
+      ws.send(JSON.stringify({
         action: "joinServer",
         serverId,
         userId,
-      };
-      console.log("📤 서버 입장 요청 전송:", joinPayload);
-      ws.send(JSON.stringify(joinPayload));
+      }));
     };
  
     ws.onmessage = (event) => {
