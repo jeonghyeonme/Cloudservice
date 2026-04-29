@@ -2,7 +2,6 @@ const {
   PutCommand,
   UpdateCommand,
   QueryCommand,
-  DeleteCommand,
 } = require("@aws-sdk/lib-dynamodb");
 const {
   ApiGatewayManagementApiClient,
@@ -11,6 +10,7 @@ const {
 const { v4: uuidv4 } = require("uuid");
 
 const dynamoDb = require("../dynamodbClient");
+const config   = require("../config");
 
 const SERVERS_TABLE     = process.env.SERVERS_TABLE;
 const CONNECTIONS_TABLE = process.env.CONNECTIONS_TABLE;
@@ -20,9 +20,21 @@ const MESSAGES_TABLE    = process.env.MESSAGES_TABLE;
 // =========================
 // WebSocket 클라이언트 생성
 // =========================
-function getApigwClient(domain, stage) {
+function getApigwClient(event) {
+  const domain = event.requestContext.domainName;
+  const stage  = event.requestContext.stage;
+
+  // 로컬(serverless-offline) 환경이거나 domainName에 localhost가 포함된 경우
+  const isLocal = config.IS_OFFLINE || domain.includes("localhost") || domain.includes("127.0.0.1");
+  
+  const endpoint = isLocal
+    ? "http://localhost:4001"
+    : `https://${domain}/${stage}`;
+
+  console.log("WebSocket Endpoint:", endpoint);
+
   return new ApiGatewayManagementApiClient({
-    endpoint: `https://${domain}/${stage}`,
+    endpoint,
   });
 }
 
@@ -33,14 +45,18 @@ async function sendToConnection(apigw, connectionId, data) {
       ConnectionId: connectionId,
       Data:         Buffer.from(JSON.stringify(data)),
     }));
-  } catch {
-    // 연결 끊김 시 Delete 대신 serverId를 'DISCONNECTED'로 바꿔서 방에서 빼냅니다.
-    await dynamoDb.send(new UpdateCommand({
-      TableName: CONNECTIONS_TABLE,
-      Key:       { connectionId },
-      UpdateExpression: "SET serverId = :none",
-      ExpressionAttributeValues: { ":none": "DISCONNECTED" }
-    })).catch(() => {}); // 혹시 모를 권한 에러 무시
+  } catch (error) {
+    console.error(`Failed to send to ${connectionId}:`, error.message);
+    
+    // 410 Gone: 연결이 이미 끊긴 경우
+    if (error.name === "GoneException" || error.$metadata?.httpStatusCode === 410) {
+      await dynamoDb.send(new UpdateCommand({
+        TableName: CONNECTIONS_TABLE,
+        Key:       { connectionId },
+        UpdateExpression: "SET serverId = :none",
+        ExpressionAttributeValues: { ":none": "DISCONNECTED" }
+      })).catch(() => {});
+    }
   }
 }
 
@@ -83,7 +99,7 @@ async function onDisconnect(event) {
 
 
 // =========================
-// 방 생성
+// 방 생성 (WebSocket용 - 현재는 HTTP로 주로 처리하나 유지)
 // =========================
 async function createServer(body) {
   const serverId    = uuidv4();
@@ -111,7 +127,7 @@ async function createServer(body) {
 
 
 // =========================
-// 방 입장
+// 방 입장 (WebSocket 세션과 serverId 연결)
 // =========================
 async function joinServer(connectionId, body) {
   const { serverId, userId } = body;
@@ -124,7 +140,7 @@ async function joinServer(connectionId, body) {
     ExpressionAttributeValues: { ":r": serverId, ":u": userId },
   }));
 
-  // 방 인원 +1
+  // 방 인원 +1 (단순 카운터)
   await dynamoDb.send(new UpdateCommand({
     TableName:                 SERVERS_TABLE,
     Key:                       { serverId },
@@ -143,9 +159,7 @@ async function joinServer(connectionId, body) {
 // 메시지 전송
 // =========================
 async function sendMessage(event, body) {
-  const connectionId = event.requestContext.connectionId;
-  const apigw        = getApigwClient(event);
-
+  const apigw = getApigwClient(event);
   const { serverId, channelId } = body;
 
   const messageId = uuidv4();
@@ -153,7 +167,7 @@ async function sendMessage(event, body) {
 
   const item = {
     serverId,
-    channelId:      channelId || "ch-general", // 기본 채널 ID
+    channelId:      channelId || "ch-general",
     messageId,
     senderId:       body.senderId,
     senderNickname: body.senderNickname,
@@ -165,13 +179,13 @@ async function sendMessage(event, body) {
     item.content = body.content;
   }
 
-  // Messages 테이블에 저장
+  // 1. DB 저장
   await dynamoDb.send(new PutCommand({
     TableName: MESSAGES_TABLE,
     Item:      item,
   }));
 
-  // serverId-index GSI로 같은 서버 접속자 전체 조회
+  // 2. 같은 서버 접속자 전체 조회
   const response = await dynamoDb.send(new QueryCommand({
     TableName:                 CONNECTIONS_TABLE,
     IndexName:                 "serverId-index",
@@ -182,7 +196,7 @@ async function sendMessage(event, body) {
   const connections = response.Items || [];
   console.log(`Broadcasting message to ${connections.length} connections in server ${serverId}`);
 
-  // 같은 서버 모든 접속자에게 브로드캐스트 (클라이언트에서 channelId로 필터링)
+  // 3. 브로드캐스트
   await Promise.all(
     connections.map((conn) =>
       sendToConnection(apigw, conn.connectionId, {
@@ -200,32 +214,15 @@ async function sendMessage(event, body) {
 // 메시지 수정
 // =========================
 async function updateMessage(event, body) {
-  const domain = event.requestContext.domainName;
-  const stage = event.requestContext.stage;
-  const apigw = getApigwClient(domain, stage);
-
-  const { serverId, messageId, senderId, content } = body;
-
-  if (!serverId || !messageId || !senderId || !content) {
-    return {
-      statusCode: 400,
-      body: JSON.stringify({ message: "serverId, messageId, senderId, content가 필요합니다." }),
-    };
-  }
+  const apigw = getApigwClient(event);
+  const { serverId, messageId, senderId, content, channelId } = body;
 
   const updatedAt = new Date().toISOString();
 
   const result = await dynamoDb.send(new UpdateCommand({
     TableName: MESSAGES_TABLE,
-    Key: {
-      serverId,
-      messageId,
-    },
-    UpdateExpression: `
-      SET content = :content,
-          updatedAt = :updatedAt,
-          isEdited = :isEdited
-    `,
+    Key: { serverId, messageId },
+    UpdateExpression: "SET content = :content, updatedAt = :updatedAt, isEdited = :isEdited",
     ConditionExpression: "senderId = :senderId",
     ExpressionAttributeValues: {
       ":content": content,
@@ -242,9 +239,7 @@ async function updateMessage(event, body) {
     TableName: CONNECTIONS_TABLE,
     IndexName: "serverId-index",
     KeyConditionExpression: "serverId = :serverId",
-    ExpressionAttributeValues: {
-      ":serverId": serverId,
-    },
+    ExpressionAttributeValues: { ":serverId": serverId },
   }));
 
   const connections = response.Items || [];
@@ -253,48 +248,28 @@ async function updateMessage(event, body) {
     connections.map((conn) =>
       sendToConnection(apigw, conn.connectionId, {
         action: "messageUpdated",
-        data: updatedMessage,
+        data:   { ...updatedMessage, channelId }, // channelId가 키가 아니므로 body에서 가져와 전달
       })
     )
   );
 
-  return {
-    statusCode: 200,
-    body: JSON.stringify(updatedMessage),
-  };
+  return { statusCode: 200 };
 }
 
 
 // =========================
-// 메시지 삭제 - 소프트 삭제
+// 메시지 삭제
 // =========================
 async function deleteMessage(event, body) {
-  const domain = event.requestContext.domainName;
-  const stage = event.requestContext.stage;
-  const apigw = getApigwClient(domain, stage);
-
-  const { serverId, messageId, senderId } = body;
-
-  if (!serverId || !messageId || !senderId) {
-    return {
-      statusCode: 400,
-      body: JSON.stringify({ message: "serverId, messageId, senderId가 필요합니다." }),
-    };
-  }
+  const apigw = getApigwClient(event);
+  const { serverId, messageId, senderId, channelId } = body;
 
   const deletedAt = new Date().toISOString();
 
   const result = await dynamoDb.send(new UpdateCommand({
     TableName: MESSAGES_TABLE,
-    Key: {
-      serverId,
-      messageId,
-    },
-    UpdateExpression: `
-      SET isDeleted = :isDeleted,
-          deletedAt = :deletedAt,
-          content = :content
-    `,
+    Key: { serverId, messageId },
+    UpdateExpression: "SET isDeleted = :isDeleted, deletedAt = :deletedAt, content = :content",
     ConditionExpression: "senderId = :senderId",
     ExpressionAttributeValues: {
       ":isDeleted": true,
@@ -311,9 +286,7 @@ async function deleteMessage(event, body) {
     TableName: CONNECTIONS_TABLE,
     IndexName: "serverId-index",
     KeyConditionExpression: "serverId = :serverId",
-    ExpressionAttributeValues: {
-      ":serverId": serverId,
-    },
+    ExpressionAttributeValues: { ":serverId": serverId },
   }));
 
   const connections = response.Items || [];
@@ -322,36 +295,22 @@ async function deleteMessage(event, body) {
     connections.map((conn) =>
       sendToConnection(apigw, conn.connectionId, {
         action: "messageDeleted",
-        data: deletedMessage,
+        data:   { ...deletedMessage, channelId },
       })
     )
   );
 
-  return {
-    statusCode: 200,
-    body: JSON.stringify(deletedMessage),
-  };
+  return { statusCode: 200 };
 }
 
 
 // =========================
-// 리소스 업데이트 브로드캐스트
+// 리소스 업데이트 알림
 // =========================
 async function resourceUpdated(event, body) {
-  const domain = event.requestContext.domainName;
-  const stage = event.requestContext.stage;
-  const apigw = getApigwClient(domain, stage);
-
+  const apigw = getApigwClient(event);
   const { serverId, resourceType, resource } = body;
 
-  if (!serverId) {
-    return {
-      statusCode: 400,
-      body: JSON.stringify({ message: "serverId가 필요합니다." }),
-    };
-  }
-
-  // 같은 서버 접속자 전체 조회
   const response = await dynamoDb.send(new QueryCommand({
     TableName: CONNECTIONS_TABLE,
     IndexName: "serverId-index",
@@ -361,7 +320,6 @@ async function resourceUpdated(event, body) {
 
   const connections = response.Items || [];
 
-  // 브로드캐스트
   await Promise.all(
     connections.map((conn) =>
       sendToConnection(apigw, conn.connectionId, {
@@ -381,7 +339,7 @@ async function resourceUpdated(event, body) {
 
 
 // =========================
-// 메인 핸들러 — API Gateway WebSocket 라우팅
+// 메인 핸들러
 // =========================
 module.exports.handler = async (event) => {
   const routeKey = event.requestContext.routeKey;
@@ -397,15 +355,6 @@ module.exports.handler = async (event) => {
     if (routeKey === "sendMessage") return await sendMessage(event, body);
     if (routeKey === "updateMessage") return await updateMessage(event, body);
     if (routeKey === "deleteMessage") return await deleteMessage(event, body);
-    if (routeKey === "resourceUpdated") return await resourceUpdated(event, body);
-
-    return { statusCode: 200 };
-
-  } catch (error) {
-    console.error("chatHandler Error:", error);
-    return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
-  }
-};dy);
     if (routeKey === "resourceUpdated") return await resourceUpdated(event, body);
 
     return { statusCode: 200 };
