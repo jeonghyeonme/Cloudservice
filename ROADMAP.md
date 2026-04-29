@@ -152,7 +152,7 @@ C:\Users\parad\Cloudservice\
 ### 1. 실시간 메시징 및 이미지 즉시 렌더링
 - **[Frontend] `ChatLayout.js`**: `new WebSocket()` 연결 생성 및 재연결 로직 구현.
 - **[Frontend] `ChatWindow.js`**: 메시지 전송 로직을 WebSocket으로 전환.
-    - **Step 1: 서버 입장 (필수)**
+    - **Step 1: 서버 입장**
       ```json
       { "action": "joinServer", "serverId": "서버_ID", "userId": "유저_ID" }
       ```
@@ -191,7 +191,8 @@ C:\Users\parad\Cloudservice\
 
 ### 3. 사용자 편의성 및 운영 (Polish)
 - **[Frontend] `App.js` & `Toast.js`**: 전역 Toast 알림 시스템 구축.
+- **[Frontend] 파일 업로드 제한 및 피드백**: PR #27의 백엔드 화이트리스트 정책에 맞춰, 허용되지 않는 확장자 업로드 시 사용자에게 즉각적인 경고 피드백(Toast 등) 제공.
 - **[DevOps] 운영 배포**: CodePipeline을 통한 정적 웹 배포 및 CloudFront 캐시 무효화 자동화.
 
 ---
-*마지막 업데이트: 2026-04-24*
+*마지막 업데이트: 2026-04-25*
