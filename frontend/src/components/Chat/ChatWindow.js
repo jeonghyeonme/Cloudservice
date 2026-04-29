@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useAuth } from "../../contexts/AuthContext";
 import { useParams } from 'react-router-dom';
 import useWebSocket from './hooks/useWebSocket';
@@ -32,46 +32,40 @@ const ChatWindow = ({ activeChannel, channels, onMembersUpdate }) => {
     });
   }, [channels, activeChannel]);
 
-  // 메시지 수신 핸들러
+  // 메시지 수신 핸들러 - activeChannel을 ref로 참조해서 재연결 방지
+  const activeChannelRef = useRef(activeChannel);
+  useEffect(() => {
+    activeChannelRef.current = activeChannel;
+  }, [activeChannel]);
+
   const handleWsMessage = useCallback((parsed) => {
     const { action, data } = parsed;
+    const cid = activeChannelRef.current;
 
     if (action === "receiveMessage" && data) {
-      setChannelMessages((prev) => {
-        // serverId가 같은 메시지를 현재 활성 채널에 추가
-        // 백엔드가 채널 구분 없이 serverId 단위로 브로드캐스트하므로 activeChannel에 추가
-        const cid = activeChannel;
-        return {
+      setChannelMessages((prev) => ({
           ...prev,
           [cid]: [...(prev[cid] || []), data],
-        };
-      });
+      }));
     }
 
     if (action === "messageUpdated" && data) {
-      setChannelMessages((prev) => {
-        const cid = activeChannel;
-        return {
+      setChannelMessages((prev) => ({
+        ...prev,
+        [cid]: (prev[cid] || []).map((msg) =>
+            msg.messageId === data.messageId ? { ...msg, ...data } : msg
+          ),
+        }));
+      };
+      if (action === "messageDeleted" && data) {
+        setChannelMessages((prev) => ({
           ...prev,
           [cid]: (prev[cid] || []).map((msg) =>
             msg.messageId === data.messageId ? { ...msg, ...data } : msg
-          ),
-        };
-      });
+        ),
+      }));
     }
-
-    if (action === "messageDeleted" && data) {
-      setChannelMessages((prev) => {
-        const cid = activeChannel;
-        return {
-          ...prev,
-          [cid]: (prev[cid] || []).map((msg) =>
-            msg.messageId === data.messageId ? { ...msg, ...data } : msg
-          ),
-        };
-      });
-    }
-  }, [activeChannel]);
+  }, []); // 의존성 없음 - ref로 최신값 참조
 
   const { sendMessage, isConnected } = useWebSocket({
     serverId,
@@ -79,13 +73,29 @@ const ChatWindow = ({ activeChannel, channels, onMembersUpdate }) => {
     onMessage: handleWsMessage,
   });
 
-  // 새 메시지 도착 시 스크롤 아래로
-  const currentMessages = [...(channelMessages[activeChannel] || [])]
-  .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+  // useMemo로 정렬된 메시지 캐싱
+  const currentMessages = useMemo(() => {
+    return [...(channelMessages[activeChannel] || [])]
+      .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+  }, [channelMessages, activeChannel]);
 
+  // 자동 스크롤 - 메시지 개수 변할 때마다
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [currentMessages.length]);
+
+  // 채널 전환 시에도 최하단으로 스크롤
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
+  }, [activeChannel]);
+
+  // 새 메시지 도착 시 스크롤 아래로
+  // const currentMessages = [...(channelMessages[activeChannel] || [])]
+  // .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+
+  // useEffect(() => {
+  //   messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  // }, [currentMessages.length]);
 
   // 메시지 전송
   const handleSend = () => {
@@ -100,9 +110,24 @@ const ChatWindow = ({ activeChannel, channels, onMembersUpdate }) => {
       content: trimmed,
     });
 
+    // 내가 보낸 메시지 즉시 화면에 반영 (브로드캐스트 대기 없이)
+    const optimisticMsg = {
+      messageId: `temp-${Date.now()}`,
+      serverId,
+      senderId: user?.userId,
+      senderNickname: user?.nickname,
+      messageType: "TEXT",
+      content: trimmed,
+      createdAt: new Date().toISOString(),
+    };
+    setChannelMessages((prev) => ({
+      ...prev,
+      [activeChannel]: [...(prev[activeChannel] || []), optimisticMsg],
+    }));
+ 
     setInputText("");
   };
-
+ 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
