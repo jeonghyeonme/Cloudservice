@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from "react";
 import { getMyServers } from "../lib/servers";
 import { useAuth } from "./AuthContext";
+import { getServerId, normalizeServer, normalizeServers } from "../lib/serverEntity";
 
 const ServerContext = createContext();
 
@@ -13,24 +14,29 @@ export const ServerProvider = ({ children }) => {
   const refreshJoinedServers = useCallback(async () => {
     try {
       const data = await getMyServers();
-      setJoinedServers(data.items || []);
+      setJoinedServers(normalizeServers(data.items || []));
     } catch (error) {
       console.error("Failed to refresh joined servers:", error);
     }
   }, []);
 
   const upsertJoinedServer = useCallback((server) => {
+    const normalizedServer = normalizeServer(server);
+
     setJoinedServers((prev) => {
-      const exists = prev.find((s) => (s.serverId || s.roomId) === (server.serverId || server.roomId));
+      const serverId = getServerId(normalizedServer);
+      const exists = prev.find((s) => getServerId(s) === serverId);
+
       if (exists) {
-        return prev.map((s) => ((s.serverId || s.roomId) === (server.serverId || server.roomId) ? { ...s, ...server } : s));
+        return prev.map((s) => (getServerId(s) === serverId ? { ...s, ...normalizedServer } : s));
       }
-      return [...prev, server];
+
+      return [...prev, normalizedServer];
     });
   }, []);
 
   const removeJoinedServer = useCallback((serverId) => {
-    setJoinedServers((prev) => prev.filter((s) => (s.serverId || s.roomId) !== serverId));
+    setJoinedServers((prev) => prev.filter((s) => getServerId(s) !== serverId));
   }, []);
 
   const removeServerFromList = useCallback((serverId) => {
@@ -51,7 +57,9 @@ export const ServerProvider = ({ children }) => {
 
     getMyServers()
       .then((data) => {
-        if (isMounted) setJoinedServers(data.items || []);
+        if (isMounted) {
+          setJoinedServers(normalizeServers(data.items || []));
+        }
       })
       .catch((err) => {
         console.error("Failed to load joined servers:", err);

@@ -335,6 +335,52 @@ async function deleteMessage(event, body) {
 
 
 // =========================
+// 리소스 업데이트 브로드캐스트
+// =========================
+async function resourceUpdated(event, body) {
+  const domain = event.requestContext.domainName;
+  const stage = event.requestContext.stage;
+  const apigw = getApigwClient(domain, stage);
+
+  const { serverId, resourceType, resource } = body;
+
+  if (!serverId) {
+    return {
+      statusCode: 400,
+      body: JSON.stringify({ message: "serverId가 필요합니다." }),
+    };
+  }
+
+  // 같은 서버 접속자 전체 조회
+  const response = await dynamoDb.send(new QueryCommand({
+    TableName: CONNECTIONS_TABLE,
+    IndexName: "serverId-index",
+    KeyConditionExpression: "serverId = :serverId",
+    ExpressionAttributeValues: { ":serverId": serverId },
+  }));
+
+  const connections = response.Items || [];
+
+  // 브로드캐스트
+  await Promise.all(
+    connections.map((conn) =>
+      sendToConnection(apigw, conn.connectionId, {
+        action: "resourceUpdated",
+        data: {
+          serverId,
+          resourceType: resourceType || "unknown",
+          resource: resource || null,
+          updatedAt: new Date().toISOString(),
+        },
+      })
+    )
+  );
+
+  return { statusCode: 200 };
+}
+
+
+// =========================
 // 메인 핸들러 — API Gateway WebSocket 라우팅
 // =========================
 module.exports.handler = async (event) => {
@@ -351,6 +397,7 @@ module.exports.handler = async (event) => {
     if (routeKey === "sendMessage") return await sendMessage(event, body);
     if (routeKey === "updateMessage") return await updateMessage(event, body);
     if (routeKey === "deleteMessage") return await deleteMessage(event, body);
+    if (routeKey === "resourceUpdated") return await resourceUpdated(event, body);
 
     return { statusCode: 200 };
 

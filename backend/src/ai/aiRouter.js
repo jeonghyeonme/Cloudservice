@@ -55,7 +55,7 @@ async function summarizeWithBedrock(text) {
 exports.handler = async (event) => {
   try {
     const body = JSON.parse(event.body || "{}");
-    const { s3ObjectKey, fileType, roomId } = body;
+    const { s3ObjectKey, fileType, serverId } = body;
 
     if (!s3ObjectKey || !fileType) {
       return {
@@ -141,7 +141,7 @@ exports.handler = async (event) => {
       headers: { "Access-Control-Allow-Origin": "*" },
       body: JSON.stringify({
         message: "AI 분석 완료",
-        roomId: roomId || null,
+        serverId: serverId || null,
         s3ObjectKey,
         result,
       }),

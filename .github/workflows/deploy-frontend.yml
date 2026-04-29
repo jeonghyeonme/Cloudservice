@@ -1,14 +1,14 @@
-name: Deploy Backend
+name: Deploy Frontend
 
 on:
   push:
     branches:
       - dev
     paths:
-      - 'backend/**'
+      - 'frontend/**'
 
 permissions:
-  id-token: write # OIDC 인증을 위해 필수
+  id-token: write
   contents: read
 
 jobs:
@@ -26,8 +26,17 @@ jobs:
 
       - name: 패키지 설치
         run: |
-          cd backend
+          cd frontend
           npm install
+
+      - name: 빌드
+        run: |
+          cd frontend
+          npm run build
+        env:
+          CI: false
+          REACT_APP_API_HOST: ${{ secrets.REACT_APP_API_HOST }}
+          REACT_APP_WS_HOST: ${{ secrets.REACT_APP_WS_HOST }}
 
       - name: AWS 자격증명 설정 (OIDC 방식)
         uses: aws-actions/configure-aws-credentials@v4
@@ -35,8 +44,7 @@ jobs:
           role-to-assume: arn:aws:iam::269578498605:role/service-role/github-actions-inhatc-shared
           aws-region: us-east-1
 
-      - name: Lambda 함수 배포
+      - name: S3 동기화 (배포)
         run: |
-          cd backend
-          # 배포 스크립트 실행 (zip 생성 및 모든 함수 업데이트 수행)
-          bash deploy.sh
+          # S3 업로드까지만 진행 (CloudFront 무효화는 추후 권한 획득 시 추가)
+          aws s3 sync frontend/build/ s3://inhatc-team3-1-frontend --delete

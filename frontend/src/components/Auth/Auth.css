@@ -9,6 +9,26 @@
   padding: 24px;
 }
 
+.auth-back-button {
+  position: absolute;
+  top: 32px;
+  left: 32px;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  transition: color 0.2s;
+}
+
+.auth-back-button:hover {
+  color: var(--text-primary);
+}
+
 .auth-header {
   text-align: center;
   margin-bottom: 32px;

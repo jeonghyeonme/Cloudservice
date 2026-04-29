@@ -1,4 +1,4 @@
-﻿const { QueryCommand } = require("@aws-sdk/lib-dynamodb");
+const { QueryCommand } = require("@aws-sdk/lib-dynamodb");
 const dynamoDb = require("../dynamodbClient");
 
 exports.handler = async (event) => {

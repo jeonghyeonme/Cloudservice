@@ -10,6 +10,13 @@ function handleRightClick(event, callback, payload) {
 /**
  * @title 채널 목록과 참여자 패널이 있는 서버 내부 사이드바
  * @param {Array} onlineUserIds - 웹소켓으로 수신한 온라인 유저 ID 목록
+ * @param {string} serverName - 현재 서버 이름
+ * @param {Array} channels - 채널 목록 ({chId, name, label} 형태)
+ * @param {string} activeChannel - 현재 활성화된 채널 ID
+ * @param {function} onChannelClick - 채널 클릭 시 실행 (채널 ID 전달)
+ * @param {function} onAddChannelClick - 채널 추가 버튼 클릭 시 실행
+ * @param {Array} members - 서버 멤버 목록 ({userId, nickname, role} 형태)
+ * @param {string} hostId - 서버 방장 userId (방장 태그 표시용)
  */
 const SidebarLeft = ({
   serverName,

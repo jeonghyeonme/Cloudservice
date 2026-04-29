@@ -48,3 +48,15 @@ export async function uploadFile(serverId, file) {
 
   return result.file;
 }
+
+export const deleteFile = async (serverId, fileId) => {
+  return await request(`/servers/${serverId}/files/${fileId}`, {
+    method: "DELETE",
+  });
+};
+
+export const deleteLink = async (serverId, linkId) => {
+  return await request(`/servers/${serverId}/links/${linkId}`, {
+    method: "DELETE",
+  });
+};
