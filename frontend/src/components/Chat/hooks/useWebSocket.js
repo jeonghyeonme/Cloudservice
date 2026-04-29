@@ -10,6 +10,11 @@ import { API_WS_URL } from "../../../constants/endpoint";
 function useWebSocket({ serverId, userId, onMessage }) {
   const wsRef = useRef(null);
   const [isConnected, setIsConnected] = useState(false);
+  const onMessageRef = useRef(onMessage);
+
+  useEffect(() => {
+    onMessageRef.current = onMessage;
+  }, [onMessage]);
  
   // 메시지 전송 함수
   const sendMessage = useCallback((action, payload) => {
@@ -41,14 +46,14 @@ function useWebSocket({ serverId, userId, onMessage }) {
     ws.onmessage = (event) => {
       try {
         const parsed = JSON.parse(event.data);
-        onMessage?.(parsed);
+        onMessageRef.current?.(parsed);
       } catch (err) {
         console.error("WebSocket 메시지 파싱 실패:", err);
       }
     };
  
     ws.onclose = () => {
-      console.log("🔌 WebSocket 연결 해제됨");
+      console.log("WebSocket 연결 해제됨");
       setIsConnected(false);
     };
  
@@ -61,7 +66,7 @@ function useWebSocket({ serverId, userId, onMessage }) {
       ws.close();
       wsRef.current = null;
     };
-  }, [serverId, userId, onMessage]); // onMessage는 의도적으로 제외 (매 렌더마다 재연결 방지)
+  }, [serverId, userId]); // onMessage는 의도적으로 제외 (매 렌더마다 재연결 방지)
  
   return { sendMessage, isConnected };
 }
