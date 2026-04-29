@@ -3,7 +3,7 @@ const API_STAGE = "/dev";
 
 export const API_BASE_URL = `${API_HOST}${API_STAGE}`;
 export const API_WS_URL =
-  process.env.REACT_APP_WS_HOST || "ws://localhost:4001";
+  process.env.REACT_APP_WS_URL || "ws://localhost:4001";
 
 export const ENDPOINTS = {
   auth: {
