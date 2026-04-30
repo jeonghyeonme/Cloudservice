@@ -111,19 +111,19 @@ const ChatWindow = ({ activeChannel, channels, onMembersUpdate }) => {
     });
 
     // 내가 보낸 메시지 즉시 화면에 반영 (브로드캐스트 대기 없이)
-    const optimisticMsg = {
-      messageId: `temp-${Date.now()}`,
-      serverId,
-      senderId: user?.userId,
-      senderNickname: user?.nickname,
-      messageType: "TEXT",
-      content: trimmed,
-      createdAt: new Date().toISOString(),
-    };
-    setChannelMessages((prev) => ({
-      ...prev,
-      [activeChannel]: [...(prev[activeChannel] || []), optimisticMsg],
-    }));
+    // const optimisticMsg = {
+    //   messageId: `temp-${Date.now()}`,
+    //   serverId,
+    //   senderId: user?.userId,
+    //   senderNickname: user?.nickname,
+    //   messageType: "TEXT",
+    //   content: trimmed,
+    //   createdAt: new Date().toISOString(),
+    // };
+    // setChannelMessages((prev) => ({
+    //   ...prev,
+    //   [activeChannel]: [...(prev[activeChannel] || []), optimisticMsg],
+    // }));
  
     setInputText("");
   };
