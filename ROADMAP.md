@@ -65,8 +65,8 @@ C:\Users\parad\Cloudservice\
 ### 4. 채팅 및 실시간 통신 모듈 (`chat/`)
 | 파일명 | 상세 역할 및 핵심 로직 |
 | :--- | :--- |
-| **`chatHandler.js`** | **WebSocket 총괄**: `$connect`, `$disconnect`, `joinServer`, `sendMessage`, `updateMessage`, `deleteMessage` 브로드캐스트 로직 구현. |
-| **`getMessages.js`** | 특정 서버/방의 대화 이력을 DynamoDB에서 최신순으로 쿼리하여 반환. |
+| **`chatHandler.js`** | **WebSocket 총괄**: `$connect/$disconnect` 관리 및 메시지/리소스 업데이트 실시간 브로드캐스트 로직 완비. |
+| **`getMessages.js`** | **이력 조회**: 특정 서버의 대화 이력을 DynamoDB에서 쿼리. (현재 키워드 필터링 미적용) |
 
 ### 5. 서버 및 채널 관리 모듈 (`servers/`)
 | 파일명 | 상세 역할 및 핵심 로직 |
@@ -105,7 +105,7 @@ C:\Users\parad\Cloudservice\
 | **`request.js`** | `fetch` 래퍼. `localStorage` 토큰 자동 주입 및 백엔드 에러 메시지(`detail/message`) 통합 처리. |
 | **`auth.js`** | 회원가입, 로그인, 로그아웃, 토큰 갱신 API 호출 함수 모음. |
 | **`servers.js`** | 서버 목록/상세 조회, 생성, 채널 추가, 서버 나가기/삭제 등 서버 중심 서비스 함수. |
-| **`resources.js`** | **S3 업로드 프로세스**: Pre-signed URL 발급 -> S3 PUT -> 메타데이터 저장 로직 총괄. |
+| **`resources.js`** | **S3 업로드 파이프라인**: Pre-signed URL 획득 → S3 PUT → 메타데이터 저장(`saveFileMetadata`) 연쇄 로직 구현. |
 
 ### 3. 전역 상태 관리 (`contexts/`)
 | 파일명 | 상세 역할 및 핵심 로직 |
@@ -126,8 +126,9 @@ C:\Users\parad\Cloudservice\
 | :--- | :--- |
 | **`Chat/ChatLayout.js`** | 채팅 메인 컨테이너. 데이터 로드 및 컴포넌트 데이터 배분. |
 | **`Chat/SidebarLeft.js`** | 서버 내부 사이드바. 채널 리스트 및 참여자를 온라인/오프라인으로 자동 분류하여 표시. |
-| **`Chat/ChatWindow.js`** | 대화창 영역. 텍스트, 파일, 링크, **AI 요약(`ai-summary`)** 등 메시지 타입별 커스텀 렌더링. |
-| **`Chat/ResourceHub.js`** | 리소스 관리 사이드바. 파일 업로드 및 링크 공유 시 UI에 즉시 반영하는 상태 업데이트 로직. |
+| **`Chat/ChatWindow.js`** | **메시징 엔진**: 타입별 렌더링, **실시간 수신 핸들러**(수정/삭제 포함), 새 메시지 **자동 스크롤** 로직 내장. |
+| **`Chat/ResourceHub.js`** | **리소스 컨트롤러**: 파일/링크 S3 업로드 및 삭제 UI, `setCurrentServer`를 통한 **로컬 상태 즉시 동기화**. |
+| **`Chat/hooks/useWebSocket.js`** | **연결 라이프사이클**: `new WebSocket()` 관리, `joinServer` 자동 발신, 전송 인터페이스 제공. |
 | **`Servers/ExploreServers.js`** | 서버 탐색 페이지. 공개 서버 검색 및 카드 기반 상세 정보/입장 프로세스 구현. |
 | **`Servers/CreateServerModal.js`** | 서버 생성 전용 모달. 규칙 입력 텍스트를 줄바꿈 기준으로 파싱하여 아이콘 자동 부여. |
 
@@ -146,53 +147,44 @@ C:\Users\parad\Cloudservice\
 
 ---
 
-## 🚨 [최우선 과제] 다음 주 목표: 채팅 및 실시간 파일 공유 완성
-> 실사용 가능한 수준의 실시간 채팅과 자료 공유 환경 구축이 최우선입니다.
-
-### 1. 실시간 메시징 및 이미지 즉시 렌더링
-- **[Frontend] `ChatLayout.js`**: `new WebSocket()` 연결 생성 및 재연결 로직 구현.
-- **[Frontend] `ChatWindow.js`**: 메시지 전송 로직을 WebSocket으로 전환.
-    - **Step 1: 서버 입장**
-      ```json
-      { "action": "joinServer", "serverId": "서버_ID", "userId": "유저_ID" }
-      ```
-    - **Step 2: 메시지 전송**
-      ```json
-      {
-        "action": "sendMessage",
-        "serverId": "서버_ID",
-        "senderId": "유저_ID",
-        "senderNickname": "닉네임",
-        "messageType": "TEXT",
-        "content": "내용"
-      }
-      ```
-    - **이미지 즉시 표시**: 메시지 타입 `IMAGE` 추가 및 업로드 시 `<img>` 태그 자동 렌더링.
-    - **Auto-scroll**: 새 메시지 수신 시 최하단으로 자동 스크롤.
-
-### 2. 리소스 허브 실시간 동기화 (자료 공유)
-- **[Frontend] `ResourceHub.js`**: 
-    - 파일/링크 업로드 완료 시 WebSocket으로 **`resourceUpdated`** 이벤트 전송.
-    - 리소스 업데이트 이벤트를 수신하면 우측 사이드바 목록을 즉시 갱신(새로고침 없이 실시간 동기화).
-- **[Backend] `chatHandler.js`**: 리소스 변경 사항을 서버 내 모든 접속자에게 전파하는 브로드캐스트 로직 보완.
-
----
-
 ## 📅 향후 작업 가이드라인 (Developer Action Items)
+> 실사용 가능한 수준의 실시간 채팅과 자료 공유 환경 구축을 포함한 전체 개발 로드맵입니다.
 
-### 1. AI 학습 지능화 및 UI 연동
-- **[Frontend] `ResourceHub.js`**: 리스트의 각 파일 옆에 'AI 분석' 버튼 추가 및 클릭 시 `aiRouter` 호출.
-- **[Frontend] `ChatWindow.js`**: AI 요약 결과(`type: ai-summary`) 전용 레이아웃 최적화.
+### 1. 실시간 메시징 고도화
+- **[Frontend] `useWebSocket.js`**: 연결 유실 시 자동으로 재연결을 시도하는 **재연결(Reconnection) 로직** 보완.
+- **[Frontend] `ChatWindow.js`**: 
+    - 메시지 타입 `IMAGE` 처리 로직 추가 (이미지 URL 존재 시 `<img>` 태그 렌더링).
+    - 이미지 업로드 성공 시 즉시 `IMAGE` 타입으로 메시지를 브로드캐스트하는 연동 작업.
+    - **입력창 UI 고도화**: 전송 버튼 아이콘, 리소스 추가용 '+' 버튼 및 입력창 테두리 포커스 효과 적용.
+    - **드래그 앤 드롭 업로드**: 
+        - 외부 파일 드래그 시 채팅창에 **디스코드풍 '업로드' 오버레이 UI** 노출.
+        - 파일 드롭 시 즉시 S3 업로드 파이프라인 트리거 및 메시지 전송 연동.
 
-### 2. 검색 및 필터링 기능 (Discovery)
-- **[Frontend] `ChatWindow.js`**: 현재 채널 내 메시지 키워드 검색 필터바 추가.
-- **[Frontend] `ExploreServers.js`**: 데이터 로딩 중 **Skeleton UI** 및 검색 결과 부재 시 **Empty States** 적용.
-- **[Backend] `getMessages.js`**: 키워드 필터링을 지원하도록 DynamoDB 쿼리 로직 보완.
+### 2. 리소스 허브 실시간 동기화
+- **[Frontend] `ResourceHub.js`**: 파일/링크 업로드 및 삭제 완료 시 WebSocket으로 **`resourceUpdated`** 액션 전송 로직 추가.
+- **[Frontend] `ChatLayout.js` 또는 `ChatWindow.js`**: 
+    - WebSocket으로부터 `resourceUpdated` 이벤트를 수신할 수 있도록 핸들러 확장.
+    - 이벤트 수신 시 `setCurrentServer` 등을 통해 리소스 목록을 즉시 갱신하여 새로고침 없이 동기화 구현.
 
-### 3. 사용자 편의성 및 운영 (Polish)
-- **[Frontend] `App.js` & `Toast.js`**: 전역 Toast 알림 시스템 구축.
-- **[Frontend] 파일 업로드 제한 및 피드백**: PR #27의 백엔드 화이트리스트 정책에 맞춰, 허용되지 않는 확장자 업로드 시 사용자에게 즉각적인 경고 피드백(Toast 등) 제공.
-- **[DevOps] 운영 배포**: CodePipeline을 통한 정적 웹 배포 및 CloudFront 캐시 무효화 자동화.
+### 3. AI 학습 지능화 및 UI 연동
+- **[Frontend] `lib/ai.js` (신규)**: `aiRouter` API 호출을 위한 서비스 함수 구현.
+- **[Frontend] `ResourceHub.js`**: 각 리소스 항목에 'AI 분석' 버튼 추가 및 분석 요청 로직 연동.
+- **[Frontend] `ChatWindow.js`**: 이미지 분석 결과(라벨, 번역) 및 문서 요약 전문 표시를 위한 전용 레이아웃 고도화.
+
+### 4. 검색 및 필터링 기능
+- **[Frontend] `ChatWindow.js`**: 상단 헤더에 메시지 검색바 추가 및 클라이언트 측 검색 필터링 구현.
+- **[Frontend] `ExploreServers.js`**: 서버 목록 로딩 시 **Skeleton UI** 및 검색 결과 부재 시 **Empty States** 적용.
+- **[Backend] `getMessages.js`**: `keyword` 파라미터를 지원하여 DynamoDB `FilterExpression`을 통한 키워드 검색 로직 추가.
+
+### 5. 사용자 편의성 및 운영
+- **[Frontend] 전역 Toast 시스템 (신규)**:
+    - `alert()`를 대체할 커스텀 Toast 알림 시스템 구축.
+    - **UI 사양**: 우측 하단 고정, 최대 3단 스택, 3초 타이머 바(진행률 표시) 포함.
+    - **테마 연동**: `theme.css` 변수를 활용한 Success/Error/Info 타입별 스타일링.
+- **[Frontend] `ResourceHub.js`**: 백엔드 정책에 맞춘 파일 확장자 화이트리스트 필터링 추가 및 에러 피드백(`Toast`) 강화.
+- **[DevOps] 인프라 고도화**: 
+    - **CloudFront 연결**: S3 정적 웹 호스팅을 CloudFront 배포와 연결하여 HTTPS 및 캐싱 적용.
+    - **CI/CD 고도화**: GitHub Actions에 **CloudFront 캐시 무효화** 스텝 추가 및 배포 파이프라인 최종 점검.
 
 ---
-*마지막 업데이트: 2026-04-25*
+*마지막 업데이트: 2026-05-03*
