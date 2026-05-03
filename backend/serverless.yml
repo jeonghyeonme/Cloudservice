@@ -109,7 +109,7 @@ functions:
     events:
       - http:
           path: /servers/{serverId}
-          method: patch
+          method: put
           cors: true
 
   # ── 인증 관련 ────────────────────────
@@ -194,7 +194,7 @@ functions:
     handler: src/servers/updateChannel.handler
     events:
       - http:
-          path: /servers/{serverId}/channels/{channelId}
+          path: /servers/{serverId}/channels/{chId}
           method: patch
           cors: true
 
@@ -222,6 +222,10 @@ functions:
           path: /ai/analyze
           method: post
           cors: true
+    environment:
+      MESSAGES_TABLE: ${self:custom.messagesTableName}
+      CONNECTIONS_TABLE: ${self:custom.connectionsTableName}
+      WSS_ENDPOINT: "https://hxdwy4fqsg.execute-api.us-east-1.amazonaws.com/dev"
 
   saveLink:
     handler: src/resources/saveLink.handler
