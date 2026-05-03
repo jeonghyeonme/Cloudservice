@@ -112,14 +112,6 @@ functions:
           method: patch
           cors: true
 
-  leaveServer:
-    handler: src/servers/leaveServer.handler
-    events:
-      - http:
-          path: /servers/{serverId}/leave
-          method: post
-          cors: true
-
   # ── 인증 관련 ────────────────────────
   userRegister:
     handler: src/auth/userRegister.handler
