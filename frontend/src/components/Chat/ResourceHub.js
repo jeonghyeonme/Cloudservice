@@ -1,6 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { uploadFile, saveLink, deleteFile, deleteLink } from '../../lib/resources';
+import { request } from '../../lib/request';
+import { ENDPOINTS } from '../../constants/endpoint';
 
 import './ResourceHub.css';
 
@@ -10,7 +12,17 @@ const getFileIcon = (fileName) => {
   if (['docx', 'hwp', 'doc'].includes(extension)) return '📝';
   if (extension === 'pdf') return '📄';
   if (['csv', 'xlsx', 'xls'].includes(extension)) return '📊';
+  if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension)) return '🖼️';
   return '📁';
+};
+
+// AI 분석 가능한 파일인지 확인
+const isAnalyzable = (fileName, fileType) => {
+  if (!fileName) return false;
+  const ext = fileName.split('.').pop().toLowerCase();
+  if (ext === 'pdf' || fileType?.includes('pdf')) return true;
+  if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext) || fileType?.startsWith('image/')) return true;
+  return false;
 };
 
 const ResourceHub = ({ serverResources, setCurrentServer }) => {
@@ -18,6 +30,7 @@ const ResourceHub = ({ serverResources, setCurrentServer }) => {
   const { serverId } = useParams();
   const fileInputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
+  const [analyzingFileId, setAnalyzingFileId] = useState(null);
 
   const files = serverResources?.files || [];
   const links = serverResources?.links || [];
@@ -64,17 +77,52 @@ const ResourceHub = ({ serverResources, setCurrentServer }) => {
     }
   };
 
-  // 파일 삭제 핸들러
+  // AI 분석 호출
+  const handleAnalyze = async (e, file) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (analyzingFileId) {
+      alert('다른 파일을 분석 중입니다. 잠시 후 다시 시도해주세요.');
+      return;
+    }
+
+    const ext = file.fileName?.split('.').pop().toLowerCase();
+    let fileType = file.fileType || '';
+    if (!fileType) {
+      if (ext === 'pdf') fileType = 'application/pdf';
+      else if (['jpg', 'jpeg'].includes(ext)) fileType = 'image/jpeg';
+      else if (ext === 'png') fileType = 'image/png';
+      else if (ext === 'gif') fileType = 'image/gif';
+      else if (ext === 'webp') fileType = 'image/webp';
+    }
+
+    setAnalyzingFileId(file.fileId);
+    try {
+      await request('/ai/analyze', {
+        method: 'POST',
+        body: JSON.stringify({
+          serverId,
+          s3ObjectKey: file.s3ObjectKey,
+          fileType,
+        }),
+      });
+      alert('AI 분석이 완료되었습니다. 채팅창에서 결과를 확인하세요.');
+    } catch (error) {
+      console.error('AI 분석 실패:', error);
+      alert(error.message || 'AI 분석에 실패했습니다.');
+    } finally {
+      setAnalyzingFileId(null);
+    }
+  };
+
   const handleDeleteFile = async (e, fileId) => {
-    e.preventDefault(); // 삭제 버튼 클릭 시 링크 이동 방지
-    e.stopPropagation(); 
-    
+    e.preventDefault();
+    e.stopPropagation();
     if (!window.confirm('파일을 삭제하시겠습니까?')) return;
-    
     try {
       await deleteFile(serverId, fileId);
       if (setCurrentServer) {
-        // 즉시 화면에서 제거
         setCurrentServer(prev => ({
           ...prev,
           files: (prev?.files || []).filter(f => f.fileId !== fileId),
@@ -86,17 +134,13 @@ const ResourceHub = ({ serverResources, setCurrentServer }) => {
     }
   };
 
-  // 링크 삭제 핸들러
   const handleDeleteLink = async (e, linkId) => {
     e.preventDefault();
     e.stopPropagation();
-
     if (!window.confirm('링크를 삭제하시겠습니까?')) return;
-
     try {
       await deleteLink(serverId, linkId);
       if (setCurrentServer) {
-        // 즉시 화면에서 제거
         setCurrentServer(prev => ({
           ...prev,
           links: (prev?.links || []).filter(l => l.linkId !== linkId),
@@ -113,18 +157,31 @@ const ResourceHub = ({ serverResources, setCurrentServer }) => {
     const fileExt = displayName ? displayName.split('.').pop().toLowerCase() : '';
     const fileTypeClass = ['pdf', 'docx', 'csv'].includes(fileExt) ? fileExt : 'default';
     const displayMeta = file.fileType || file.meta || fileExt.toUpperCase();
+    const canAnalyze = isAnalyzable(displayName, file.fileType);
+    const isAnalyzing = analyzingFileId === file.fileId;
 
     return (
-      // 호버 클래스(resource-item-hover) 및 position relative
       <a key={file.fileId || i} href={file.fileUrl || '#'} target="_blank" rel="noopener noreferrer" className="hub-file-item resource-item-hover" style={{ textDecoration: 'none', color: 'inherit', position: 'relative' }}>
         <div className={'hub-file-icon ' + fileTypeClass}>{getFileIcon(displayName)}</div>
         <div className="hub-file-info">
           <span className="hub-file-name">{displayName}</span>
           <span className="hub-file-meta">{displayMeta}</span>
         </div>
-        <button className="delete-btn" onClick={(e) => handleDeleteFile(e, file.fileId)}>
-          ×
-        </button>
+        <div className="hub-file-actions">
+          {canAnalyze && (
+            <button
+              className="ai-analyze-btn"
+              onClick={(e) => handleAnalyze(e, file)}
+              disabled={isAnalyzing}
+              title="AI 분석"
+            >
+              {isAnalyzing ? '⏳' : '🤖'}
+            </button>
+          )}
+          <button className="delete-btn" onClick={(e) => handleDeleteFile(e, file.fileId)}>
+            ×
+          </button>
+        </div>
       </a>
     );
   };
