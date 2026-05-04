@@ -2,7 +2,6 @@ import React, { useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { uploadFile, saveLink, deleteFile, deleteLink } from '../../lib/resources';
 import { request } from '../../lib/request';
-import { ENDPOINTS } from '../../constants/endpoint';
 
 import './ResourceHub.css';
 
