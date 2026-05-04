@@ -194,6 +194,16 @@ const ChatWindow = ({ activeChannel, channels, onMembersUpdate }) => {
                     <span className="ai-icon">🤖</span>
                     <span className="ai-label">SAGE AI</span>
                     <span className="ai-tag">{isDocument ? "문서 요약" : isImage ? "이미지 분석" : "AI 분석"}</span>
+                    {aiResult.fileName && (
+                      <span className="ai-filename" style={{
+                        marginLeft: "8px",
+                        fontSize: "12px",
+                        color: "#a1a1aa",
+                        fontStyle: "italic",
+                      }}>
+                        📎 {aiResult.fileName}
+                      </span>
+                    )}
                   </div>
                   <div className="ai-summary-content">
                     {isDocument && aiResult.summary && (

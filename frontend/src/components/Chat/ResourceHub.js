@@ -104,6 +104,7 @@ const ResourceHub = ({ serverResources, setCurrentServer }) => {
           serverId,
           s3ObjectKey: file.s3ObjectKey,
           fileType,
+          fileName: file.fileName,
         }),
       });
       alert('AI 분석이 완료되었습니다. 채팅창에서 결과를 확인하세요.');

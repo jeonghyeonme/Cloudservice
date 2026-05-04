@@ -60,7 +60,7 @@ async function summarizeWithBedrock(text) {
 exports.handler = async (event) => {
   try {
     const body = JSON.parse(event.body || "{}");
-    const { s3ObjectKey, fileType, serverId } = body;
+    const { s3ObjectKey, fileType, serverId, fileName } = body;
 
     if (!s3ObjectKey || !fileType) {
       return {
@@ -83,6 +83,7 @@ exports.handler = async (event) => {
       result = {
         type: "document",
         status: "COMPLETE",
+        fileName: fileName || s3ObjectKey.split("/").pop(),
         extractedText: extractedText.slice(0, 2000),
         summary,
       };
@@ -113,6 +114,7 @@ exports.handler = async (event) => {
       result = {
         type: "image",
         status: "COMPLETE",
+        fileName: fileName || s3ObjectKey.split("/").pop(),
         labels, labelsKo, detectedTexts,
       };
     } else {
