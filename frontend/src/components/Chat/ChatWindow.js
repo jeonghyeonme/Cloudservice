@@ -179,18 +179,57 @@ const ChatWindow = ({ activeChannel, channels, onMembersUpdate }) => {
             }
 
             // AI 요약 타입
-            if (msg.type === "ai-summary" || msg.messageType === "AI_SUMMARY") {
+            if (msg.type === "ai-summary" || msg.messageType === "ai-summary" || msg.messageType === "AI_SUMMARY") {
+              let aiResult = {};
+              try {
+                aiResult = typeof msg.content === "string" ? JSON.parse(msg.content) : msg.content || {};
+              } catch { aiResult = {}; }
+
+              const isDocument = aiResult.type === "document";
+              const isImage = aiResult.type === "image";
+
               return (
                 <div key={key} className="ai-summary-box">
                   <div className="ai-summary-header">
                     <span className="ai-icon">🤖</span>
                     <span className="ai-label">SAGE AI</span>
-                    <span className="ai-tag">{msg.title}</span>
+                    <span className="ai-tag">{isDocument ? "문서 요약" : isImage ? "이미지 분석" : "AI 분석"}</span>
                   </div>
                   <div className="ai-summary-content">
-                    <ul className="ai-summary-list">
-                      {(msg.points || []).map((pt, i) => <li key={i}>{pt}</li>)}
-                    </ul>
+                    {isDocument && aiResult.summary && (
+                      <>
+                        <h4 className="ai-summary-title">📄 문서 요약</h4>
+                        <div style={{ fontSize: "13px", color: "#d4d4d8", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
+                          {aiResult.summary}
+                        </div>
+                      </>
+                    )}
+                    {isImage && (
+                      <>
+                        <h4 className="ai-summary-title">🖼️ 이미지 분석</h4>
+                        {aiResult.labelsKo?.length > 0 && (
+                          <div style={{ marginBottom: "8px" }}>
+                            <span style={{ fontSize: "12px", color: "#a1a1aa" }}>감지된 태그: </span>
+                            {aiResult.labelsKo.map((tag, i) => (
+                              <span key={i} style={{
+                                display: "inline-block", background: "rgba(0,255,102,0.1)",
+                                color: "#00ff66", padding: "2px 8px", borderRadius: "10px",
+                                fontSize: "11px", margin: "2px 4px 2px 0"
+                              }}>{tag}</span>
+                            ))}
+                          </div>
+                        )}
+                        {aiResult.detectedTexts?.length > 0 && (
+                          <div>
+                            <span style={{ fontSize: "12px", color: "#a1a1aa" }}>감지된 텍스트: </span>
+                            <span style={{ fontSize: "13px", color: "#d4d4d8" }}>{aiResult.detectedTexts.join(", ")}</span>
+                          </div>
+                        )}
+                      </>
+                    )}
+                    {!isDocument && !isImage && (
+                      <div style={{ fontSize: "13px", color: "#d4d4d8" }}>{msg.content}</div>
+                    )}
                   </div>
                 </div>
               );

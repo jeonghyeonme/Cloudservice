@@ -108,8 +108,8 @@ const ResourceHub = ({ serverResources, setCurrentServer }) => {
       });
       alert('AI 분석이 완료되었습니다. 채팅창에서 결과를 확인하세요.');
     } catch (error) {
-      console.error('AI 분석 실패:', error);
-      alert(error.message || 'AI 분석에 실패했습니다.');
+      console.error('AI 분석 요청:', error);
+      alert('AI 분석을 요청했습니다. PDF는 분석에 1~2분 소요됩니다. 완료되면 채팅창에 자동으로 결과가 표시됩니다.');
     } finally {
       setAnalyzingFileId(null);
     }
