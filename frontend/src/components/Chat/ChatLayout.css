@@ -233,7 +233,7 @@
   border: 1px solid #00ff66;
   border-radius: 8px;
   background-color: rgba(0, 255, 102, 0.04);
-  overflow: hidden;
+  overflow: visible;
   margin-bottom: 8px;
 }
 .ai-summary-header {

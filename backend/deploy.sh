@@ -17,6 +17,8 @@ TIMEOUT=30
 MEMORY=512
 
 # ── 공통 환경 변수 ─────────────────────────────────────
+WSS_ENDPOINT="https://hxdwy4fqsg.execute-api.${REGION}.amazonaws.com/${STAGE}"
+
 ENV_VARS="{
   \"Variables\": {
     \"REGION\":               \"${REGION}\",
@@ -29,7 +31,8 @@ ENV_VARS="{
     \"RESOURCES_BUCKET\":     \"inhatc-team3-2-resources\",
     \"S3_BUCKET\":            \"inhatc-team3-2-resources\",
     \"JWT_SECRET_KEY\":       \"PLACEHOLDER\",
-    \"SALT\":                 \"PLACEHOLDER\"
+    \"SALT\":                 \"PLACEHOLDER\",
+    \"WSS_ENDPOINT\":         \"${WSS_ENDPOINT}\"
   }
 }"
 
@@ -106,24 +109,15 @@ for entry in "${FUNCTIONS[@]}"; do
       --region "$REGION" \
       --no-cli-pager > /dev/null
   else
-    echo "  🔄 업데이트: $FUNC_NAME"
+    echo "  🔄 코드 업데이트: $FUNC_NAME"
     aws lambda update-function-code \
       --function-name "$FUNC_NAME" \
       --s3-bucket "$S3_BUCKET" \
       --s3-key "$S3_KEY" \
       --region "$REGION" \
       --no-cli-pager > /dev/null
-
-    sleep 1
-
-    aws lambda update-function-configuration \
-      --function-name "$FUNC_NAME" \
-      --handler "$HANDLER" \
-      --environment "$ENV_VARS" \
-      --timeout "$TIMEOUT" \
-      --memory-size "$MEMORY" \
-      --region "$REGION" \
-      --no-cli-pager > /dev/null 2>&1 || true
+    # 환경변수/handler/timeout은 의도적으로 업데이트 안 함
+    # (콘솔에서 수동 관리하는 시크릿 보호)
   fi
 done
 

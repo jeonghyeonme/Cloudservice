@@ -103,7 +103,6 @@ exports.handler = async (event) => {
       Bucket: bucketName,
       Key: s3ObjectKey,
       ContentType: fileType,
-      ContentLength: MAX_FILE_SIZE_MB * 1024 * 1024,
     });
 
     const uploadUrl = await getSignedUrl(s3Client, command, { expiresIn: 300 });
