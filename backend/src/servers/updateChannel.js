@@ -1,5 +1,6 @@
 const { GetCommand, UpdateCommand } = require("@aws-sdk/lib-dynamodb");
 const dynamoDb = require("../dynamodbClient");
+const { HEADERS } = require("../utils/response");
 
 exports.handler = async (event) => {
   try {
@@ -14,7 +15,7 @@ exports.handler = async (event) => {
     if (!serverResult.Item || !serverResult.Item.channels) {
       return {
         statusCode: 404,
-        headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" },
+        headers: HEADERS,
         body: JSON.stringify({ message: "서버 또는 채널을 찾을 수 없습니다." }),
       };
     }
@@ -25,7 +26,7 @@ exports.handler = async (event) => {
     if (channelIndex === -1) {
       return {
         statusCode: 404,
-        headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" },
+        headers: HEADERS,
         body: JSON.stringify({ message: "해당 채널을 찾을 수 없습니다." }),
       };
     }
@@ -49,14 +50,14 @@ exports.handler = async (event) => {
 
     return {
       statusCode: 200,
-      headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" },
+      headers: HEADERS,
       body: JSON.stringify({ message: "채널 수정 완료", channel: updatedChannel }),
     };
   } catch (error) {
     console.error("updateChannel Error:", error);
     return {
       statusCode: 500,
-      headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" },
+      headers: HEADERS,
       body: JSON.stringify({ message: "채널 수정 실패", error: error.message }),
     };
   }

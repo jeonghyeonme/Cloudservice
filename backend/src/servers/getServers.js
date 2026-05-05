@@ -1,5 +1,6 @@
 const { QueryCommand } = require("@aws-sdk/lib-dynamodb");
 const dynamoDb = require("../dynamodbClient");
+const { HEADERS } = require("../utils/response");
 
 exports.handler = async (event) => {
   try {
@@ -23,11 +24,7 @@ exports.handler = async (event) => {
 
     return {
       statusCode: 200,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Credentials": true,
-        "Content-Type": "application/json",
-      },
+      headers: HEADERS,
       body: JSON.stringify({
         items: result.Items,
         lastKey: result.LastEvaluatedKey ? encodeURIComponent(JSON.stringify(result.LastEvaluatedKey)) : null,
@@ -37,6 +34,7 @@ exports.handler = async (event) => {
     console.error(error);
     return {
       statusCode: 500,
+      headers: HEADERS,
       body: JSON.stringify({ message: "서버 목록 조회 실패", error: error.message }),
     };
   }

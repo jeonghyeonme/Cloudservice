@@ -1,6 +1,7 @@
 const { GetCommand, UpdateCommand } = require("@aws-sdk/lib-dynamodb");
 const dynamoDb = require("../dynamodbClient");
 const { verifyAccessToken } = require("../utils");
+const { HEADERS } = require("../utils/response");
 
 exports.handler = async (event) => {
   try {
@@ -11,7 +12,7 @@ exports.handler = async (event) => {
     if (!userId) {
       return {
         statusCode: 401,
-        headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" },
+        headers: HEADERS,
         body: JSON.stringify({ message: "인증이 필요합니다." }),
       };
     }
@@ -24,7 +25,7 @@ exports.handler = async (event) => {
     if (!serverResult.Item) {
       return {
         statusCode: 404,
-        headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" },
+        headers: HEADERS,
         body: JSON.stringify({ message: "해당 서버를 찾을 수 없습니다." }),
       };
     }
@@ -32,7 +33,7 @@ exports.handler = async (event) => {
     if (serverResult.Item.hostId !== userId) {
       return {
         statusCode: 403,
-        headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" },
+        headers: HEADERS,
         body: JSON.stringify({ message: "방장만 서버 설정을 수정할 수 있습니다." }),
       };
     }
@@ -69,7 +70,7 @@ exports.handler = async (event) => {
     if (updateExpressions.length === 0) {
       return {
         statusCode: 400,
-        headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" },
+        headers: HEADERS,
         body: JSON.stringify({ message: "수정할 항목이 없습니다." }),
       };
     }
@@ -90,14 +91,14 @@ exports.handler = async (event) => {
 
     return {
       statusCode: 200,
-      headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" },
+      headers: HEADERS,
       body: JSON.stringify({ message: "서버 설정 수정 완료", room: updated.Item }),
     };
   } catch (error) {
     console.error("updateServer Error:", error);
     return {
       statusCode: 500,
-      headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" },
+      headers: HEADERS,
       body: JSON.stringify({ message: "서버 설정 수정 실패", error: error.message }),
     };
   }

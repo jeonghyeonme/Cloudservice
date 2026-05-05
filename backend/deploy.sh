@@ -12,7 +12,7 @@ REGION="us-east-1"
 ROLE_ARN="arn:aws:iam::269578498605:role/SafeRole-inhatc-team3"
 S3_BUCKET="inhatc-team3-2-deployments"
 S3_KEY="lambda-deploy.zip"
-RUNTIME="nodejs18.x"
+RUNTIME="nodejs20.x"
 TIMEOUT=30
 MEMORY=512
 

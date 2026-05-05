@@ -2,17 +2,14 @@ const { UpdateCommand, GetCommand } = require("@aws-sdk/lib-dynamodb");
 const { v4: uuidv4 } = require("uuid");
 const dynamoDb = require("../dynamodbClient");
 const { verifyAccessToken } = require("../utils");
-const { getLinkPreview } = require("../linkPreview");
+const { getLinkPreview } = require("./linkPreview");
+const { HEADERS } = require("../utils/response");
 
 const SERVERS_TABLE = process.env.SERVERS_TABLE;
 
-const headers = {
-  "Access-Control-Allow-Origin": "*",
-};
-
 const response = (statusCode, body) => ({
   statusCode,
-  headers,
+  headers: HEADERS,
   body: JSON.stringify(body),
 });
 

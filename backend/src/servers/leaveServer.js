@@ -1,6 +1,7 @@
 const { GetCommand, DeleteCommand, UpdateCommand } = require("@aws-sdk/lib-dynamodb");
 const dynamoDb = require("../dynamodbClient");
 const { verifyAccessToken } = require("../utils");
+const { HEADERS } = require("../utils/response");
 
 exports.handler = async (event) => {
   try {
@@ -11,7 +12,7 @@ exports.handler = async (event) => {
     if (!userId) {
       return {
         statusCode: 401,
-        headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" },
+        headers: HEADERS,
         body: JSON.stringify({ message: "인증이 필요합니다." }),
       };
     }
@@ -25,7 +26,7 @@ exports.handler = async (event) => {
     if (!serverResult.Item) {
       return {
         statusCode: 404,
-        headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" },
+        headers: HEADERS,
         body: JSON.stringify({ message: "해당 서버를 찾을 수 없습니다." }),
       };
     }
@@ -34,7 +35,7 @@ exports.handler = async (event) => {
     if (serverResult.Item.hostId === userId) {
       return {
         statusCode: 403,
-        headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" },
+        headers: HEADERS,
         body: JSON.stringify({ message: "방장은 서버를 나갈 수 없습니다. 서버를 삭제해주세요." }),
       };
     }
@@ -61,14 +62,14 @@ exports.handler = async (event) => {
 
     return {
       statusCode: 200,
-      headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" },
+      headers: HEADERS,
       body: JSON.stringify({ message: "서버에서 나갔습니다.", serverId }),
     };
   } catch (error) {
     console.error("leaveServer Error:", error);
     return {
       statusCode: 500,
-      headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" },
+      headers: HEADERS,
       body: JSON.stringify({ message: "서버 나가기 실패", error: error.message }),
     };
   }

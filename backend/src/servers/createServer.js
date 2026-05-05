@@ -2,6 +2,7 @@ const { PutCommand, GetCommand } = require("@aws-sdk/lib-dynamodb");
 const { v4: uuidv4 } = require("uuid");
 const dynamoDb = require("../dynamodbClient");
 const { verifyAccessToken } = require("../utils");
+const { HEADERS } = require("../utils/response");
 
 module.exports.handler = async (event) => {
   try {
@@ -72,11 +73,7 @@ module.exports.handler = async (event) => {
 
     return {
       statusCode: 200,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Credentials": true,
-        "Content-Type": "application/json",
-      },
+      headers: HEADERS,
       body: JSON.stringify({
         message: "서버 생성 성공",
         serverId,
@@ -86,11 +83,7 @@ module.exports.handler = async (event) => {
     console.error(error);
     return {
       statusCode: 500,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Credentials": true,
-        "Content-Type": "application/json",
-      },
+      headers: HEADERS,
       body: JSON.stringify({ message: "서버 생성 실패", error: error.message }),
     };
   }
