@@ -19,27 +19,23 @@ exports.handler = async (event) => {
       ExpressionAttributeValues: {
         ":serverId": serverId,
       },
-      ScanIndexForward: false, // 🔥 최신순
+      ScanIndexForward: true,
     };
 
     if (keyword && keyword.trim()) {
-      params.FilterExpression = "contains(#content, :keyword)";
+      params.FilterExpression =
+        "contains(#content, :keyword) AND #messageType = :messageType AND (attribute_not_exists(#isDeleted) OR #isDeleted = :isDeleted)";
       params.ExpressionAttributeNames = {
         "#content": "content",
+        "#messageType": "messageType",
+        "#isDeleted": "isDeleted",
       };
       params.ExpressionAttributeValues[":keyword"] = keyword.trim();
+      params.ExpressionAttributeValues[":messageType"] = "TEXT";
+      params.ExpressionAttributeValues[":isDeleted"] = false;
     }
 
     const result = await dynamoDb.send(new QueryCommand(params));
-
-    let items = result.Items || [];
-
-    // 🔥 정렬 보정 (timestamp 기준 내림차순)
-    items.sort((a, b) => {
-      const t1 = new Date(a.timestamp || a.createdAt).getTime();
-      const t2 = new Date(b.timestamp || b.createdAt).getTime();
-      return t2 - t1;
-    });
 
     return {
       statusCode: 200,
@@ -48,10 +44,11 @@ exports.handler = async (event) => {
         "Access-Control-Allow-Credentials": true,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(items), // 🔥 기존 형태 유지
+      body: JSON.stringify(result.Items),
     };
   } catch (error) {
     console.error("getMessages Error:", error);
+
     return {
       statusCode: 500,
       body: JSON.stringify({
