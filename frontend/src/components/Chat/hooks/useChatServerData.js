@@ -21,13 +21,29 @@ function normalizeServerWithMessages(serverData, messagesData) {
   const channels = normalizedServer.channels || [
     { id: "ch-general", name: "일반", label: "일반", isDefault: true },
   ];
+  const defaultChannelId = channels[0]?.chId || channels[0]?.id || "";
+  const messagesByChannelId = messages.reduce((acc, message) => {
+    const channelId = message.channelId || defaultChannelId;
+    if (!channelId) {
+      return acc;
+    }
+
+    if (!acc[channelId]) {
+      acc[channelId] = [];
+    }
+
+    acc[channelId].push(message);
+    return acc;
+  }, {});
 
   return {
     ...normalizedServer,
     channels: channels.map((channel, index) => ({
       ...channel,
       label: channel.label || channel.name,
-      messages: index === 0 ? messages : [],
+      messages:
+        messagesByChannelId[channel.chId || channel.id] ||
+        (!index ? messagesByChannelId[defaultChannelId] || [] : []),
     })),
   };
 }
