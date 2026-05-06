@@ -2,7 +2,7 @@ const { UpdateCommand, GetCommand } = require("@aws-sdk/lib-dynamodb");
 const { v4: uuidv4 } = require("uuid");
 const dynamoDb = require("../dynamodbClient");
 const { verifyAccessToken } = require("../utils");
-const { getLinkPreview } = require("../linkPreview");
+const { getLinkPreview } = require("./linkPreview");
 
 const SERVERS_TABLE = process.env.SERVERS_TABLE;
 
