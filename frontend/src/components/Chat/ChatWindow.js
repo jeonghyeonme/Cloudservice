@@ -1,23 +1,33 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useAuth } from "../../contexts/AuthContext";
 import { useParams } from 'react-router-dom';
-import useWebSocket from './hooks/useWebSocket';
 
-const ChatWindow = ({ activeChannel, channels, onMembersUpdate }) => {
+/**
+ * @param {string} activeChannel - 현재 활성 채널 ID
+ * @param {Array} channels - 채널 목록
+ * @param {function} sendWsMessage - ChatLayout에서 전달받은 WebSocket 전송 함수
+ * @param {boolean} isConnected - WebSocket 연결 상태
+ * @param {object} chatMessageHandlerRef - ChatLayout에서 메시지 핸들러 등록용 ref
+ */
+const ChatWindow = ({ activeChannel, channels, sendWsMessage, isConnected, chatMessageHandlerRef }) => {
   const { user } = useAuth();
   const { serverId } = useParams();
   const CURRENT_USER = user?.nickname || "";
 
   const [inputText, setInputText] = useState("");
-  // 채널별 메시지를 별도로 관리 { [channelId]: [...messages] }
   const [channelMessages, setChannelMessages] = useState({});
   const messagesEndRef = useRef(null);
+
+  const activeChannelRef = useRef(activeChannel);
+  useEffect(() => {
+    activeChannelRef.current = activeChannel;
+  }, [activeChannel]);
 
   const currentChannel = channels?.find(
     (ch) => (ch.chId || ch.id) === activeChannel
   );
 
-  // 채널 초기 메시지 로드 (서버에서 내려온 messages 사용)
+  // 채널 초기 메시지 로드
   useEffect(() => {
     if (!activeChannel || !channels) return;
     setChannelMessages((prev) => {
@@ -32,20 +42,15 @@ const ChatWindow = ({ activeChannel, channels, onMembersUpdate }) => {
     });
   }, [channels, activeChannel]);
 
-  // 메시지 수신 핸들러 - activeChannel을 ref로 참조해서 재연결 방지
-  const activeChannelRef = useRef(activeChannel);
-  useEffect(() => {
-    activeChannelRef.current = activeChannel;
-  }, [activeChannel]);
-
+  // ✅ 메시지 수신 핸들러 - ChatLayout의 ref에 등록
   const handleWsMessage = useCallback((parsed) => {
     const { action, data } = parsed;
     const cid = activeChannelRef.current;
 
     if (action === "receiveMessage" && data) {
       setChannelMessages((prev) => ({
-          ...prev,
-          [cid]: [...(prev[cid] || []), data],
+        ...prev,
+        [cid]: [...(prev[cid] || []), data],
       }));
     }
 
@@ -53,56 +58,46 @@ const ChatWindow = ({ activeChannel, channels, onMembersUpdate }) => {
       setChannelMessages((prev) => ({
         ...prev,
         [cid]: (prev[cid] || []).map((msg) =>
-            msg.messageId === data.messageId ? { ...msg, ...data } : msg
-          ),
-        }));
-      };
-      if (action === "messageDeleted" && data) {
-        setChannelMessages((prev) => ({
-          ...prev,
-          [cid]: (prev[cid] || []).map((msg) =>
-            msg.messageId === data.messageId ? { ...msg, ...data } : msg
+          msg.messageId === data.messageId ? { ...msg, ...data } : msg
         ),
       }));
     }
-  }, []); // 의존성 없음 - ref로 최신값 참조
 
-  const { sendMessage, isConnected } = useWebSocket({
-    serverId,
-    userId: user?.userId,
-    onMessage: handleWsMessage,
-  });
+    if (action === "messageDeleted" && data) {
+      setChannelMessages((prev) => ({
+        ...prev,
+        [cid]: (prev[cid] || []).map((msg) =>
+          msg.messageId === data.messageId ? { ...msg, ...data } : msg
+        ),
+      }));
+    }
+  }, []);
 
-  // useMemo로 정렬된 메시지 캐싱
+  // ✅ ChatLayout의 ref에 핸들러 등록
+  useEffect(() => {
+    if (chatMessageHandlerRef) {
+      chatMessageHandlerRef.current = handleWsMessage;
+    }
+  }, [chatMessageHandlerRef, handleWsMessage]);
+
   const currentMessages = useMemo(() => {
     return [...(channelMessages[activeChannel] || [])]
       .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
   }, [channelMessages, activeChannel]);
 
-  // 자동 스크롤 - 메시지 개수 변할 때마다
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [currentMessages.length]);
 
-  // 채널 전환 시에도 최하단으로 스크롤
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
   }, [activeChannel]);
 
-  // 새 메시지 도착 시 스크롤 아래로
-  // const currentMessages = [...(channelMessages[activeChannel] || [])]
-  // .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-
-  // useEffect(() => {
-  //   messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  // }, [currentMessages.length]);
-
-  // 메시지 전송
   const handleSend = () => {
     const trimmed = inputText.trim();
     if (!trimmed || !isConnected) return;
 
-    sendMessage("sendMessage", {
+    sendWsMessage?.("sendMessage", {
       serverId,
       senderId: user?.userId,
       senderNickname: user?.nickname,
@@ -110,24 +105,9 @@ const ChatWindow = ({ activeChannel, channels, onMembersUpdate }) => {
       content: trimmed,
     });
 
-    // 내가 보낸 메시지 즉시 화면에 반영 (브로드캐스트 대기 없이)
-    // const optimisticMsg = {
-    //   messageId: `temp-${Date.now()}`,
-    //   serverId,
-    //   senderId: user?.userId,
-    //   senderNickname: user?.nickname,
-    //   messageType: "TEXT",
-    //   content: trimmed,
-    //   createdAt: new Date().toISOString(),
-    // };
-    // setChannelMessages((prev) => ({
-    //   ...prev,
-    //   [activeChannel]: [...(prev[activeChannel] || []), optimisticMsg],
-    // }));
- 
     setInputText("");
   };
- 
+
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -143,7 +123,6 @@ const ChatWindow = ({ activeChannel, channels, onMembersUpdate }) => {
           {currentChannel ? (currentChannel.name || currentChannel.label) : "채널 선택 중..."}
         </h3>
         <p className="topic">{currentChannel?.topic}</p>
-        {/* 연결 상태 표시 */}
         <span style={{
           marginLeft: "auto",
           fontSize: "11px",
@@ -166,7 +145,6 @@ const ChatWindow = ({ activeChannel, channels, onMembersUpdate }) => {
           currentMessages.map((msg, idx) => {
             const key = msg.messageId || idx;
 
-            // 삭제된 메시지
             if (msg.isDeleted) {
               return (
                 <div key={key} className="message-dummy">
@@ -178,7 +156,7 @@ const ChatWindow = ({ activeChannel, channels, onMembersUpdate }) => {
               );
             }
 
-            // AI 요약 타입
+            // ✅ AI 요약 타입 (기존 상세 렌더링 유지)
             if (msg.type === "ai-summary" || msg.messageType === "ai-summary" || msg.messageType === "AI_SUMMARY") {
               let aiResult = {};
               try {
@@ -195,12 +173,7 @@ const ChatWindow = ({ activeChannel, channels, onMembersUpdate }) => {
                     <span className="ai-label">SAGE AI</span>
                     <span className="ai-tag">{isDocument ? "문서 요약" : isImage ? "이미지 분석" : "AI 분석"}</span>
                     {aiResult.fileName && (
-                      <span className="ai-filename" style={{
-                        marginLeft: "8px",
-                        fontSize: "12px",
-                        color: "#a1a1aa",
-                        fontStyle: "italic",
-                      }}>
+                      <span className="ai-filename" style={{ marginLeft: "8px", fontSize: "12px", color: "#a1a1aa", fontStyle: "italic" }}>
                         📎 {aiResult.fileName}
                       </span>
                     )}
@@ -245,7 +218,6 @@ const ChatWindow = ({ activeChannel, channels, onMembersUpdate }) => {
               );
             }
 
-            // 일반 텍스트 메시지
             const authorName = msg.senderNickname || msg.author || "알 수 없음";
             const isMine = (msg.senderId === user?.userId) || (authorName === CURRENT_USER);
             const avatarChar = authorName.charAt(0).toUpperCase();
@@ -256,9 +228,12 @@ const ChatWindow = ({ activeChannel, channels, onMembersUpdate }) => {
                 {!isMine && <div className="avatar">{avatarChar}</div>}
                 <div className={`message-content ${isMine ? "mine-content" : ""}`}>
                   <span className={`author ${isMine ? "mine-author" : ""}`}>{authorName}</span>
-                  {content && <p>{content}{msg.isEdited && <span style={{ fontSize: "10px", color: "#71717a", marginLeft: "6px" }}>(수정됨)</span>}</p>}
-
-                  {/* 파일 첨부 */}
+                  {content && (
+                    <p>
+                      {content}
+                      {msg.isEdited && <span style={{ fontSize: "10px", color: "#71717a", marginLeft: "6px" }}>(수정됨)</span>}
+                    </p>
+                  )}
                   {(msg.type === "file" || msg.messageType === "FILE") && (
                     <div className="file-attachment">
                       <span className="file-icon">📄</span>
@@ -268,8 +243,6 @@ const ChatWindow = ({ activeChannel, channels, onMembersUpdate }) => {
                       </div>
                     </div>
                   )}
-
-                  {/* 링크 */}
                   {(msg.type === "link" || msg.messageType === "LINK") && (
                     <div className="file-attachment link-attachment">
                       <span className="file-icon">🔗</span>
@@ -288,7 +261,6 @@ const ChatWindow = ({ activeChannel, channels, onMembersUpdate }) => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* 채팅 입력창 */}
       <div className="chat-input-area">
         <input
           type="text"
