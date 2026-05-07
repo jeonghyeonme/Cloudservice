@@ -2,12 +2,7 @@ const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 const { v4: uuidv4 } = require("uuid");
 
-const s3Client = new S3Client({ 
-  region: process.env.AWS_REGION || "us-east-1",
-  // 💡 SDK 수준에서 체크섬 자동 계산 기능을 명시적으로 제어
-  requestChecksumCalculation: "WHEN_REQUIRED",
-  // responseChecksumValidation: "WHEN_REQUIRED" // s3Client 생성자에는 이 옵션이 없을 수 있어 제거하거나 확인 필요 (일반적으로 요청 측면이 중요)
-});
+const s3Client = new S3Client({ region: process.env.AWS_REGION || "us-east-1" });
 
 // ── 허용 파일 타입 정의 ──────────────────────────────────
 const ALLOWED_TYPES = {
@@ -108,18 +103,9 @@ exports.handler = async (event) => {
       Bucket: bucketName,
       Key: s3ObjectKey,
       ContentType: fileType,
-      // 💡 명령 수준에서 체크섬 알고리즘을 사용하지 않도록 설정
-      ChecksumAlgorithm: undefined
     });
 
-    // 💡 서명 생성 시 브라우저에서 보내지 않는 체크섬 관련 헤더를 서명 대상에서 제외
-    const uploadUrl = await getSignedUrl(s3Client, command, { 
-      expiresIn: 300,
-      unhoistedableHeaders: new Set([
-        'x-amz-checksum-crc32', 
-        'x-amz-sdk-checksum-algorithm'
-      ])
-    });
+    const uploadUrl = await getSignedUrl(s3Client, command, { expiresIn: 300 });
     const fileUrl = `https://${bucketName}.s3.${process.env.AWS_REGION || "us-east-1"}.amazonaws.com/${s3ObjectKey}`;
 
     return {
