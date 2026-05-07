@@ -112,9 +112,10 @@ exports.handler = async (event) => {
       ChecksumAlgorithm: undefined
     });
 
-    // 💡 서명 생성 시 브라우저에서 보내지 않는 체크섬 관련 헤더를 서명 대상에서 제외
+    // 💡 서명 생성 시 브라우저에서 보낼 Content-Type을 서명 대상에 명시적으로 포함
     const uploadUrl = await getSignedUrl(s3Client, command, { 
       expiresIn: 300,
+      signableHeaders: new Set(['content-type']),
       unhoistedableHeaders: new Set([
         'x-amz-checksum-crc32', 
         'x-amz-sdk-checksum-algorithm'
