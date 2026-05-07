@@ -1,6 +1,7 @@
 const { GetCommand, UpdateCommand } = require("@aws-sdk/lib-dynamodb");
 const { v4: uuidv4 } = require("uuid");
 const dynamoDb = require("../dynamodbClient");
+const { HEADERS } = require("../utils/response");
 
 exports.handler = async (event) => {
   try {
@@ -11,6 +12,7 @@ exports.handler = async (event) => {
     if (!name) {
       return {
         statusCode: 400,
+        headers: HEADERS,
         body: JSON.stringify({ message: "채널 이름은 필수입니다." }),
       };
     }
@@ -23,6 +25,7 @@ exports.handler = async (event) => {
     if (!serverData.Item) {
       return {
         statusCode: 404,
+        headers: HEADERS,
         body: JSON.stringify({ message: "서버를 찾을 수 없습니다." }),
       };
     }
@@ -46,16 +49,13 @@ exports.handler = async (event) => {
 
     return {
       statusCode: 200,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Credentials": true,
-      },
+      headers: HEADERS,
       body: JSON.stringify({ message: "채널 추가 성공", channel: newChannel }),
     };
   } catch (error) {
     console.error(error);
     return {
-      statusCode: 500,
+      headers: HEADERS,
       body: JSON.stringify({ message: "채널 추가 실패", error: error.message }),
     };
   }

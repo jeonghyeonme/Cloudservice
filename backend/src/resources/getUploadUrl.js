@@ -1,6 +1,7 @@
 const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 const { v4: uuidv4 } = require("uuid");
+const { HEADERS } = require("../utils/response");
 
 const s3Client = new S3Client({ region: process.env.AWS_REGION || "us-east-1" });
 
@@ -66,7 +67,7 @@ exports.handler = async (event) => {
     if (!fileName || !fileType) {
       return {
         statusCode: 400,
-        headers: { "Access-Control-Allow-Origin": "*" },
+        headers: HEADERS,
         body: JSON.stringify({ message: "fileName과 fileType 파라미터가 필요합니다." }),
       };
     }
@@ -76,7 +77,7 @@ exports.handler = async (event) => {
     if (!ALLOWED_EXTENSIONS.includes(fileExtension)) {
       return {
         statusCode: 400,
-        headers: { "Access-Control-Allow-Origin": "*" },
+        headers: HEADERS,
         body: JSON.stringify({
           message: `허용되지 않는 파일 확장자입니다: .${fileExtension}`,
           allowedExtensions: ALLOWED_EXTENSIONS,
@@ -88,7 +89,7 @@ exports.handler = async (event) => {
     if (!ALLOWED_TYPES[fileType]) {
       return {
         statusCode: 400,
-        headers: { "Access-Control-Allow-Origin": "*" },
+        headers: HEADERS,
         body: JSON.stringify({
           message: `허용되지 않는 파일 타입입니다: ${fileType}`,
         }),
@@ -110,10 +111,7 @@ exports.handler = async (event) => {
 
     return {
       statusCode: 200,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Credentials": true,
-      },
+      headers: HEADERS,
       body: JSON.stringify({
         message: "업로드 URL 발급 성공",
         uploadUrl,
@@ -125,7 +123,7 @@ exports.handler = async (event) => {
     console.error("S3 URL 발급 에러:", error);
     return {
       statusCode: 500,
-      headers: { "Access-Control-Allow-Origin": "*" },
+      headers: HEADERS,
       body: JSON.stringify({ message: "URL 발급 실패", error: error.message }),
     };
   }

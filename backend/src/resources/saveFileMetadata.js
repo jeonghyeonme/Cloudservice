@@ -3,6 +3,7 @@ const { S3Client, DeleteObjectCommand, HeadObjectCommand } = require("@aws-sdk/c
 const { v4: uuidv4 } = require("uuid");
 const dynamoDb = require("../dynamodbClient");
 const { verifyAccessToken } = require("../utils");
+const { HEADERS } = require("../utils/response");
 
 const SERVERS_TABLE = process.env.SERVERS_TABLE;
 const RESOURCES_BUCKET = process.env.RESOURCES_BUCKET;
@@ -12,7 +13,11 @@ exports.handler = async (event) => {
   try {
     const auth = verifyAccessToken(event.headers?.Authorization || event.headers?.authorization);
     if (auth.error) {
-      return { statusCode: 401, headers: { "Access-Control-Allow-Origin": "*" }, body: JSON.stringify({ message: auth.error }) };
+      return {
+        statusCode: 401, 
+        headers: HEADERS, 
+        body: JSON.stringify({ message: auth.error }) 
+      };
     }
 
     const { serverId } = event.pathParameters || {};
@@ -25,14 +30,28 @@ exports.handler = async (event) => {
       const { fileId } = body;
       const getResult = await dynamoDb.send(new GetCommand({ TableName: SERVERS_TABLE, Key: { serverId } }));
       const serverData = getResult.Item;
-      if (!serverData) return { statusCode: 404, headers: { "Access-Control-Allow-Origin": "*" }, body: JSON.stringify({ message: "서버 없음" }) };
+      if (!serverData) return { 
+        statusCode: 404, 
+        headers: HEADERS, 
+        body: JSON.stringify({ message: "서버 없음" }) 
+      };
 
       const files = serverData.files || [];
       const targetFile = files.find(f => f.fileId === fileId);
-      if (!targetFile) return { statusCode: 404, headers: { "Access-Control-Allow-Origin": "*" }, body: JSON.stringify({ message: "파일 없음" }) };
+      if (!targetFile) {
+        return { 
+          statusCode: 404, 
+          headers: HEADERS, 
+          body: JSON.stringify({ message: "파일 없음" }) 
+        };
+      }
 
       if (targetFile.uploadedBy !== auth.userId && serverData.hostId !== auth.userId) {
-        return { statusCode: 403, headers: { "Access-Control-Allow-Origin": "*" }, body: JSON.stringify({ message: "권한 없음" }) };
+        return { 
+          statusCode: 403, 
+          headers: HEADERS, 
+          body: JSON.stringify({ message: "권한 없음" }) 
+        };
       }
 
       if (targetFile.s3ObjectKey) {
@@ -48,7 +67,11 @@ exports.handler = async (event) => {
         ExpressionAttributeNames: { "#files": "files" },
         ExpressionAttributeValues: { ":updatedFiles": updatedFiles }
       }));
-      return { statusCode: 200, headers: { "Access-Control-Allow-Origin": "*" }, body: JSON.stringify({ message: "파일 삭제 완료" }) };
+      return {
+        statusCode: 200, 
+        headers: HEADERS, 
+        body: JSON.stringify({ message: "파일 삭제 완료" }) 
+      };
     }
 
     // ──────────────────────────────────────────
@@ -56,7 +79,11 @@ exports.handler = async (event) => {
     // ──────────────────────────────────────────
     const { fileName, fileUrl, fileType, s3ObjectKey } = body;
     if (!serverId || !fileName || !fileUrl) {
-      return { statusCode: 400, headers: { "Access-Control-Allow-Origin": "*" }, body: JSON.stringify({ message: "필수값 누락" }) };
+      return {
+        statusCode: 400, 
+        headers: HEADERS,  
+        body: JSON.stringify({ message: "필수값 누락" }) 
+      };
     }
 
     // 파일 검증 로직
@@ -72,7 +99,7 @@ exports.handler = async (event) => {
         // 파일이 없으면 에러를 던져 DB 저장을 차단합니다.
         return { 
           statusCode: 400, 
-          headers: { "Access-Control-Allow-Origin": "*" }, 
+          headers: HEADERS, 
           body: JSON.stringify({ message: "S3에 파일이 존재하지 않거나 업로드가 완료되지 않았습니다." }) 
         };
       }
@@ -90,9 +117,17 @@ exports.handler = async (event) => {
       ExpressionAttributeValues: { ":newFile": [fileItem], ":empty": [] },
     }));
 
-    return { statusCode: 200, headers: { "Access-Control-Allow-Origin": "*" }, body: JSON.stringify({ message: "저장 완료", file: fileItem }) };
+    return { 
+      statusCode: 200, 
+      headers: HEADERS, 
+      body: JSON.stringify({ message: "저장 완료", file: fileItem }) 
+    };
 
   } catch (error) {
-    return { statusCode: 500, headers: { "Access-Control-Allow-Origin": "*" }, body: JSON.stringify({ error: error.message }) };
+    return { 
+      statusCode: 500, 
+      headers: HEADERS, 
+      body: JSON.stringify({ error: error.message }) 
+    };
   }
 };

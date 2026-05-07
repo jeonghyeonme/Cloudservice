@@ -1,6 +1,7 @@
 const { GetCommand, PutCommand, UpdateCommand } = require("@aws-sdk/lib-dynamodb");
 const dynamoDb = require("../dynamodbClient");
 const { verifyAccessToken } = require("../utils");
+const { HEADERS } = require("../utils/response");
 
 exports.handler = async (event) => {
   try {
@@ -12,7 +13,7 @@ exports.handler = async (event) => {
     if (!userId) {
       return {
         statusCode: 401,
-        headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" },
+        headers: HEADERS,
         body: JSON.stringify({ message: "인증이 필요합니다." }),
       };
     }
@@ -20,7 +21,7 @@ exports.handler = async (event) => {
     if (!serverId) {
       return {
         statusCode: 400,
-        headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" },
+        headers: HEADERS,
         body: JSON.stringify({ message: "serverId가 필요합니다." }),
       };
     }
@@ -34,7 +35,7 @@ exports.handler = async (event) => {
     if (!serverResult.Item) {
       return {
         statusCode: 404,
-        headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" },
+        headers: HEADERS,
         body: JSON.stringify({ message: "해당 서버를 찾을 수 없습니다." }),
       };
     }
@@ -48,7 +49,7 @@ exports.handler = async (event) => {
     if (membershipResult.Item) {
       return {
         statusCode: 200,
-        headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" },
+        headers: HEADERS,
         body: JSON.stringify({
           message: "이미 참여 중인 서버입니다.",
           serverId,
@@ -63,7 +64,7 @@ exports.handler = async (event) => {
     if (currentCount >= maxCapacity) {
       return {
         statusCode: 403,
-        headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" },
+        headers: HEADERS,
         body: JSON.stringify({ message: "서버 정원이 가득 찼습니다." }),
       };
     }
@@ -75,7 +76,7 @@ exports.handler = async (event) => {
       if (!body.serverPassword || body.serverPassword !== serverResult.Item.serverPassword) {
         return {
           statusCode: 403,
-          headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" },
+          headers: HEADERS,
           body: JSON.stringify({ message: "비밀번호가 올바르지 않습니다." }),
         };
       }
@@ -111,14 +112,14 @@ exports.handler = async (event) => {
 
     return {
       statusCode: 200,
-      headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" },
+      headers: HEADERS,
       body: JSON.stringify({ message: "서버 참여 성공", serverId, alreadyMember: false }),
     };
   } catch (error) {
     console.error("joinServer Error:", error);
     return {
       statusCode: 500,
-      headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" },
+      headers: HEADERS,
       body: JSON.stringify({ message: "서버 참여 실패", error: error.message }),
     };
   }

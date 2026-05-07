@@ -1,5 +1,6 @@
 const { QueryCommand } = require("@aws-sdk/lib-dynamodb");
 const dynamoDb = require("../dynamodbClient");
+const { HEADERS } = require("../utils/response");
 
 exports.handler = async (event) => {
   try {
@@ -9,6 +10,7 @@ exports.handler = async (event) => {
     if (!serverId) {
       return {
         statusCode: 400,
+        headers: HEADERS,
         body: JSON.stringify({ message: "serverId가 필요합니다." }),
       };
     }
@@ -39,11 +41,7 @@ exports.handler = async (event) => {
 
     return {
       statusCode: 200,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Credentials": true,
-        "Content-Type": "application/json",
-      },
+      headers: HEADERS,
       body: JSON.stringify(result.Items),
     };
   } catch (error) {
@@ -51,10 +49,8 @@ exports.handler = async (event) => {
 
     return {
       statusCode: 500,
-      body: JSON.stringify({
-        message: "메시지 조회 실패",
-        error: error.message,
-      }),
+      headers: HEADERS,
+      body: JSON.stringify({ message: "메시지 조회 실패", error: error.message }),
     };
   }
 };

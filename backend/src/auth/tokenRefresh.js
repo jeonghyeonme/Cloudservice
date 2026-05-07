@@ -1,9 +1,5 @@
 const { validateRefreshTokenAndGenerateAccessToken } = require("../utils");
-
-const HEADERS = {
-  "Access-Control-Allow-Origin":      "*",
-  "Access-Control-Allow-Credentials": true,
-};
+const { HEADERS } = require("../utils/response");
 
 // =========================
 // Access Token 재발급

@@ -3,16 +3,16 @@ const { RekognitionClient, DetectLabelsCommand, DetectTextCommand } = require("@
 const { TranslateClient, TranslateTextCommand } = require("@aws-sdk/client-translate");
 const { BedrockRuntimeClient, InvokeModelCommand } = require("@aws-sdk/client-bedrock-runtime");
 
-// [추가] DynamoDB, API Gateway WSS, UUID 모듈 임포트
 const { PutCommand, QueryCommand } = require("@aws-sdk/lib-dynamodb");
 const { ApiGatewayManagementApiClient, PostToConnectionCommand } = require("@aws-sdk/client-apigatewaymanagementapi");
 const { v4: uuidv4 } = require("uuid");
-const dynamoDb = require("../dynamodbClient"); // 작성해두신 공통 DB 클라이언트
+const dynamoDb = require("../dynamodbClient");
+const { HEADERS } = require("../utils/response");
 
 const REGION = process.env.REGION || "us-east-1";
 const RESOURCES_BUCKET = process.env.RESOURCES_BUCKET;
 
-// [추가] DB 테이블명 및 웹소켓 엔드포인트 환경변수
+// DB 테이블명 및 웹소켓 엔드포인트 환경변수
 const MESSAGES_TABLE = process.env.MESSAGES_TABLE;
 const CONNECTIONS_TABLE = process.env.CONNECTIONS_TABLE;
 const WSS_ENDPOINT = process.env.WSS_ENDPOINT; // HTTP 핸들러이므로 환경변수로 주입받아야 합니다.
@@ -65,7 +65,7 @@ exports.handler = async (event) => {
     if (!s3ObjectKey || !fileType) {
       return {
         statusCode: 400,
-        headers: { "Access-Control-Allow-Origin": "*" },
+        headers: HEADERS,
         body: JSON.stringify({ message: "s3ObjectKey, fileType은 필수입니다." }),
       };
     }
@@ -181,10 +181,9 @@ exports.handler = async (event) => {
       }
     }
 
-    // HTTP 응답 (REST를 호출한 클라이언트에게 완료되었음을 알림)
     return {
       statusCode: 200,
-      headers: { "Access-Control-Allow-Origin": "*" },
+      headers: HEADERS,
       body: JSON.stringify({
         message: "AI 분석 완료 및 채팅방 전송 성공",
         serverId: serverId || null,
@@ -195,7 +194,7 @@ exports.handler = async (event) => {
     console.error("AI Router Error:", error);
     return {
       statusCode: 500,
-      headers: { "Access-Control-Allow-Origin": "*" },
+      headers: HEADERS,
       body: JSON.stringify({ message: "AI 분석 실패", error: error.message }),
     };
   }
