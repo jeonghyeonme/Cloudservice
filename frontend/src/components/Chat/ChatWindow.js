@@ -109,6 +109,11 @@ const ChatWindow = ({ activeChannel, channels, sendWsMessage, isConnected, chatM
     activeChannelRef.current = activeChannel;
   }, [activeChannel]);
 
+  const currentChannel = useMemo(
+    () => channels?.find((ch) => (ch.chId || ch.id) === activeChannel),
+    [channels, activeChannel],
+  );
+
   // 채널 초기 메시지 로드
   useEffect(() => {
     if (!activeChannel || !channels) return;
