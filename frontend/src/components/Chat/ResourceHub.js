@@ -15,7 +15,6 @@ const getFileIcon = (fileName) => {
   return '📁';
 };
 
-// AI 분석 가능한 파일인지 확인
 const isAnalyzable = (fileName, fileType) => {
   if (!fileName) return false;
   const ext = fileName.split('.').pop().toLowerCase();
@@ -24,7 +23,12 @@ const isAnalyzable = (fileName, fileType) => {
   return false;
 };
 
-const ResourceHub = ({ serverResources, setCurrentServer }) => {
+/**
+ * @param {object} serverResources - 서버 상세 데이터
+ * @param {function} setCurrentServer - 서버 state 업데이트 함수
+ * @param {function} sendWsMessage - WebSocket 메시지 전송 함수 (ChatLayout에서 전달)
+ */
+const ResourceHub = ({ serverResources, setCurrentServer, sendWsMessage }) => {
   const [activeHubTab, setActiveHubTab] = useState('Files');
   const { serverId } = useParams();
   const fileInputRef = useRef(null);
@@ -33,6 +37,16 @@ const ResourceHub = ({ serverResources, setCurrentServer }) => {
 
   const files = serverResources?.files || [];
   const links = serverResources?.links || [];
+
+  // ✅ resourceUpdated 브로드캐스트 헬퍼
+  const broadcastResourceUpdate = (type, action, data) => {
+    sendWsMessage?.('resourceUpdated', {
+      serverId,
+      resourceType: type,   // 'file' | 'link'
+      resourceAction: action, // 'add' | 'delete'
+      data,
+    });
+  };
 
   const handleFileSelect = async (e) => {
     const file = e.target.files?.[0];
@@ -49,6 +63,8 @@ const ResourceHub = ({ serverResources, setCurrentServer }) => {
           ...prev,
           files: [...(prev?.files || []), savedFile],
         }));
+        // ✅ 파일 업로드 완료 시 브로드캐스트
+        broadcastResourceUpdate('file', 'add', savedFile);
       }
     } catch (error) {
       console.error('업로드 실패:', error);
@@ -69,6 +85,8 @@ const ResourceHub = ({ serverResources, setCurrentServer }) => {
           ...prev,
           links: [...(prev?.links || []), result.link],
         }));
+        // ✅ 링크 저장 완료 시 브로드캐스트
+        broadcastResourceUpdate('link', 'add', result.link);
       }
     } catch (error) {
       console.error('링크 저장 실패:', error);
@@ -76,7 +94,6 @@ const ResourceHub = ({ serverResources, setCurrentServer }) => {
     }
   };
 
-  // AI 분석 호출
   const handleAnalyze = async (e, file) => {
     e.preventDefault();
     e.stopPropagation();
@@ -127,6 +144,8 @@ const ResourceHub = ({ serverResources, setCurrentServer }) => {
           ...prev,
           files: (prev?.files || []).filter(f => f.fileId !== fileId),
         }));
+        // ✅ 파일 삭제 완료 시 브로드캐스트
+        broadcastResourceUpdate('file', 'delete', { fileId });
       }
     } catch (error) {
       console.error('파일 삭제 실패:', error);
@@ -145,6 +164,8 @@ const ResourceHub = ({ serverResources, setCurrentServer }) => {
           ...prev,
           links: (prev?.links || []).filter(l => l.linkId !== linkId),
         }));
+        // ✅ 링크 삭제 완료 시 브로드캐스트
+        broadcastResourceUpdate('link', 'delete', { linkId });
       }
     } catch (error) {
       console.error('링크 삭제 실패:', error);
@@ -169,18 +190,11 @@ const ResourceHub = ({ serverResources, setCurrentServer }) => {
         </div>
         <div className="hub-file-actions">
           {canAnalyze && (
-            <button
-              className="ai-analyze-btn"
-              onClick={(e) => handleAnalyze(e, file)}
-              disabled={isAnalyzing}
-              title="AI 분석"
-            >
+            <button className="ai-analyze-btn" onClick={(e) => handleAnalyze(e, file)} disabled={isAnalyzing} title="AI 분석">
               {isAnalyzing ? '⏳' : '🤖'}
             </button>
           )}
-          <button className="delete-btn" onClick={(e) => handleDeleteFile(e, file.fileId)}>
-            ×
-          </button>
+          <button className="delete-btn" onClick={(e) => handleDeleteFile(e, file.fileId)}>×</button>
         </div>
       </a>
     );
@@ -199,9 +213,7 @@ const ResourceHub = ({ serverResources, setCurrentServer }) => {
           <span className="hub-file-name">{link.title}</span>
           <span className="hub-file-meta">{link.siteName || link.url}</span>
         </div>
-        <button className="delete-btn" onClick={(e) => handleDeleteLink(e, link.linkId)}>
-          ×
-        </button>
+        <button className="delete-btn" onClick={(e) => handleDeleteLink(e, link.linkId)}>×</button>
       </a>
     );
   };
@@ -212,17 +224,15 @@ const ResourceHub = ({ serverResources, setCurrentServer }) => {
         <div className="hub-header">
           <h3 className="hub-title">리소스 허브</h3>
           <div className="hub-tabs">
-            {[{ en: 'Files', ko: '파일' }, { en: 'Links', ko: '링크' }].map(function(tab) {
-              return (
-                <button
-                  key={tab.en}
-                  className={'hub-tab' + (activeHubTab === tab.en ? ' active' : '')}
-                  onClick={function() { setActiveHubTab(tab.en); }}
-                >
-                  {tab.ko}
-                </button>
-              );
-            })}
+            {[{ en: 'Files', ko: '파일' }, { en: 'Links', ko: '링크' }].map((tab) => (
+              <button
+                key={tab.en}
+                className={'hub-tab' + (activeHubTab === tab.en ? ' active' : '')}
+                onClick={() => setActiveHubTab(tab.en)}
+              >
+                {tab.ko}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -231,34 +241,16 @@ const ResourceHub = ({ serverResources, setCurrentServer }) => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
               <p className="hub-section-label">최근 파일</p>
               <button
-                onClick={function() { fileInputRef.current && fileInputRef.current.click(); }}
+                onClick={() => fileInputRef.current && fileInputRef.current.click()}
                 disabled={uploading}
-                style={{
-                  background: '#00ff66',
-                  color: '#000',
-                  border: 'none',
-                  borderRadius: '4px',
-                  padding: '4px 10px',
-                  fontSize: '11px',
-                  fontWeight: 700,
-                  cursor: uploading ? 'not-allowed' : 'pointer',
-                  opacity: uploading ? 0.6 : 1,
-                }}
+                style={{ background: '#00ff66', color: '#000', border: 'none', borderRadius: '4px', padding: '4px 10px', fontSize: '11px', fontWeight: 700, cursor: uploading ? 'not-allowed' : 'pointer', opacity: uploading ? 0.6 : 1 }}
               >
                 {uploading ? '업로드 중...' : '+ 업로드'}
               </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                style={{ display: 'none' }}
-                onChange={handleFileSelect}
-              />
+              <input ref={fileInputRef} type="file" style={{ display: 'none' }} onChange={handleFileSelect} />
             </div>
             <div className="hub-file-list">
-              {files.length > 0
-                ? files.map(renderFileItem)
-                : <div className="empty-msg">공유된 파일이 없습니다.</div>
-              }
+              {files.length > 0 ? files.map(renderFileItem) : <div className="empty-msg">공유된 파일이 없습니다.</div>}
             </div>
           </div>
         )}
@@ -269,25 +261,13 @@ const ResourceHub = ({ serverResources, setCurrentServer }) => {
               <p className="hub-section-label">공유된 링크</p>
               <button
                 onClick={handleLinkAdd}
-                style={{
-                  background: '#00ff66',
-                  color: '#000',
-                  border: 'none',
-                  borderRadius: '4px',
-                  padding: '4px 10px',
-                  fontSize: '11px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                }}
+                style={{ background: '#00ff66', color: '#000', border: 'none', borderRadius: '4px', padding: '4px 10px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
               >
                 + 링크 추가
               </button>
             </div>
             <div className="hub-file-list">
-              {links.length > 0
-                ? links.map(renderLinkItem)
-                : <div className="empty-msg">공유된 링크가 없습니다.</div>
-              }
+              {links.length > 0 ? links.map(renderLinkItem) : <div className="empty-msg">공유된 링크가 없습니다.</div>}
             </div>
           </div>
         )}

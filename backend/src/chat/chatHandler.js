@@ -155,6 +155,7 @@ async function sendMessage(event, body) {
 
   const item = {
     serverId,
+    channelId: body.channelId,
     messageId,
     senderId:       body.senderId,
     senderNickname: body.senderNickname,
@@ -164,6 +165,31 @@ async function sendMessage(event, body) {
 
   if (body.messageType === "TEXT") {
     item.content = body.content;
+  }
+
+  if (body.messageType === "IMAGE") {
+    item.content = body.content || "";
+    item.imageUrl = body.imageUrl || body.fileUrl || "";
+    item.fileUrl = body.fileUrl || body.imageUrl || "";
+    item.fileName = body.fileName || "";
+    item.fileType = body.fileType || "";
+    item.fileId = body.fileId || "";
+    item.s3ObjectKey = body.s3ObjectKey || "";
+  }
+
+  if (body.messageType === "FILE") {
+    item.content = body.content || body.fileName || "";
+    item.fileUrl = body.fileUrl || "";
+    item.fileName = body.fileName || "";
+    item.fileType = body.fileType || "";
+    item.fileId = body.fileId || "";
+    item.s3ObjectKey = body.s3ObjectKey || "";
+  }
+
+  if (body.messageType === "LINK") {
+    item.content = body.content || "";
+    item.linkUrl = body.linkUrl || "";
+    item.linkName = body.linkName || "";
   }
 
   // Messages 테이블에 저장
