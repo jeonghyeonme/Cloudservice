@@ -131,15 +131,17 @@ echo "────────────────────────�
 # 임시 CORS 설정 파일 생성 (환경에 따라 파일 경로 처리)
 CORS_FILE="/tmp/cors-config.json"
 cat <<EOF > "$CORS_FILE"
-[
-  {
-    "AllowedHeaders": ["*"],
-    "AllowedMethods": ["GET", "PUT", "POST", "DELETE", "HEAD"],
-    "AllowedOrigins": ["*"],
-    "ExposeHeaders": ["ETag"],
-    "MaxAgeSeconds": 3000
-  }
-]
+{
+  "CORSRules": [
+    {
+      "AllowedHeaders": ["*"],
+      "AllowedMethods": ["GET", "PUT", "POST", "DELETE", "HEAD"],
+      "AllowedOrigins": ["*"],
+      "ExposeHeaders": ["ETag"],
+      "MaxAgeSeconds": 3000
+    }
+  ]
+}
 EOF
 
 aws s3api put-bucket-cors \
