@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { PATHS } from "../../constants/path";
 import { useServers } from "../../contexts/ServerContext";
@@ -26,6 +26,7 @@ import {
   buildServerContextMenuItems,
 } from "./utils/contextMenuFactories";
 import { getServerId, getServerName } from "../../lib/serverEntity";
+import useWebSocket from "./hooks/useWebSocket";
 
 const ChatLayout = () => {
   const { serverId } = useParams();
@@ -33,7 +34,7 @@ const ChatLayout = () => {
   const { user, logout, refreshToken } = useAuth();
   const { setActiveServerId, upsertJoinedServer, removeJoinedServer, clearJoinedServers } =
     useServers();
-    
+
   const [isServerModalOpen, setIsServerModalOpen] = useState(false);
   const [isChannelModalOpen, setIsChannelModalOpen] = useState(false);
 
@@ -71,6 +72,61 @@ const ChatLayout = () => {
     removeJoinedServer,
   });
 
+  // ✅ ChatWindow에서 사용할 메시지 핸들러 ref (ChatLayout에서 통합 관리)
+  const chatMessageHandlerRef = useRef(null);
+
+  // ✅ WebSocket 메시지 통합 핸들러
+  const handleWsMessage = useCallback((parsed) => {
+    const { action, data } = parsed;
+
+    // 채팅 메시지 관련 → ChatWindow 핸들러로 위임
+    if (['receiveMessage', 'messageUpdated', 'messageDeleted'].includes(action)) {
+      chatMessageHandlerRef.current?.(parsed);
+      return;
+    }
+
+    // ✅ resourceUpdated 이벤트 처리 → 리소스 목록 즉시 갱신
+    if (action === 'resourceUpdated' && data) {
+      const { resourceType, resourceAction, data: resourceData } = data;
+
+      setCurrentServer((prev) => {
+        if (!prev) return prev;
+
+        if (resourceType === 'file') {
+          if (resourceAction === 'add') {
+            // 중복 방지
+            const already = (prev.files || []).some(f => f.fileId === resourceData.fileId);
+            if (already) return prev;
+            return { ...prev, files: [...(prev.files || []), resourceData] };
+          }
+          if (resourceAction === 'delete') {
+            return { ...prev, files: (prev.files || []).filter(f => f.fileId !== resourceData.fileId) };
+          }
+        }
+
+        if (resourceType === 'link') {
+          if (resourceAction === 'add') {
+            const already = (prev.links || []).some(l => l.linkId === resourceData.linkId);
+            if (already) return prev;
+            return { ...prev, links: [...(prev.links || []), resourceData] };
+          }
+          if (resourceAction === 'delete') {
+            return { ...prev, links: (prev.links || []).filter(l => l.linkId !== resourceData.linkId) };
+          }
+        }
+
+        return prev;
+      });
+    }
+  }, [setCurrentServer]);
+
+  // ✅ WebSocket 연결 (ChatLayout에서 관리 → ChatWindow, ResourceHub에 sendMessage 전달)
+  const { sendMessage: sendWsMessage, isConnected } = useWebSocket({
+    serverId,
+    userId: user?.userId,
+    onMessage: handleWsMessage,
+  });
+
   const {
     contextMenu,
     settingsModal,
@@ -91,21 +147,12 @@ const ChatLayout = () => {
       ));
 
   const openServerSettings = useCallback(
-    () =>
-      openSettingsModal({
-        type: "server",
-        entityName: getServerName(currentServer),
-      }),
+    () => openSettingsModal({ type: "server", entityName: getServerName(currentServer) }),
     [currentServer, openSettingsModal],
   );
 
   const openChannelSettings = useCallback(
-    (channel) =>
-      openSettingsModal({
-        type: "channel",
-        channel,
-        entityName: channel.name || channel.label || "현재 채널",
-      }),
+    (channel) => openSettingsModal({ type: "channel", channel, entityName: channel.name || channel.label || "현재 채널" }),
     [openSettingsModal],
   );
 
@@ -117,54 +164,24 @@ const ChatLayout = () => {
         onOpenDeleteConfirm: () =>
           openConfirmModal({
             title: "정말로 삭제하시겠습니까?",
-            description:
-              "확인을 누르면 현재 서버가 삭제되고 서버 목록 화면으로 이동합니다.",
-            onConfirm: async () => {
-              await removeServer();
-              closeConfirmModal();
-            },
+            description: "확인을 누르면 현재 서버가 삭제되고 서버 목록 화면으로 이동합니다.",
+            onConfirm: async () => { await removeServer(); closeConfirmModal(); },
           }),
         onLeave: () =>
           openConfirmModal({
             title: "서버에서 나가시겠습니까?",
             description: "확인을 누르면 서버 목록에서 제외됩니다.",
-            onConfirm: async () => {
-              await leaveServer();
-              closeConfirmModal();
-            },
+            onConfirm: async () => { await leaveServer(); closeConfirmModal(); },
           }),
       }),
-    [
-      closeConfirmModal,
-      isCurrentUserHost,
-      openConfirmModal,
-      openServerSettings,
-      removeServer,
-      leaveServer,
-    ],
+    [closeConfirmModal, isCurrentUserHost, openConfirmModal, openServerSettings, removeServer, leaveServer],
   );
 
-  const handleServerSettingsSubmit = async (values) => {
-    await saveServerSettings(values);
-    closeSettingsModal();
-  };
+  const handleServerSettingsSubmit = async (values) => { await saveServerSettings(values); closeSettingsModal(); };
+  const handleChannelSettingsSubmit = async (values) => { await saveChannelSettings(settingsModal?.channel, values); closeSettingsModal(); };
+  const handleCreateChannel = async (values) => { await createChannelInServer(values); setIsChannelModalOpen(false); };
 
-  const handleChannelSettingsSubmit = async (values) => {
-    await saveChannelSettings(settingsModal?.channel, values);
-    closeSettingsModal();
-  };
-
-  const handleCreateChannel = async (values) => {
-    await createChannelInServer(values);
-    setIsChannelModalOpen(false);
-  };
-
-  if (loading)
-    return (
-      <div style={{ color: "white", padding: "20px" }}>
-        서버 정보를 가져오는 중...
-      </div>
-    );
+  if (loading) return <div style={{ color: "white", padding: "20px" }}>서버 정보를 가져오는 중...</div>;
 
   if (!currentServer) {
     return (
@@ -186,14 +203,8 @@ const ChatLayout = () => {
         contextMenuTargetId={contextMenu?.targetId}
         onServerContextMenu={(event, server) => {
           const sid = getServerId(server);
-          const resolvedServer =
-            getServerId(currentServer) === sid ? currentServer : server;
-          openContextMenu(event, {
-            type: "server",
-            targetId: sid,
-            title: getServerName(resolvedServer),
-            items: serverMenuItems,
-          });
+          const resolvedServer = getServerId(currentServer) === sid ? currentServer : server;
+          openContextMenu(event, { type: "server", targetId: sid, title: getServerName(resolvedServer), items: serverMenuItems });
         }}
       />
 
@@ -208,12 +219,7 @@ const ChatLayout = () => {
         members={currentServer?.members || []}
         hostId={currentServer?.hostId}
         onServerContextMenu={(event) =>
-          openContextMenu(event, {
-            type: "server",
-            targetId: serverId,
-            title: getServerName(currentServer),
-            items: serverMenuItems,
-          })
+          openContextMenu(event, { type: "server", targetId: serverId, title: getServerName(currentServer), items: serverMenuItems })
         }
         onChannelContextMenu={(event, channel) =>
           openContextMenu(event, {
@@ -226,10 +232,7 @@ const ChatLayout = () => {
                 openConfirmModal({
                   title: "정말로 삭제하시겠습니까?",
                   description: "확인을 누르면 현재 채널이 삭제됩니다.",
-                  onConfirm: async () => {
-                    await removeChannel(channel);
-                    closeConfirmModal();
-                  },
+                  onConfirm: async () => { await removeChannel(channel); closeConfirmModal(); },
                 }),
             }),
           })
@@ -237,13 +240,23 @@ const ChatLayout = () => {
       />
 
       <main className="chat-content-wrapper" style={{ display: "flex", flex: 1, minWidth: 0 }}>
-        <ChatWindow activeChannel={activeChannel} channels={currentServer.channels} />
-        <ResourceHub serverResources={currentServer} setCurrentServer={setCurrentServer} />
+        {/* ✅ ChatWindow에 sendWsMessage, isConnected, chatMessageHandlerRef 전달 */}
+        <ChatWindow
+          activeChannel={activeChannel}
+          channels={currentServer.channels}
+          sendWsMessage={sendWsMessage}
+          isConnected={isConnected}
+          chatMessageHandlerRef={chatMessageHandlerRef}
+        />
+        {/* ✅ ResourceHub에 sendWsMessage 전달 */}
+        <ResourceHub
+          serverResources={currentServer}
+          setCurrentServer={setCurrentServer}
+          sendWsMessage={sendWsMessage}
+        />
       </main>
 
-      {isServerModalOpen && (
-        <CreateServerModal onClose={() => setIsServerModalOpen(false)} />
-      )}
+      {isServerModalOpen && <CreateServerModal onClose={() => setIsServerModalOpen(false)} />}
 
       <CreateChannelModal
         open={isChannelModalOpen}
@@ -273,9 +286,7 @@ const ChatLayout = () => {
         open={settingsModal?.type === "channel"}
         entityType="channel"
         entityName={settingsModal?.entityName}
-        fields={createChannelFields(
-          createChannelDefaultValues(settingsModal?.channel || {}),
-        )}
+        fields={createChannelFields(createChannelDefaultValues(settingsModal?.channel || {}))}
         onClose={closeSettingsModal}
         onSubmit={handleChannelSettingsSubmit}
       />

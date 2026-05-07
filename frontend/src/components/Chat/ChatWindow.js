@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useParams } from "react-router-dom";
-import useWebSocket from "./hooks/useWebSocket";
 import { uploadFile } from "../../lib/resources";
 
 const IMAGE_MESSAGE_TYPES = new Set(["IMAGE", "image"]);
@@ -9,6 +8,7 @@ const FILE_MESSAGE_TYPES = new Set(["FILE", "file"]);
 const LINK_MESSAGE_TYPES = new Set(["LINK", "link"]);
 const AI_SUMMARY_MESSAGE_TYPES = new Set(["ai-summary", "AI_SUMMARY"]);
 
+// Helper for deduplication
 const isSameMessage = (left, right) => {
   if (!left || !right) return false;
   if (left.messageId && right.messageId && left.messageId === right.messageId) return true;
@@ -82,7 +82,14 @@ const getDroppedFile = (event) => {
 
 const isImageUpload = (file) => Boolean(file?.type?.startsWith("image/"));
 
-const ChatWindow = ({ activeChannel, channels }) => {
+/**
+ * @param {string} activeChannel - 현재 활성 채널 ID
+ * @param {Array} channels - 채널 목록
+ * @param {function} sendWsMessage - ChatLayout에서 전달받은 WebSocket 전송 함수
+ * @param {boolean} isConnected - WebSocket 연결 상태
+ * @param {object} chatMessageHandlerRef - ChatLayout에서 메시지 핸들러 등록용 ref
+ */
+const ChatWindow = ({ activeChannel, channels, sendWsMessage, isConnected, chatMessageHandlerRef }) => {
   const { user } = useAuth();
   const { serverId } = useParams();
   const CURRENT_USER = user?.nickname || "";
@@ -97,10 +104,12 @@ const ChatWindow = ({ activeChannel, channels }) => {
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
 
-  const currentChannel = channels?.find(
-    (ch) => (ch.chId || ch.id) === activeChannel,
-  );
+  const activeChannelRef = useRef(activeChannel);
+  useEffect(() => {
+    activeChannelRef.current = activeChannel;
+  }, [activeChannel]);
 
+  // 채널 초기 메시지 로드
   useEffect(() => {
     if (!activeChannel || !channels) return;
 
@@ -115,11 +124,6 @@ const ChatWindow = ({ activeChannel, channels }) => {
       return updated;
     });
   }, [channels, activeChannel]);
-
-  const activeChannelRef = useRef(activeChannel);
-  useEffect(() => {
-    activeChannelRef.current = activeChannel;
-  }, [activeChannel]);
 
   useEffect(() => {
     return () => {
@@ -179,6 +183,7 @@ const ChatWindow = ({ activeChannel, channels }) => {
     };
   }, [activeChannel, serverId, user?.nickname, user?.userId]);
 
+  // ✅ 메시지 수신 핸들러 - ChatLayout의 ref에 등록
   const handleWsMessage = useCallback((parsed) => {
     const { action, data } = parsed;
     const channelId = data?.channelId || activeChannelRef.current;
@@ -208,11 +213,12 @@ const ChatWindow = ({ activeChannel, channels }) => {
     }
   }, [appendMessageToChannel]);
 
-  const { sendMessage, isConnected } = useWebSocket({
-    serverId,
-    userId: user?.userId,
-    onMessage: handleWsMessage,
-  });
+  // ✅ ChatLayout의 ref에 핸들러 등록
+  useEffect(() => {
+    if (chatMessageHandlerRef) {
+      chatMessageHandlerRef.current = handleWsMessage;
+    }
+  }, [chatMessageHandlerRef, handleWsMessage]);
 
   const currentMessages = useMemo(
     () =>
@@ -230,17 +236,17 @@ const ChatWindow = ({ activeChannel, channels }) => {
     messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
   }, [activeChannel]);
 
-  const broadcastUploadedFile = useCallback((savedFile) => {
+  const broadcastUploadedFile = useCallback((savedFile, content = "") => {
     if (!savedFile || !activeChannel || !isConnected) return;
 
     const imageType = savedFile.fileType?.startsWith("image/");
-    sendMessage("sendMessage", {
+    sendWsMessage?.("sendMessage", {
       serverId,
       channelId: activeChannel,
       senderId: user?.userId,
       senderNickname: user?.nickname,
       messageType: imageType ? "IMAGE" : "FILE",
-      content: imageType ? "" : savedFile.fileName,
+      content: content || (imageType ? "" : savedFile.fileName),
       imageUrl: imageType ? savedFile.fileUrl : undefined,
       fileUrl: savedFile.fileUrl,
       fileName: savedFile.fileName,
@@ -248,7 +254,7 @@ const ChatWindow = ({ activeChannel, channels }) => {
       fileId: savedFile.fileId,
       s3ObjectKey: savedFile.s3ObjectKey,
     });
-  }, [activeChannel, isConnected, sendMessage, serverId, user?.nickname, user?.userId]);
+  }, [activeChannel, isConnected, sendWsMessage, serverId, user?.nickname, user?.userId]);
 
   const handleUpload = useCallback(async (file) => {
     if (!file) return;
@@ -314,21 +320,7 @@ const ChatWindow = ({ activeChannel, channels }) => {
         optimisticMessage.content = trimmed;
         appendMessageToChannel(activeChannel, optimisticMessage);
 
-        const imageType = savedFile.fileType?.startsWith("image/");
-        sendMessage("sendMessage", {
-          serverId,
-          channelId: activeChannel,
-          senderId: user?.userId,
-          senderNickname: user?.nickname,
-          messageType: imageType ? "IMAGE" : "FILE",
-          content: trimmed,
-          imageUrl: imageType ? savedFile.fileUrl : undefined,
-          fileUrl: savedFile.fileUrl,
-          fileName: savedFile.fileName,
-          fileType: savedFile.fileType,
-          fileId: savedFile.fileId,
-          s3ObjectKey: savedFile.s3ObjectKey,
-        });
+        broadcastUploadedFile(savedFile, trimmed);
 
         setInputText("");
         clearPendingImage();
@@ -342,7 +334,7 @@ const ChatWindow = ({ activeChannel, channels }) => {
       return;
     }
 
-    sendMessage("sendMessage", {
+    sendWsMessage?.("sendMessage", {
       serverId,
       channelId: activeChannel,
       senderId: user?.userId,
@@ -352,7 +344,7 @@ const ChatWindow = ({ activeChannel, channels }) => {
     });
 
     setInputText("");
-  }, [activeChannel, appendMessageToChannel, clearPendingImage, createOptimisticUploadMessage, inputText, isConnected, pendingImage, sendMessage, serverId, user?.nickname, user?.userId]);
+  }, [activeChannel, appendMessageToChannel, clearPendingImage, createOptimisticUploadMessage, broadcastUploadedFile, inputText, isConnected, pendingImage, sendWsMessage, serverId, user?.nickname, user?.userId]);
 
   const handleKeyDown = (event) => {
     if (event.nativeEvent?.isComposing || isComposing || event.keyCode === 229) {
@@ -556,6 +548,7 @@ const ChatWindow = ({ activeChannel, channels }) => {
               );
             }
 
+            // AI 요약 타입 렌더링
             if (AI_SUMMARY_MESSAGE_TYPES.has(msg.type) || AI_SUMMARY_MESSAGE_TYPES.has(msg.messageType)) {
               let aiResult = {};
               try {
