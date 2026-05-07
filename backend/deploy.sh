@@ -123,9 +123,35 @@ done
 
 echo "✅ Lambda 함수 ${#FUNCTIONS[@]}개 배포 완료!"
 
-# ── 3단계: 배포 확인 ─────────────────────────────────────
+# ── 3단계: S3 CORS 설정 업데이트 ──────────────────────────
 echo ""
-echo "📋 3단계: 배포 결과 확인"
+echo "🌐 3단계: S3 CORS 설정 업데이트 중..."
+echo "────────────────────────────────────────"
+
+# 임시 CORS 설정 파일 생성 (환경에 따라 파일 경로 처리)
+CORS_FILE="/tmp/cors-config.json"
+cat <<EOF > "$CORS_FILE"
+[
+  {
+    "AllowedHeaders": ["*"],
+    "AllowedMethods": ["GET", "PUT", "POST", "DELETE", "HEAD"],
+    "AllowedOrigins": ["*"],
+    "ExposeHeaders": ["ETag"],
+    "MaxAgeSeconds": 3000
+  }
+]
+EOF
+
+aws s3api put-bucket-cors \
+  --bucket "inhatc-team3-2-resources" \
+  --cors-configuration "file://$CORS_FILE" \
+  --region "$REGION"
+
+echo "✅ S3 CORS 설정 완료!"
+
+# ── 4단계: 배포 확인 ─────────────────────────────────────
+echo ""
+echo "📋 4단계: 배포 결과 확인"
 echo "────────────────────────────────────────"
 
 for entry in "${FUNCTIONS[@]}"; do
