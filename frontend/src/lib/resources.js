@@ -22,18 +22,16 @@ export function saveLink(serverId, url) {
 }
 
 export async function uploadFile(serverId, file) {
-  const contentType = file.type || "application/octet-stream";
-
   const { uploadUrl, fileUrl, s3ObjectKey } = await getUploadUrl(
     file.name,
-    contentType
+    file.type || "application/octet-stream"
   );
 
   const uploadResponse = await fetch(uploadUrl, {
     method: "PUT",
     body: file,
     headers: {
-      "Content-Type": contentType,
+      "Content-Type": file.type || "application/octet-stream",
     },
   });
 
