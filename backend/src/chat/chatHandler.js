@@ -359,6 +359,52 @@ async function deleteMessage(event, body) {
   };
 }
 
+// =========================
+// AI 분석 시작 알림 브로드캐스트
+// =========================
+async function aiAnalysisStarted(event, body) {
+  const domain = event.requestContext.domainName;
+  const stage = event.requestContext.stage;
+  const apigw = getApigwClient(domain, stage);
+
+  const { serverId, fileName, requestId, requestedBy } = body;
+
+  if (!serverId || !requestId) {
+    return {
+      statusCode: 400,
+      body: JSON.stringify({ message: "serverId, requestId가 필요합니다." }),
+    };
+  }
+
+  // 같은 서버 접속자 전체 조회
+  const response = await dynamoDb.send(new QueryCommand({
+    TableName: CONNECTIONS_TABLE,
+    IndexName: "serverId-index",
+    KeyConditionExpression: "serverId = :serverId",
+    ExpressionAttributeValues: { ":serverId": serverId },
+  }));
+
+  const connections = response.Items || [];
+
+  // 브로드캐스트
+  await Promise.all(
+    connections.map((conn) =>
+      sendToConnection(apigw, conn.connectionId, {
+        action: "aiAnalysisStarted",
+        data: {
+          serverId,
+          fileName,
+          requestId,
+          requestedBy,
+          startedAt: new Date().toISOString(),
+        },
+      })
+    )
+  );
+
+  return { statusCode: 200 };
+}
+
 
 // =========================
 // 리소스 업데이트 브로드캐스트
@@ -424,6 +470,7 @@ module.exports.handler = async (event) => {
     if (routeKey === "updateMessage") return await updateMessage(event, body);
     if (routeKey === "deleteMessage") return await deleteMessage(event, body);
     if (routeKey === "resourceUpdated") return await resourceUpdated(event, body);
+    if (routeKey === "aiAnalysisStarted") return await aiAnalysisStarted(event, body);
 
     return { statusCode: 200 };
 
