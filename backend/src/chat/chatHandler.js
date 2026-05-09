@@ -363,11 +363,15 @@ async function deleteMessage(event, body) {
 // AI 분석 시작 알림 브로드캐스트
 // =========================
 async function aiAnalysisStarted(event, body) {
+  console.log("📢 aiAnalysisStarted 진입:", JSON.stringify(body));  // ← 추가
+  
   const domain = event.requestContext.domainName;
   const stage = event.requestContext.stage;
   const apigw = getApigwClient(domain, stage);
 
   const { serverId, fileName, requestId, requestedBy } = body;
+  
+  console.log("📢 추출 결과:", { serverId, requestId });  // ← 추가
 
   if (!serverId || !requestId) {
     return {
@@ -375,8 +379,9 @@ async function aiAnalysisStarted(event, body) {
       body: JSON.stringify({ message: "serverId, requestId가 필요합니다." }),
     };
   }
+  
+  console.log("📢 Connections 조회 시작");  // ← 추가
 
-  // 같은 서버 접속자 전체 조회
   const response = await dynamoDb.send(new QueryCommand({
     TableName: CONNECTIONS_TABLE,
     IndexName: "serverId-index",
@@ -384,27 +389,23 @@ async function aiAnalysisStarted(event, body) {
     ExpressionAttributeValues: { ":serverId": serverId },
   }));
 
+  console.log("📢 Connections 결과:", response.Items?.length, "건");  // ← 추가
+
   const connections = response.Items || [];
 
-  // 브로드캐스트
   await Promise.all(
     connections.map((conn) =>
       sendToConnection(apigw, conn.connectionId, {
         action: "aiAnalysisStarted",
-        data: {
-          serverId,
-          fileName,
-          requestId,
-          requestedBy,
-          startedAt: new Date().toISOString(),
-        },
+        data: { serverId, fileName, requestId, requestedBy, startedAt: new Date().toISOString() },
       })
     )
   );
 
+  console.log("📢 브로드캐스트 완료");  // ← 추가
+
   return { statusCode: 200 };
 }
-
 
 // =========================
 // 리소스 업데이트 브로드캐스트
