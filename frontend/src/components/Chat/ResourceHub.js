@@ -1,7 +1,9 @@
 import React, { useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
+import { v4 as uuidv4 } from 'uuid';
 import { uploadFile, saveLink, deleteFile, deleteLink } from '../../lib/resources';
 import { request } from '../../lib/request';
+import { useAuth } from '../../contexts/AuthContext';
 
 import './ResourceHub.css';
 
@@ -29,6 +31,7 @@ const isAnalyzable = (fileName, fileType) => {
  * @param {function} sendWsMessage - WebSocket 메시지 전송 함수 (ChatLayout에서 전달)
  */
 const ResourceHub = ({ serverResources, setCurrentServer, sendWsMessage }) => {
+  const { user } = useAuth();
   const [activeHubTab, setActiveHubTab] = useState('Files');
   const { serverId } = useParams();
   const fileInputRef = useRef(null);
@@ -113,7 +116,20 @@ const ResourceHub = ({ serverResources, setCurrentServer, sendWsMessage }) => {
       else if (ext === 'webp') fileType = 'image/webp';
     }
 
+    // 임시 메시지 식별용 uuid
+    const requestId = uuidv4();
+
     setAnalyzingFileId(file.fileId);
+
+    // 1. 같은 채널 모든 사람에게 "분석 시작" 브로드캐스트
+    sendWsMessage?.('aiAnalysisStarted', {
+      serverId,
+      fileName: file.fileName,
+      requestId,
+      requestedBy: user?.nickname || '누군가',
+    });
+
+    // 2. AI 분석 요청 (백엔드)
     try {
       await request('/ai/analyze', {
         method: 'POST',
@@ -122,12 +138,13 @@ const ResourceHub = ({ serverResources, setCurrentServer, sendWsMessage }) => {
           s3ObjectKey: file.s3ObjectKey,
           fileType,
           fileName: file.fileName,
+          requestId, // 같은 requestId 함께 전송 → 결과에 aiRequestId로 박혀 돌아옴
         }),
       });
-      alert('AI 분석이 완료되었습니다. 채팅창에서 결과를 확인하세요.');
+      // 정상 완료. 임시 메시지는 ai-summary 도착 시 자동 교체됨.
     } catch (error) {
-      console.error('AI 분석 요청:', error);
-      alert('AI 분석을 요청했습니다. PDF는 분석에 1~2분 소요됩니다. 완료되면 채팅창에 자동으로 결과가 표시됩니다.');
+      // API Gateway 29초 타임아웃은 정상 (Lambda는 백그라운드 실행 중)
+      console.log('AI 분석 요청 진행 중:', error.message);
     } finally {
       setAnalyzingFileId(null);
     }

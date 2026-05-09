@@ -80,7 +80,7 @@ const ChatLayout = () => {
     const { action, data } = parsed;
 
     // 채팅 메시지 관련 → ChatWindow 핸들러로 위임
-    if (['receiveMessage', 'messageUpdated', 'messageDeleted'].includes(action)) {
+    if (['receiveMessage', 'messageUpdated', 'messageDeleted', 'aiAnalysisStarted'].includes(action)) {
       chatMessageHandlerRef.current?.(parsed);
       return;
     }

@@ -7,6 +7,8 @@ const IMAGE_MESSAGE_TYPES = new Set(["IMAGE", "image"]);
 const FILE_MESSAGE_TYPES = new Set(["FILE", "file"]);
 const LINK_MESSAGE_TYPES = new Set(["LINK", "link"]);
 const AI_SUMMARY_MESSAGE_TYPES = new Set(["ai-summary", "AI_SUMMARY"]);
+const AI_PENDING_MESSAGE_TYPES = new Set(["ai-pending"]);
+const AI_FAILED_MESSAGE_TYPES = new Set(["ai-failed"]);
 
 // Helper for deduplication
 const isSameMessage = (left, right) => {
@@ -103,6 +105,7 @@ const ChatWindow = ({ activeChannel, channels, sendWsMessage, isConnected, chatM
   const dragDepthRef = useRef(0);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
+  const aiPendingTimeoutsRef = useRef(new Map()); // requestId → timeoutId
 
   const activeChannelRef = useRef(activeChannel);
   useEffect(() => {
@@ -194,6 +197,30 @@ const ChatWindow = ({ activeChannel, channels, sendWsMessage, isConnected, chatM
     const channelId = data?.channelId || activeChannelRef.current;
 
     if (action === "receiveMessage" && data) {
+      // ai-summary 도착 시: 같은 requestId의 ai-pending 제거 + 타이머 정리
+      if (
+        (AI_SUMMARY_MESSAGE_TYPES.has(data.messageType) || AI_SUMMARY_MESSAGE_TYPES.has(data.type)) &&
+        data.aiRequestId
+      ) {
+        const timeoutId = aiPendingTimeoutsRef.current.get(data.aiRequestId);
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          aiPendingTimeoutsRef.current.delete(data.aiRequestId);
+        }
+        // ai-pending 제거 후 ai-summary 추가
+        setChannelMessages((prev) => {
+          const targetChannel = channelId;
+          const filtered = (prev[targetChannel] || []).filter(
+            (m) => !(m.aiRequestId === data.aiRequestId && AI_PENDING_MESSAGE_TYPES.has(m.messageType)),
+          );
+          return {
+            ...prev,
+            [targetChannel]: [...filtered, data],
+          };
+        });
+        return;
+      }
+
       appendMessageToChannel(channelId, data);
       return;
     }
@@ -215,6 +242,55 @@ const ChatWindow = ({ activeChannel, channels, sendWsMessage, isConnected, chatM
           msg.messageId === data.messageId ? { ...msg, ...data } : msg,
         ),
       }));
+      return;
+    }
+
+    // AI 분석 시작 알림 → 임시 메시지 추가 + 5분 타이머 등록
+    if (action === "aiAnalysisStarted" && data) {
+      const { requestId, fileName, requestedBy, startedAt } = data;
+      if (!requestId) return;
+
+      const targetChannel = channelId;
+
+      setChannelMessages((prev) => {
+        const existing = prev[targetChannel] || [];
+        // 중복 방지
+        if (existing.some((m) => m.aiRequestId === requestId && AI_PENDING_MESSAGE_TYPES.has(m.messageType))) {
+          return prev;
+        }
+        return {
+          ...prev,
+          [targetChannel]: [
+            ...existing,
+            {
+              messageId: `ai-pending-${requestId}`,
+              messageType: "ai-pending",
+              aiRequestId: requestId,
+              channelId: targetChannel,
+              fileName,
+              requestedBy,
+              createdAt: startedAt || new Date().toISOString(),
+              senderId: "system-ai",
+              senderNickname: "AI 스터디 조교",
+            },
+          ],
+        };
+      });
+
+      // 5분 후 자동 실패 처리
+      const timeoutId = setTimeout(() => {
+        setChannelMessages((prev) => ({
+          ...prev,
+          [targetChannel]: (prev[targetChannel] || []).map((m) =>
+            m.aiRequestId === requestId && AI_PENDING_MESSAGE_TYPES.has(m.messageType)
+              ? { ...m, messageType: "ai-failed", messageId: `ai-failed-${requestId}` }
+              : m,
+          ),
+        }));
+        aiPendingTimeoutsRef.current.delete(requestId);
+      }, 5 * 60 * 1000);
+
+      aiPendingTimeoutsRef.current.set(requestId, timeoutId);
     }
   }, [appendMessageToChannel]);
 
@@ -240,6 +316,13 @@ const ChatWindow = ({ activeChannel, channels, sendWsMessage, isConnected, chatM
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
   }, [activeChannel]);
+
+  useEffect(() => {
+    return () => {
+      aiPendingTimeoutsRef.current.forEach((timeoutId) => clearTimeout(timeoutId));
+      aiPendingTimeoutsRef.current.clear();
+    };
+  }, []);
 
   const broadcastUploadedFile = useCallback((savedFile, content = "") => {
     if (!savedFile || !activeChannel || !isConnected) return;
@@ -483,6 +566,9 @@ const ChatWindow = ({ activeChannel, channels, sendWsMessage, isConnected, chatM
     if (AI_SUMMARY_MESSAGE_TYPES.has(msg.type) || AI_SUMMARY_MESSAGE_TYPES.has(msg.messageType)) {
       return true;
     }
+    if (AI_PENDING_MESSAGE_TYPES.has(messageType) || AI_FAILED_MESSAGE_TYPES.has(messageType)) {
+      return true;
+    }
     if (IMAGE_MESSAGE_TYPES.has(messageType)) {
       return Boolean(msg.imageUrl || content);
     }
@@ -548,6 +634,76 @@ const ChatWindow = ({ activeChannel, channels, sendWsMessage, isConnected, chatM
                   <div className="avatar" style={{ opacity: 0.4 }}>?</div>
                   <div className="message-content">
                     <p style={{ color: "#52525b", fontStyle: "italic" }}>삭제된 메시지입니다.</p>
+                  </div>
+                </div>
+              );
+            }
+
+            // AI 분석 진행 중 임시 메시지
+            if (AI_PENDING_MESSAGE_TYPES.has(msg.messageType)) {
+              return (
+                <div key={key} className="ai-summary-box" style={{ opacity: 0.7 }}>
+                  <div className="ai-summary-header">
+                    <span className="ai-icon">🔄</span>
+                    <span className="ai-label">SAGE AI</span>
+                    <span className="ai-tag">분석 중</span>
+                    {msg.fileName && (
+                      <span
+                        className="ai-filename"
+                        style={{
+                          marginLeft: "8px",
+                          fontSize: "12px",
+                          color: "#a1a1aa",
+                          fontStyle: "italic",
+                        }}
+                      >
+                        📎 {msg.fileName}
+                      </span>
+                    )}
+                  </div>
+                  <div className="ai-summary-content">
+                    <div style={{ fontSize: "13px", color: "#d4d4d8", lineHeight: 1.6 }}>
+                      {msg.requestedBy ? `${msg.requestedBy}님이 요청한` : "요청된"} 파일을 분석하고 있어요.
+                      <br />
+                      <span style={{ fontSize: "11px", color: "#71717a" }}>
+                        PDF는 1~5분 소요됩니다. 완료되면 자동으로 결과가 표시됩니다.
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+
+            // AI 분석 실패 메시지
+            if (AI_FAILED_MESSAGE_TYPES.has(msg.messageType)) {
+              return (
+                <div key={key} className="ai-summary-box" style={{ opacity: 0.6 }}>
+                  <div className="ai-summary-header">
+                    <span className="ai-icon">❌</span>
+                    <span className="ai-label" style={{ color: "#ef4444" }}>SAGE AI</span>
+                    <span className="ai-tag" style={{ color: "#ef4444" }}>분석 실패</span>
+                    {msg.fileName && (
+                      <span
+                        className="ai-filename"
+                        style={{
+                          marginLeft: "8px",
+                          fontSize: "12px",
+                          color: "#a1a1aa",
+                          fontStyle: "italic",
+                        }}
+                      >
+                        📎 {msg.fileName}
+                      </span>
+                    )}
+                  </div>
+                  <div className="ai-summary-content">
+                    <div style={{ fontSize: "13px", color: "#d4d4d8", lineHeight: 1.6 }}>
+                      분석에 시간이 너무 오래 걸려 중단되었습니다.
+                      <br />
+                      <span style={{ fontSize: "11px", color: "#71717a" }}>
+                        잠시 후 🤖 버튼으로 다시 시도해주세요.
+                      </span>
+                    </div>
                   </div>
                 </div>
               );
