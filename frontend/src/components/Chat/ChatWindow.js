@@ -318,9 +318,10 @@ const ChatWindow = ({ activeChannel, channels, sendWsMessage, isConnected, chatM
   }, [activeChannel]);
 
   useEffect(() => {
+    const timeoutsMap = aiPendingTimeoutsRef.current;
     return () => {
-      aiPendingTimeoutsRef.current.forEach((timeoutId) => clearTimeout(timeoutId));
-      aiPendingTimeoutsRef.current.clear();
+      timeoutsMap.forEach((timeoutId) => clearTimeout(timeoutId));
+      timeoutsMap.clear();
     };
   }, []);
 
