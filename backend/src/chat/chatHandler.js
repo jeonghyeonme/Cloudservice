@@ -415,7 +415,7 @@ async function resourceUpdated(event, body) {
   const stage = event.requestContext.stage;
   const apigw = getApigwClient(domain, stage);
 
-  const { serverId, resourceType, resource } = body;
+  const { serverId, resourceType, resourceAction, data: resourceData } = body;
 
   if (!serverId) {
     return {
@@ -434,15 +434,16 @@ async function resourceUpdated(event, body) {
 
   const connections = response.Items || [];
 
-  // 브로드캐스트
+  // 프론트가 보낸 형식 그대로 전달 (resourceType, resourceAction, data 포함)
   await Promise.all(
     connections.map((conn) =>
       sendToConnection(apigw, conn.connectionId, {
         action: "resourceUpdated",
         data: {
           serverId,
-          resourceType: resourceType || "unknown",
-          resource: resource || null,
+          resourceType,
+          resourceAction,
+          data: resourceData,
           updatedAt: new Date().toISOString(),
         },
       })
