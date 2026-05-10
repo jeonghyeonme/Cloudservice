@@ -3,6 +3,7 @@ const {
   UpdateCommand,
   QueryCommand,
   DeleteCommand,
+  GetCommand,
 } = require("@aws-sdk/lib-dynamodb");
 const {
   ApiGatewayManagementApiClient,
@@ -69,14 +70,48 @@ async function onConnect(event) {
 // =========================
 async function onDisconnect(event) {
   const connectionId = event.requestContext.connectionId;
+  const domain = event.requestContext.domainName;
+  const stage = event.requestContext.stage;
+  const apigw = getApigwClient(domain, stage);
 
-  // Delete 대신 논리적으로 방에서 제외
+  // 1. 끊긴 connection의 serverId, userId 조회 (브로드캐스트용)
+  const connResult = await dynamoDb.send(new GetCommand({
+    TableName: CONNECTIONS_TABLE,
+    Key: { connectionId },
+  })).catch(() => null);
+
+  const serverId = connResult?.Item?.serverId;
+  const userId = connResult?.Item?.userId;
+
+  // 2. CONNECTIONS 테이블 업데이트 (DISCONNECTED)
   await dynamoDb.send(new UpdateCommand({
     TableName: CONNECTIONS_TABLE,
-    Key:       { connectionId },
+    Key: { connectionId },
     UpdateExpression: "SET serverId = :none",
     ExpressionAttributeValues: { ":none": "DISCONNECTED" }
   })).catch(() => {});
+
+  // 3. 같은 서버 다른 접속자들에게 userLeft 브로드캐스트
+  if (serverId && serverId !== "DISCONNECTED" && userId) {
+    const response = await dynamoDb.send(new QueryCommand({
+      TableName: CONNECTIONS_TABLE,
+      IndexName: "serverId-index",
+      KeyConditionExpression: "serverId = :serverId",
+      ExpressionAttributeValues: { ":serverId": serverId },
+    }));
+    const connections = response.Items || [];
+
+    await Promise.all(
+      connections
+        .filter((c) => c.connectionId !== connectionId)
+        .map((conn) =>
+          sendToConnection(apigw, conn.connectionId, {
+            action: "userLeft",
+            data: { serverId, userId },
+          })
+        )
+    );
+  }
 
   return { statusCode: 200 };
 }
@@ -113,10 +148,14 @@ async function createServer(body) {
 // =========================
 // 방 입장
 // =========================
-async function joinServer(connectionId, body) {
+async function joinServer(connectionId, body, event) {
+  const domain = event.requestContext.domainName;
+  const stage = event.requestContext.stage;
+  const apigw = getApigwClient(domain, stage);
+
   const { serverId, userId } = body;
 
-  // 해당 connection에 serverId, userId 연결
+  // 1. 해당 connection에 serverId, userId 연결
   await dynamoDb.send(new UpdateCommand({
     TableName:                 CONNECTIONS_TABLE,
     Key:                       { connectionId },
@@ -124,13 +163,43 @@ async function joinServer(connectionId, body) {
     ExpressionAttributeValues: { ":r": serverId, ":u": userId },
   }));
 
-  // 방 인원 +1
+  // 2. 방 인원 +1
   await dynamoDb.send(new UpdateCommand({
     TableName:                 SERVERS_TABLE,
     Key:                       { serverId },
     UpdateExpression:          "SET currentCount = currentCount + :inc",
     ExpressionAttributeValues: { ":inc": 1 },
   }));
+
+  // 3. 같은 서버 모든 접속자 조회
+  const response = await dynamoDb.send(new QueryCommand({
+    TableName: CONNECTIONS_TABLE,
+    IndexName: "serverId-index",
+    KeyConditionExpression: "serverId = :serverId",
+    ExpressionAttributeValues: { ":serverId": serverId },
+  }));
+  const connections = response.Items || [];
+
+  // 4. 본인에게 현재 온라인 유저 ID 리스트 전송 (자기 포함)
+  const onlineUserIds = [...new Set(
+    connections.map((c) => c.userId).filter(Boolean)
+  )];
+  await sendToConnection(apigw, connectionId, {
+    action: "onlineMembers",
+    data: { serverId, onlineUserIds },
+  });
+
+  // 5. 다른 접속자들에게 userJoined 브로드캐스트 (본인 제외)
+  await Promise.all(
+    connections
+      .filter((c) => c.connectionId !== connectionId)
+      .map((conn) =>
+        sendToConnection(apigw, conn.connectionId, {
+          action: "userJoined",
+          data: { serverId, userId },
+        })
+      )
+  );
 
   return {
     statusCode: 200,
@@ -467,7 +536,7 @@ module.exports.handler = async (event) => {
     const body = JSON.parse(event.body || "{}");
 
     if (routeKey === "createServer")  return await createServer(body);
-    if (routeKey === "joinServer")    return await joinServer(event.requestContext.connectionId, body);
+    if (routeKey === "joinServer")    return await joinServer(event.requestContext.connectionId, body, event);
     if (routeKey === "sendMessage") return await sendMessage(event, body);
     if (routeKey === "updateMessage") return await updateMessage(event, body);
     if (routeKey === "deleteMessage") return await deleteMessage(event, body);
