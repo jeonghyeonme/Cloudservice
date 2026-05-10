@@ -66,7 +66,7 @@ C:\Users\parad\Cloudservice\
 | 파일명 | 상세 역할 및 핵심 로직 |
 | :--- | :--- |
 | **`chatHandler.js`** | **WebSocket 총괄**: `$connect/$disconnect` 관리 및 메시지/리소스 업데이트 실시간 브로드캐스트 로직 완비. |
-| **`getMessages.js`** | **이력 조회**: 특정 서버의 대화 이력을 DynamoDB에서 쿼리. (현재 키워드 필터링 미적용) |
+| **`getMessages.js`** | **이력 조회**: 특정 서버의 대화 이력을 DynamoDB에서 쿼리. `keyword` 파라미터를 통한 필터링 지원. |
 
 ### 5. 서버 및 채널 관리 모듈 (`servers/`)
 | 파일명 | 상세 역할 및 핵심 로직 |
@@ -150,41 +150,50 @@ C:\Users\parad\Cloudservice\
 ## 📅 향후 작업 가이드라인 (Developer Action Items)
 > 실사용 가능한 수준의 실시간 채팅과 자료 공유 환경 구축을 포함한 전체 개발 로드맵입니다.
 
-### 1. 실시간 메시징 고도화
-- **[Frontend] `useWebSocket.js`**: 연결 유실 시 자동으로 재연결을 시도하는 **재연결(Reconnection) 로직** 보완.
-- **[Frontend] `ChatWindow.js`**: 
-    - 메시지 타입 `IMAGE` 처리 로직 추가 (이미지 URL 존재 시 `<img>` 태그 렌더링).
-    - 이미지 업로드 성공 시 즉시 `IMAGE` 타입으로 메시지를 브로드캐스트하는 연동 작업.
-    - **입력창 UI 고도화**: 전송 버튼 아이콘, 리소스 추가용 '+' 버튼 및 입력창 테두리 포커스 효과 적용.
-    - **드래그 앤 드롭 업로드**: 
-        - 외부 파일 드래그 시 채팅창에 **디스코드풍 '업로드' 오버레이 UI** 노출.
-        - 파일 드롭 시 즉시 S3 업로드 파이프라인 트리거 및 메시지 전송 연동.
+### 1. 핵심 기능 확장 (Core Features)
+- **초대 시스템 고도화 (Invite System)**:
+    - **BackEnd:** `smartstudy-Invites` 전용 테이블 구축(PK: `inviteId`, GSI: `inviteCode-index`) 및 TTL 속성 정의. 8자리 난수 기반 초대 코드 생성 엔진 및 유효성 검증 API 구현.
+    - **FrontEnd:** 서버 설정 내 초대 코드 생성/관리 UI 및 탐색 페이지 "즉시 입장" 시 초대 코드를 통한 가입 프로세스 연동.
+- **유저 프로필 및 정보 관리 (User Profile)**:
+    - **BackEnd:** 
+        - `smartstudy-Users` 테이블 내 `profileImageUrl`, `bio`(상태 메시지) 필드 추가 및 데이터 스키마 확장.
+        - **프로필 이미지 업로드:** S3 전용 경로(`profiles/{userId}/`) 할당 및 Pre-signed URL 발급 API 구현.
+        - **프로필 통합 수정 API:** `PATCH /users/me` 엔드포인트를 통해 닉네임/이미지/상태메시지 부분 업데이트 지원.
+    - **FrontEnd:**
+        - **프로필 관리 모달:** 이미지 드래그 앤 드롭 업로드, 닉네임 중복 체크 UI, 상태 메시지 입력 기능 구현.
+        - **전역 상태 동기화:** `AuthContext`의 유저 정보를 즉시 갱신하여 사이드바, 메시지 리스트, 참여자 목록의 아바타/닉네임을 일괄 업데이트.
+        - **이미지 최적화:** S3에 업로드된 이미지를 리사이징하여 아바타 크기에 최적화된 썸네일 노출.
+- **서버 관리자 도구 (Moderation)**:
+    - **BackEnd:** 
+        - **권한 제어(RBAC):** `ServerMembers` 테이블 기반 Role 시스템(HOST, MODERATOR, MEMBER) 고도화.
+        - **관리 API:** 특정 멤버 강퇴(Kick), 영구 차단(Ban), 방장 권한 위임(Ownership Transfer) 트랜잭션 API 구현.
+        - **서버 설정 강화:** 초대 코드 초기화, 서버 비공개 전환 및 비밀번호 즉시 변경 로직.
+    - **FrontEnd:**
+        - **멤버 관리 대시보드:** 호스트 전용 멤버 목록 관리 UI 구축 (권한 변경, 강퇴 버튼 등).
+        - **컨텍스트 메뉴 확장:** 멤버 아이콘/닉네임 우클릭 시 권한에 따른 관리 메뉴(강퇴, 권한 부여 등) 동적 노출.
+        - **호스트 가드(Guard):** 관리자 전용 기능 접근 시 클라이언트/서버 이중 권한 검증 로직 적용.
+- **모바일 대응 반응형 레이아웃 (Responsive Design)**:
+    - **적응형 UI 레이아웃:** 768px(태블릿) 및 480px(모바일) 기준 미디어 쿼리 적용. 데스크톱의 3단 분할 레이아웃을 모바일 환경에 맞게 싱글/듀얼 스택으로 가변 처리.
+    - **모바일 드로어(Drawer) 시스템:** 화면 좌측 상단 햄버거 메뉴를 통한 서버/채널 리스트 슬라이드 애니메이션 구현.
+    - **상태 관리:** 드로어 열림/닫힘 상태를 전역 또는 상위 컨텍스트에서 관리하여 페이지 이동 시 자동 닫힘 처리.
+    - **터치 최적화:** 모바일 전용 하단 탭 바(채팅/리소스/멤버) 및 터치 영역(Hit Area) 확장을 통한 조작성 개선.
 
-### 2. 리소스 허브 실시간 동기화
-- **[Frontend] `ResourceHub.js`**: 파일/링크 업로드 및 삭제 완료 시 WebSocket으로 **`resourceUpdated`** 액션 전송 로직 추가.
-- **[Frontend] `ChatLayout.js` 또는 `ChatWindow.js`**: 
-    - WebSocket으로부터 `resourceUpdated` 이벤트를 수신할 수 있도록 핸들러 확장.
-    - 이벤트 수신 시 `setCurrentServer` 등을 통해 리소스 목록을 즉시 갱신하여 새로고침 없이 동기화 구현.
+### 2. 리소스-채팅 연동 및 동기화
+- **[Frontend] 자동 알림 메시지 생성**: 리소스 허브에서 파일/링크 추가 시 `sendMessage` 액션을 자동 호출하여 메시지 기록.
+- **[Frontend] 메시지-리소스 통합 레이아웃**: 이미지 메시지 전송 시 텍스트 캡션을 포함할 수 있도록 데이터 구조 및 UI 렌더링 정교화. [검토 필요]
 
-### 3. AI 학습 지능화 및 UI 연동
-- **[Frontend] `lib/ai.js` (신규)**: `aiRouter` API 호출을 위한 서비스 함수 구현.
-- **[Frontend] `ResourceHub.js`**: 각 리소스 항목에 'AI 분석' 버튼 추가 및 분석 요청 로직 연동.
-- **[Frontend] `ChatWindow.js`**: 이미지 분석 결과(라벨, 번역) 및 문서 요약 전문 표시를 위한 전용 레이아웃 고도화.
+### 3. 검색 및 필터링 기능 완성
+- **[Frontend] 메시지 통합 검색 UI**: 채팅창 상단 헤더에 검색창 배치 및 백엔드 `getMessages` 검색 API 연동.
+- **[Frontend] 상태별 UI 피드백**: 서버/채널 목록 로딩 시 **Skeleton UI** 적용 및 검색 결과 부재 시 **Empty States** 구현.
 
-### 4. 검색 및 필터링 기능
-- **[Frontend] `ChatWindow.js`**: 상단 헤더에 메시지 검색바 추가 및 클라이언트 측 검색 필터링 구현.
-- **[Frontend] `ExploreServers.js`**: 서버 목록 로딩 시 **Skeleton UI** 및 검색 결과 부재 시 **Empty States** 적용.
-- **[Backend] `getMessages.js`**: `keyword` 파라미터를 지원하여 DynamoDB `FilterExpression`을 통한 키워드 검색 로직 추가.
+### 4. 사용자 편의성 및 운영 고도화
+- **[Frontend] 전역 Toast 알림 시스템**: `alert()`를 대체할 커스텀 Toast 시스템 구축 (우측 하단 스택형, 성공/에러/정보 타입별 스타일링).
+- **[Frontend] 전송 상태 및 에러 핸들링**: 메시지 전송 중 흐릿한 표시(Optimistic UI) 및 전송 실패 시 '재전송' 버튼 노출.
+- **[Frontend] 업로드 정책 제어**: 파일 확장자 화이트리스트 검사 및 용량 초과 시 즉각적인 UI 피드백 제공.
 
-### 5. 사용자 편의성 및 운영
-- **[Frontend] 전역 Toast 시스템 (신규)**:
-    - `alert()`를 대체할 커스텀 Toast 알림 시스템 구축.
-    - **UI 사양**: 우측 하단 고정, 최대 3단 스택, 3초 타이머 바(진행률 표시) 포함.
-    - **테마 연동**: `theme.css` 변수를 활용한 Success/Error/Info 타입별 스타일링.
-- **[Frontend] `ResourceHub.js`**: 백엔드 정책에 맞춘 파일 확장자 화이트리스트 필터링 추가 및 에러 피드백(`Toast`) 강화.
-- **[DevOps] 인프라 고도화**: 
-    - **CloudFront 연결**: S3 정적 웹 호스팅을 CloudFront 배포와 연결하여 HTTPS 및 캐싱 적용.
-    - **CI/CD 고도화**: GitHub Actions에 **CloudFront 캐시 무효화** 스텝 추가 및 배포 파이프라인 최종 점검.
+### 5. 코드 구조화 및 인프라
+- **[Frontend] `lib/ai.js` 모듈화**: 여러 컴포넌트에 산재된 AI 분석 API 호출 로직을 전용 라이브러리로 통합 관리.
+- **[DevOps] 배포 최적화**: CloudFront 배포 설정 및 CI/CD 파이프라인 내 캐시 무효화(Invalidation) 자동화 스크립트 보완.
 
 ---
-*마지막 업데이트: 2026-05-03*
+*마지막 업데이트: 2026-05-10*
