@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState, useRef } from "react";
+import React, { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { PATHS } from "../../constants/path";
 import { useServers } from "../../contexts/ServerContext";
@@ -37,6 +37,12 @@ const ChatLayout = () => {
 
   const [isServerModalOpen, setIsServerModalOpen] = useState(false);
   const [isChannelModalOpen, setIsChannelModalOpen] = useState(false);
+  const [onlineUserIds, setOnlineUserIds] = useState([]);
+
+  // ✅ 서버 변경 시 onlineUserIds 초기화
+  useEffect(() => {
+    setOnlineUserIds([]);
+  }, [serverId]);
 
   const handleLogout = async () => {
     try {
@@ -80,8 +86,29 @@ const ChatLayout = () => {
     const { action, data } = parsed;
 
     // 채팅 메시지 관련 → ChatWindow 핸들러로 위임
-    if (['receiveMessage', 'messageUpdated', 'messageDeleted'].includes(action)) {
+    if (['receiveMessage', 'messageUpdated', 'messageDeleted', 'aiAnalysisStarted'].includes(action)) {
       chatMessageHandlerRef.current?.(parsed);
+      return;
+    }
+
+    // ✅ 온라인 멤버 리스트 (입장 직후 본인이 받음)
+    if (action === 'onlineMembers' && data) {
+      setOnlineUserIds(data.onlineUserIds || []);
+      return;
+    }
+
+    // ✅ 다른 사람 입장 알림
+    if (action === 'userJoined' && data?.userId) {
+      setOnlineUserIds((prev) => {
+        if (prev.includes(data.userId)) return prev;
+        return [...prev, data.userId];
+      });
+      return;
+    }
+
+    // ✅ 다른 사람 퇴장 알림
+    if (action === 'userLeft' && data?.userId) {
+      setOnlineUserIds((prev) => prev.filter((id) => id !== data.userId));
       return;
     }
 
@@ -218,6 +245,7 @@ const ChatLayout = () => {
         contextMenuTargetId={contextMenu?.targetId}
         members={currentServer?.members || []}
         hostId={currentServer?.hostId}
+        onlineUserIds={onlineUserIds}
         onServerContextMenu={(event) =>
           openContextMenu(event, { type: "server", targetId: serverId, title: getServerName(currentServer), items: serverMenuItems })
         }

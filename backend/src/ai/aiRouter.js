@@ -60,7 +60,7 @@ async function summarizeWithBedrock(text) {
 exports.handler = async (event) => {
   try {
     const body = JSON.parse(event.body || "{}");
-    const { s3ObjectKey, fileType, serverId, fileName } = body;
+    const { s3ObjectKey, fileType, serverId, fileName, requestId } = body;
 
     if (!s3ObjectKey || !fileType) {
       return {
@@ -139,6 +139,7 @@ exports.handler = async (event) => {
         messageType: "ai-summary",     // 프론트엔드 CSS 트리거용 타입
         content: JSON.stringify(result), // 결과 객체를 문자열로 담음 (프론트에서 JSON.parse)
         createdAt,
+        ...(requestId && { aiRequestId: requestId }),
       };
 
       // 1. Messages 테이블에 저장
