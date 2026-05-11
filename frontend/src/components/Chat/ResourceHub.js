@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { v4 as uuidv4 } from 'uuid';
 import { uploadFile, saveLink, deleteFile, deleteLink } from '../../lib/resources';
-import { request } from '../../lib/request';
+import { analyzeResource } from '../../lib/ai';
 import { useAuth } from '../../contexts/AuthContext';
 
 import './ResourceHub.css';
@@ -131,15 +131,12 @@ const ResourceHub = ({ serverResources, setCurrentServer, sendWsMessage }) => {
 
     // 2. AI 분석 요청 (백엔드)
     try {
-      await request('/ai/analyze', {
-        method: 'POST',
-        body: JSON.stringify({
-          serverId,
-          s3ObjectKey: file.s3ObjectKey,
-          fileType,
-          fileName: file.fileName,
-          requestId, // 같은 requestId 함께 전송 → 결과에 aiRequestId로 박혀 돌아옴
-        }),
+      await analyzeResource({
+        serverId,
+        s3ObjectKey: file.s3ObjectKey,
+        fileType,
+        fileName: file.fileName,
+        requestId, // 같은 requestId 함께 전송 → 결과에 aiRequestId로 박혀 돌아옴
       });
       // 정상 완료. 임시 메시지는 ai-summary 도착 시 자동 교체됨.
     } catch (error) {
