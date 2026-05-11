@@ -10,6 +10,44 @@ const AI_SUMMARY_MESSAGE_TYPES = new Set(["ai-summary", "AI_SUMMARY"]);
 const AI_PENDING_MESSAGE_TYPES = new Set(["ai-pending"]);
 const AI_FAILED_MESSAGE_TYPES = new Set(["ai-failed"]);
 
+const parseAiResult = (content) => {
+  if (!content) return {};
+
+  if (typeof content === "object") {
+    return content;
+  }
+
+  try {
+    return JSON.parse(content);
+  } catch {
+    return {};
+  }
+};
+
+const getSummaryParagraphs = (summary) =>
+  String(summary || "")
+    .split(/\n{2,}/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+const getLabelTranslation = (labelsKo, index) => labelsKo?.[index] || "";
+
+const renderSummaryText = (summary) => {
+  const paragraphs = getSummaryParagraphs(summary);
+
+  if (!paragraphs.length) {
+    return null;
+  }
+
+  return (
+    <div className="ai-summary-prose">
+      {paragraphs.map((paragraph, index) => (
+        <p key={`${paragraph}-${index}`}>{paragraph}</p>
+      ))}
+    </div>
+  );
+};
+
 // Helper for deduplication
 const isSameMessage = (left, right) => {
   if (!left || !right) return false;
@@ -712,18 +750,14 @@ const ChatWindow = ({ activeChannel, channels, sendWsMessage, isConnected, chatM
 
             // AI 요약 타입 렌더링
             if (AI_SUMMARY_MESSAGE_TYPES.has(msg.type) || AI_SUMMARY_MESSAGE_TYPES.has(msg.messageType)) {
-              let aiResult = {};
-              try {
-                aiResult =
-                  typeof msg.content === "string"
-                    ? JSON.parse(msg.content)
-                    : msg.content || {};
-              } catch {
-                aiResult = {};
-              }
+              const aiResult = parseAiResult(msg.content);
 
               const isDocument = aiResult.type === "document";
               const isImage = aiResult.type === "image";
+              const summaryParagraphs = getSummaryParagraphs(aiResult.summary);
+              const extractedPreview = aiResult.extractedText?.trim();
+              const labels = Array.isArray(aiResult.labels) ? aiResult.labels : [];
+              const detectedTexts = Array.isArray(aiResult.detectedTexts) ? aiResult.detectedTexts : [];
 
               return (
                 <div key={key} className="ai-summary-box">
@@ -748,61 +782,118 @@ const ChatWindow = ({ activeChannel, channels, sendWsMessage, isConnected, chatM
                     )}
                   </div>
                   <div className="ai-summary-content">
-                    {isDocument && aiResult.summary && (
+                    {isDocument && (
                       <>
-                        <h4 className="ai-summary-title">📄 문서 요약</h4>
-                        <div
-                          style={{
-                            fontSize: "13px",
-                            color: "#d4d4d8",
-                            lineHeight: 1.6,
-                            whiteSpace: "pre-wrap",
-                          }}
-                        >
-                          {aiResult.summary}
+                        <div className="ai-section-block">
+                          <div className="ai-section-heading-row">
+                            <h4 className="ai-summary-title">📄 문서 요약 전문</h4>
+                            {summaryParagraphs.length > 0 && (
+                              <span className="ai-section-count">{summaryParagraphs.length}개 문단</span>
+                            )}
+                          </div>
+                          {renderSummaryText(aiResult.summary) || (
+                            <p className="ai-empty-text">요약 결과가 비어 있습니다.</p>
+                          )}
                         </div>
+                        {extractedPreview && (
+                          <div className="ai-section-block">
+                            <div className="ai-section-heading-row">
+                              <h4 className="ai-summary-title">🧾 추출 텍스트 미리보기</h4>
+                              <span className="ai-section-count">최대 2000자</span>
+                            </div>
+                            <pre className="ai-document-preview">{extractedPreview}</pre>
+                          </div>
+                        )}
                       </>
                     )}
                     {isImage && (
                       <>
-                        <h4 className="ai-summary-title">🖼️ 이미지 분석</h4>
-                        {aiResult.labelsKo?.length > 0 && (
-                          <div style={{ marginBottom: "8px" }}>
-                            <span style={{ fontSize: "12px", color: "#a1a1aa" }}>
-                              감지된 태그:
-                            </span>{" "}
-                            {aiResult.labelsKo.map((tag, i) => (
-                              <span
-                                key={i}
-                                style={{
-                                  display: "inline-block",
-                                  background: "rgba(0,255,102,0.1)",
-                                  color: "#00ff66",
-                                  padding: "2px 8px",
-                                  borderRadius: "10px",
-                                  fontSize: "11px",
-                                  margin: "2px 4px 2px 0",
-                                }}
-                              >
-                                {tag}
-                              </span>
-                            ))}
+                        <div className="ai-section-block">
+                          <div className="ai-section-heading-row">
+                            <h4 className="ai-summary-title">🖼️ 감지 라벨</h4>
+                            {labels.length > 0 && (
+                              <span className="ai-section-count">{labels.length}개 항목</span>
+                            )}
                           </div>
-                        )}
-                        {aiResult.detectedTexts?.length > 0 && (
-                          <div>
-                            <span style={{ fontSize: "12px", color: "#a1a1aa" }}>
-                              감지된 텍스트:
-                            </span>{" "}
-                            <span style={{ fontSize: "13px", color: "#d4d4d8" }}>
-                              {aiResult.detectedTexts.join(", ")}
-                            </span>
+                          {labels.length > 0 ? (
+                            <div className="ai-label-grid">
+                              {labels.map((label, index) => {
+                                const translated = getLabelTranslation(aiResult.labelsKo, index);
+
+                                return (
+                                  <div key={`${label.name}-${index}`} className="ai-label-card">
+                                    <div className="ai-label-card-top">
+                                      <strong>{translated || label.name}</strong>
+                                      <span>{label.confidence}%</span>
+                                    </div>
+                                    {translated && translated !== label.name && (
+                                      <div className="ai-label-card-subtitle">{label.name}</div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <p className="ai-empty-text">감지된 라벨이 없습니다.</p>
+                          )}
+                        </div>
+                        <div className="ai-section-block">
+                          <div className="ai-section-heading-row">
+                            <h4 className="ai-summary-title">🔤 이미지 텍스트 추출</h4>
+                            {detectedTexts.length > 0 && (
+                              <span className="ai-section-count">{detectedTexts.length}줄 감지</span>
+                            )}
+                          </div>
+                          {detectedTexts.length > 0 ? (
+                            <div className="ai-text-chip-group">
+                              {detectedTexts.map((text, index) => (
+                                <span key={`${text}-${index}`} className="ai-text-chip">
+                                  {text}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="ai-empty-text">감지된 텍스트가 없습니다.</p>
+                          )}
+                        </div>
+                        {aiResult.labelsKo?.length > 0 && (
+                          <div className="ai-section-block">
+                            <div className="ai-section-heading-row">
+                              <h4 className="ai-summary-title">🌐 번역 태그 모아보기</h4>
+                            </div>
+                            <div className="ai-text-chip-group">
+                              {aiResult.labelsKo.map((tag, index) => (
+                                <span key={`${tag}-${index}`} className="ai-tag-pill">
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
                           </div>
                         )}
                       </>
                     )}
                     {!isDocument && !isImage && (
-                      <div style={{ fontSize: "13px", color: "#d4d4d8" }}>{msg.content}</div>
+                      <div className="ai-section-block">
+                        <h4 className="ai-summary-title">AI 응답</h4>
+                        <div className="ai-summary-prose">
+                          <p>{msg.content}</p>
+                        </div>
+                      </div>
+                    )}
+                    {aiResult.message && !isDocument && !isImage && (
+                      <div className="ai-inline-note">
+                        {aiResult.message}
+                      </div>
+                    )}
+                    {aiResult.status && (
+                      <div className="ai-footer-note">
+                        상태: {aiResult.status}
+                      </div>
+                    )}
+                    {aiResult.message && (isDocument || isImage) && (
+                      <div className="ai-footer-note">
+                        {aiResult.message}
+                      </div>
                     )}
                   </div>
                 </div>
