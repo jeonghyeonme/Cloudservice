@@ -18,6 +18,19 @@ function handleRightClick(event, callback, payload) {
  * @param {Array} members - 서버 멤버 목록 ({userId, nickname, role} 형태)
  * @param {string} hostId - 서버 방장 userId (방장 태그 표시용)
  */
+
+// ✅ 채널 목록 Skeleton UI
+const ChannelSkeleton = () => (
+  <div className="channel-skeleton-list">
+    {[...Array(4)].map((_, i) => (
+      <div key={i} className="channel-skeleton-item">
+        <div className="skeleton skeleton-hash" />
+        <div className="skeleton skeleton-channel-name" style={{ width: `${60 + i * 10}%` }} />
+      </div>
+    ))}
+  </div>
+);
+
 const SidebarLeft = ({
   serverName,
   channels,
@@ -31,6 +44,7 @@ const SidebarLeft = ({
   members = [],
   hostId,
   onlineUserIds = [], // ✅ 웹소켓 연결 시 실시간 온라인 유저 ID 목록
+  loading = false, // ✅ 로딩 상태 prop 추가
 }) => {
   const { user } = useAuth();
 
@@ -67,8 +81,9 @@ const SidebarLeft = ({
       </h2>
 
       <div className="channel-list">
-        {channels && channels.length > 0 ? (
-          channels.map((ch) => {
+        {/* ✅ 로딩 중이면 Skeleton, 채널 있으면 목록, 없으면 Empty State */}
+        {loading ? ( <ChannelSkeleton />) : channels && channels.length > 0 ? 
+        (channels.map((ch) => {
             const cid = ch.chId || ch.id;
             const isActive = activeChannel === cid;
             const isContextOpen = contextMenuType === "channel" && contextMenuTargetId === cid;
@@ -89,9 +104,15 @@ const SidebarLeft = ({
             );
           })
         ) : (
-          <div style={{ padding: "0 20px", fontSize: "0.8rem", color: "#888" }}>
-            채널을 불러오는 중...
+          // ✅ 채널 Empty State
+          <div className="channel-empty-state">
+            <span className="channel-empty-icon">#</span>
+            <p className="channel-empty-text">채널이 없습니다</p>
+            <p className="channel-empty-sub">+ 버튼으로 채널을 추가해보세요</p>
           </div>
+          // <div style={{ padding: "0 20px", fontSize: "0.8rem", color: "#888" }}>
+          //   채널을 불러오는 중...
+          // </div>
         )}
       </div>
 

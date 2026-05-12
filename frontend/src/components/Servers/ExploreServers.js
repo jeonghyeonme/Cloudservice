@@ -25,6 +25,30 @@ import {
   normalizeServers,
 } from "../../lib/serverEntity";
 
+// ✅ 서버 카드 Skeleton UI
+const ServerCardSkeleton = () => (
+  <div className="servers-card skeleton-card">
+    <div className="skeleton skeleton-cover" />
+    <div className="servers-body">
+      <div className="skeleton skeleton-title" />
+      <div className="skeleton skeleton-desc" />
+      <div className="skeleton skeleton-desc short" />
+    </div>
+  </div>
+);
+
+// ✅ 검색 결과 없음 Empty State
+const EmptySearchState = ({ query }) => (
+  <div className="empty-state">
+    <div className="empty-state-icon">🔍</div>
+    <p className="empty-state-title">검색 결과가 없어요</p>
+    <p className="empty-state-sub">
+      <span className="empty-state-keyword">"{query}"</span>에 해당하는 서버를 찾을 수 없습니다.
+      <br />다른 검색어를 시도하거나 새 서버를 만들어보세요!
+    </p>
+  </div>
+);
+
 const ServerCard = ({ server, onJoin }) => {
   const name = getServerName(server, "제목 없음");
   const description = server.description;
@@ -46,7 +70,6 @@ const ServerCard = ({ server, onJoin }) => {
         ) : (
           <div className="servers-cover-emoji">{emoji}</div>
         )}
-
         <span className={`servers-badge badge-${displayStatus.toLowerCase()}`}>
           {displayStatus}
         </span>
@@ -74,18 +97,11 @@ const ServerCard = ({ server, onJoin }) => {
           </div>
 
           {isLocked ? (
-            <button className="servers-btn btn-locked" disabled>
-              LOCKED
-            </button>
+            <button className="servers-btn btn-locked" disabled>LOCKED</button>
           ) : isFull ? (
-            <button className="servers-btn btn-locked" disabled>
-              FULL
-            </button>
+            <button className="servers-btn btn-locked" disabled>FULL</button>
           ) : (
-            <button
-              className="servers-btn btn-join"
-              onClick={() => onJoin(server)}
-            >
+            <button className="servers-btn btn-join" onClick={() => onJoin(server)}>
               JOIN
             </button>
           )}
@@ -98,9 +114,9 @@ const ServerCard = ({ server, onJoin }) => {
 const ExploreServers = () => {
   const navigate = useNavigate();
   const { logout, refreshToken, user } = useAuth();
-  const { clearJoinedServers, setActiveServerId, upsertJoinedServer, removeJoinedServer } =
-    useServers();
+  const { clearJoinedServers, setActiveServerId, upsertJoinedServer, removeJoinedServer } = useServers();
   const [servers, setServers] = useState([]);
+  const [loading, setLoading] = useState(true); // ✅ 로딩 상태 추가
   const [searchQuery, setSearchQuery] = useState("");
   const [inviteCode, setInviteCode] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -135,12 +151,14 @@ const ExploreServers = () => {
 
   useEffect(() => {
     setActiveServerId(null);
+    setLoading(true); // ✅ 로딩 시작
     getServers()
       .then((data) => setServers(normalizeServers(data.items || [])))
       .catch((err) => {
         console.error("데이터 로드 실패!", err);
         setServers([]);
-      });
+      })
+      .finally(() => setLoading(false)); // ✅ 로딩 완료
   }, [setActiveServerId]);
 
   const filteredServers = servers.filter((server) => {
@@ -301,22 +319,30 @@ const ExploreServers = () => {
         </div>
 
         <div className="servers-grid">
-            {filteredServers.map((server) => (
+          {/* ✅ 로딩 중 → Skeleton 카드 표시 */}
+          {loading ? (
+            [...Array(4)].map((_, i) => <ServerCardSkeleton key={i} />)
+          ) : filteredServers.length === 0 && searchQuery ? (
+            // ✅ 검색 결과 없음 → Empty State
+            <EmptySearchState query={searchQuery} />
+          ) : ( 
+            filteredServers.map((server) => (
               <ServerCard
                 key={getServerId(server)}
                 server={server}
                 onJoin={handleJoinClick}
               />
-          ))}
+            ))
+          )}
 
-          <div
-            className="servers-card create-card"
-            onClick={() => setIsModalOpen(true)}
-          >
+          {/* 방 만들기 카드 - 로딩 중이 아닐 때만 표시 */}
+          {!loading && (
+          <div className="servers-card create-card" onClick={() => setIsModalOpen(true)}>
             <div className="create-plus">+</div>
             <p className="create-label">서버 만들기</p>
             <p className="create-sub">새로운 학습 세션 시작하기</p>
           </div>
+          )}
         </div>
       </div>
 
