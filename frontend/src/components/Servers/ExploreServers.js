@@ -8,6 +8,7 @@ import CreateServerModal from "./CreateServerModal";
 import { useAuth } from "../../contexts/AuthContext";
 import { PATHS } from "../../constants/path";
 import { useServers } from "../../contexts/ServerContext";
+import { useToast } from "../../contexts/ToastContext";
 import ContextMenu from "../common/ContextMenu";
 import ConfirmModal from "../common/ConfirmModal";
 import EntitySettingsModal from "../common/EntitySettingsModal";
@@ -97,6 +98,7 @@ const ServerCard = ({ server, onJoin }) => {
 
 const ExploreServers = () => {
   const navigate = useNavigate();
+  const toast = useToast();
   const { logout, refreshToken, user } = useAuth();
   const { clearJoinedServers, setActiveServerId, upsertJoinedServer, removeJoinedServer } =
     useServers();
@@ -175,7 +177,7 @@ const ExploreServers = () => {
 
   const handleDirectJoin = () => {
     if (!inviteCode.trim()) {
-      alert("코드 혹은 주소를 입력해주세요!");
+      toast.info("입력 필요", "코드 혹은 주소를 입력해주세요.");
       return;
     }
   };

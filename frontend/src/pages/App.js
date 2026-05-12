@@ -5,6 +5,7 @@ import "./App.css";
 // Context
 import { AuthProvider, useAuth } from "../contexts/AuthContext";
 import { ServerProvider, useServers } from "../contexts/ServerContext";
+import { ToastProvider } from "../contexts/ToastContext";
 
 // Components
 import Onboarding from "../components/Onboarding/Onboarding";
@@ -109,9 +110,11 @@ function AppRoutes() {
 function App() {
   return (
     <AuthProvider>
-      <ServerProvider>
-        <AppRoutes />
-      </ServerProvider>
+      <ToastProvider>
+        <ServerProvider>
+          <AppRoutes />
+        </ServerProvider>
+      </ToastProvider>
     </AuthProvider>
   );
 }

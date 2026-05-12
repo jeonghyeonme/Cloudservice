@@ -59,3 +59,14 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+.hub-upload-policy {
+  margin: 0 0 12px;
+  font-size: 11px;
+  color: #71717a;
+  line-height: 1.5;
+}
+
+.hub-upload-policy.is-error {
+  color: #fca5a5;
+}
