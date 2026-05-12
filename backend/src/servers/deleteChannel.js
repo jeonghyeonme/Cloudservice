@@ -1,18 +1,16 @@
-const { GetCommand, UpdateCommand } = require("@aws-sdk/lib-dynamodb");
+const { UpdateCommand } = require("@aws-sdk/lib-dynamodb");
 const dynamoDb = require("../dynamodbClient");
 const { HEADERS } = require("../utils/response");
+const { ROLE, requireServerRole } = require("./serverAccess");
 
 exports.handler = async (event) => {
   try {
     const serverId = event.pathParameters.serverId;
     const chId = event.pathParameters.chId;
+    const access = await requireServerRole(event, serverId, ROLE.MODERATOR);
+    if (access.response) return access.response;
 
-    const serverData = await dynamoDb.send(new GetCommand({
-      TableName: process.env.SERVERS_TABLE,
-      Key: { serverId },
-    }));
-
-    if (!serverData.Item || !serverData.Item.channels) {
+    if (!access.server.channels) {
       return {
         statusCode: 404,
         headers: HEADERS,
@@ -20,8 +18,16 @@ exports.handler = async (event) => {
       };
     }
 
-    const currentChannels = serverData.Item.channels;
+    const currentChannels = access.server.channels;
     const targetChannel = currentChannels.find((ch) => ch.chId === chId);
+
+    if (!targetChannel) {
+      return {
+        statusCode: 404,
+        headers: HEADERS,
+        body: JSON.stringify({ message: "해당 채널을 찾을 수 없습니다." }),
+      };
+    }
 
     if (targetChannel?.isDefault) {
       return {
@@ -31,14 +37,15 @@ exports.handler = async (event) => {
       };
     }
 
-const updatedChannels = currentChannels.filter((ch) => ch.chId !== chId);
+    const updatedChannels = currentChannels.filter((ch) => ch.chId !== chId);
 
     await dynamoDb.send(new UpdateCommand({
       TableName: process.env.SERVERS_TABLE,
       Key: { serverId },
-      UpdateExpression: "SET channels = :updatedChannels",
+      UpdateExpression: "SET channels = :updatedChannels, updatedAt = :updatedAt",
       ExpressionAttributeValues: {
         ":updatedChannels": updatedChannels,
+        ":updatedAt": new Date().toISOString(),
       },
     }));
 

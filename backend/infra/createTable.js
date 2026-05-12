@@ -220,6 +220,43 @@ async function addEmailGSI() {
   console.log("✅ Users GSI (email-index) 생성 완료");
 }
 
+async function addServerMembersGSI() {
+  await client.send(new UpdateTableCommand({
+    TableName: "smartstudy-ServerMembers",
+    AttributeDefinitions: [
+      { AttributeName: "serverId", AttributeType: "S" },
+      { AttributeName: "joinedAt", AttributeType: "S" },
+    ],
+    GlobalSecondaryIndexUpdates: [
+      {
+        Create: {
+          IndexName: "serverId-index",
+          KeySchema: [
+            { AttributeName: "serverId", KeyType: "HASH" },
+            { AttributeName: "joinedAt", KeyType: "RANGE" },
+          ],
+          Projection: { ProjectionType: "ALL" },
+        },
+      },
+    ],
+  }));
+
+  console.log("⏳ ServerMembers GSI (serverId-index) 생성 중...");
+
+  while (true) {
+    const desc = await client.send(new DescribeTableCommand({ TableName: "smartstudy-ServerMembers" }));
+    const gsiList = desc.Table.GlobalSecondaryIndexes || [];
+    const gsi = gsiList.find((item) => item.IndexName === "serverId-index");
+    const status = gsi?.IndexStatus;
+
+    console.log("ServerMembers GSI 상태:", status);
+    if (status === "ACTIVE") break;
+    await sleep(2000);
+  }
+
+  console.log("✅ ServerMembers GSI (serverId-index) 생성 완료");
+}
+
 async function createServerMembersTable() {
   await client.send(new CreateTableCommand({
     TableName: "smartstudy-ServerMembers", // 실제 테이블 이름
@@ -230,10 +267,61 @@ async function createServerMembersTable() {
     AttributeDefinitions: [
       { AttributeName: "userId", AttributeType: "S" },
       { AttributeName: "serverId", AttributeType: "S" },
+      { AttributeName: "joinedAt", AttributeType: "S" },
+    ],
+    GlobalSecondaryIndexes: [
+      {
+        IndexName: "serverId-index",
+        KeySchema: [
+          { AttributeName: "serverId", KeyType: "HASH" },
+          { AttributeName: "joinedAt", KeyType: "RANGE" },
+        ],
+        Projection: { ProjectionType: "ALL" },
+      },
     ],
     BillingMode: "PAY_PER_REQUEST",
   }));
   console.log("✅ ServerMembers 테이블 생성 완료");
+}
+
+async function createInvitesTable() {
+  await client.send(new CreateTableCommand({
+    TableName: "smartstudy-Invites",
+    KeySchema: [
+      { AttributeName: "inviteId", KeyType: "HASH" },
+    ],
+    AttributeDefinitions: [
+      { AttributeName: "inviteId", AttributeType: "S" },
+      { AttributeName: "inviteCode", AttributeType: "S" },
+      { AttributeName: "serverId", AttributeType: "S" },
+      { AttributeName: "createdAt", AttributeType: "S" },
+    ],
+    GlobalSecondaryIndexes: [
+      {
+        IndexName: "inviteCode-index",
+        KeySchema: [
+          { AttributeName: "inviteCode", KeyType: "HASH" },
+        ],
+        Projection: { ProjectionType: "ALL" },
+      },
+      {
+        IndexName: "serverId-createdAt-index",
+        KeySchema: [
+          { AttributeName: "serverId", KeyType: "HASH" },
+          { AttributeName: "createdAt", KeyType: "RANGE" },
+        ],
+        Projection: { ProjectionType: "ALL" },
+      },
+    ],
+    BillingMode: "PAY_PER_REQUEST",
+  }));
+
+  await client.send(new UpdateTimeToLiveCommand({
+    TableName: "smartstudy-Invites",
+    TimeToLiveSpecification: { Enabled: true, AttributeName: "expiresAt" },
+  }));
+
+  console.log("✅ Invites 테이블 생성 + TTL 설정 완료");
 }
 
 
@@ -272,6 +360,7 @@ async function run() {
     { name: "Connections", fn: createConnectionsTable },
     { name: "Messages", fn: createMessagesTable },
     { name: "RefreshTokens", fn: createRefreshTokensTable },
+    { name: "Invites", fn: createInvitesTable },
   ];
 
   for (const task of createFunctions) {

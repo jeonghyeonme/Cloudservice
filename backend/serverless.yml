@@ -13,6 +13,7 @@ custom:
   messagesTableName: "${self:custom.prefix}-Messages"
   refreshTokensTableName: "${self:custom.prefix}-RefreshTokens"
   serverMembersTableName: "${self:custom.prefix}-ServerMembers"
+  invitesTableName: "${self:custom.prefix}-Invites"
 
 provider:
   name: aws
@@ -42,6 +43,7 @@ provider:
     MESSAGES_TABLE: ${self:custom.messagesTableName}
     REFRESH_TOKENS_TABLE: ${self:custom.refreshTokensTableName}
     SERVER_MEMBERS_TABLE: ${self:custom.serverMembersTableName}
+    INVITES_TABLE: ${self:custom.invitesTableName}
 
 # -------------------------------------------------------
 # Lambda 함수 목록
@@ -110,6 +112,104 @@ functions:
       - http:
           path: /servers/{serverId}
           method: put
+          cors: true
+
+  # ── 초대 시스템 ────────────────────────
+  createInvite:
+    handler: src/invites/createInvite.handler
+    events:
+      - http:
+          path: /servers/{serverId}/invites
+          method: post
+          cors: true
+
+  listInvites:
+    handler: src/invites/listInvites.handler
+    events:
+      - http:
+          path: /servers/{serverId}/invites
+          method: get
+          cors: true
+
+  deleteInvite:
+    handler: src/invites/deleteInvite.handler
+    events:
+      - http:
+          path: /servers/{serverId}/invites/{inviteId}
+          method: delete
+          cors: true
+
+  resetInvites:
+    handler: src/invites/resetInvites.handler
+    events:
+      - http:
+          path: /servers/{serverId}/invites/reset
+          method: post
+          cors: true
+
+  validateInvite:
+    handler: src/invites/validateInvite.handler
+    events:
+      - http:
+          path: /invites/{inviteCode}
+          method: get
+          cors: true
+
+  joinByInvite:
+    handler: src/invites/joinByInvite.handler
+    events:
+      - http:
+          path: /invites/{inviteCode}/join
+          method: post
+          cors: true
+
+  # ── 서버 관리자 도구 ────────────────────────
+  listMembers:
+    handler: src/moderation/listMembers.handler
+    events:
+      - http:
+          path: /servers/{serverId}/members
+          method: get
+          cors: true
+
+  updateMemberRole:
+    handler: src/moderation/updateMemberRole.handler
+    events:
+      - http:
+          path: /servers/{serverId}/members/{targetUserId}/role
+          method: patch
+          cors: true
+
+  kickMember:
+    handler: src/moderation/kickMember.handler
+    events:
+      - http:
+          path: /servers/{serverId}/members/{targetUserId}/kick
+          method: post
+          cors: true
+
+  banMember:
+    handler: src/moderation/banMember.handler
+    events:
+      - http:
+          path: /servers/{serverId}/members/{targetUserId}/ban
+          method: post
+          cors: true
+
+  unbanMember:
+    handler: src/moderation/unbanMember.handler
+    events:
+      - http:
+          path: /servers/{serverId}/bans/{targetUserId}
+          method: delete
+          cors: true
+
+  transferOwnership:
+    handler: src/moderation/transferOwnership.handler
+    events:
+      - http:
+          path: /servers/{serverId}/ownership
+          method: post
           cors: true
 
   # ── 인증 관련 ────────────────────────
@@ -196,6 +296,10 @@ functions:
       - http:
           path: /servers/{serverId}/channels/{chId}
           method: patch
+          cors: true
+      - http:
+          path: /servers/{serverId}/channels/{chId}
+          method: put
           cors: true
 
   # ── S3 Pre-signed URL 관련 ───────────────────
@@ -397,3 +501,40 @@ resources:
                 KeyType: RANGE
             Projection:
               ProjectionType: ALL
+
+    # 7. Invites 테이블
+    InvitesTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.invitesTableName}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: inviteId
+            AttributeType: S
+          - AttributeName: inviteCode
+            AttributeType: S
+          - AttributeName: serverId
+            AttributeType: S
+          - AttributeName: createdAt
+            AttributeType: S
+        KeySchema:
+          - AttributeName: inviteId
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: inviteCode-index
+            KeySchema:
+              - AttributeName: inviteCode
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+          - IndexName: serverId-createdAt-index
+            KeySchema:
+              - AttributeName: serverId
+                KeyType: HASH
+              - AttributeName: createdAt
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+        TimeToLiveSpecification:
+          AttributeName: expiresAt
+          Enabled: true
