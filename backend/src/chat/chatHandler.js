@@ -16,6 +16,7 @@ const dynamoDb = require("../dynamodbClient");
 const SERVERS_TABLE     = process.env.SERVERS_TABLE;
 const CONNECTIONS_TABLE = process.env.CONNECTIONS_TABLE;
 const MESSAGES_TABLE    = process.env.MESSAGES_TABLE;
+const SERVER_MEMBERS_TABLE = process.env.SERVER_MEMBERS_TABLE;
 
 
 // =========================
@@ -163,15 +164,27 @@ async function joinServer(connectionId, body, event) {
     ExpressionAttributeValues: { ":r": serverId, ":u": userId },
   }));
 
-  // 2. 방 인원 +1
-  await dynamoDb.send(new UpdateCommand({
-    TableName:                 SERVERS_TABLE,
-    Key:                       { serverId },
-    UpdateExpression:          "SET currentCount = currentCount + :inc",
-    ExpressionAttributeValues: { ":inc": 1 },
-  }));
+  // 2. ServerMembers 테이블에서 이미 멤버인지 확인
+  let isAlreadyMember = false;
+  if (SERVER_MEMBERS_TABLE && userId) {
+    const memberResult = await dynamoDb.send(new GetCommand({
+      TableName: SERVER_MEMBERS_TABLE,
+      Key: { userId, serverId },
+    })).catch(() => null);
+    isAlreadyMember = Boolean(memberResult?.Item);
+  }
 
-  // 3. 같은 서버 모든 접속자 조회
+  // 3. 이미 멤버가 아닐 때만 currentCount +1
+  if (!isAlreadyMember) {
+    await dynamoDb.send(new UpdateCommand({
+      TableName:                 SERVERS_TABLE,
+      Key:                       { serverId },
+      UpdateExpression:          "SET currentCount = if_not_exists(currentCount, :zero) + :inc",
+      ExpressionAttributeValues: { ":inc": 1, ":zero": 0 },
+    }));
+  }
+
+  // 4. 같은 서버 모든 접속자 조회
   const response = await dynamoDb.send(new QueryCommand({
     TableName: CONNECTIONS_TABLE,
     IndexName: "serverId-index",
@@ -180,7 +193,7 @@ async function joinServer(connectionId, body, event) {
   }));
   const connections = response.Items || [];
 
-  // 4. 본인에게 현재 온라인 유저 ID 리스트 전송 (자기 포함)
+  // 5. 본인에게 현재 온라인 유저 ID 리스트 전송 (자기 포함)
   const onlineUserIds = [...new Set(
     connections.map((c) => c.userId).filter(Boolean)
   )];
@@ -203,7 +216,7 @@ async function joinServer(connectionId, body, event) {
 
   return {
     statusCode: 200,
-    body: JSON.stringify({ action: "joinServer", serverId }),
+    body: JSON.stringify({ action: "joinServer", serverId, isAlreadyMember }),
   };
 }
 

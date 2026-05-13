@@ -49,7 +49,7 @@ const EmptySearchState = ({ query }) => (
   </div>
 );
 
-const ServerCard = ({ server, onJoin }) => {
+const ServerCard = ({ server, onJoin, isMember }) => {
   const name = getServerName(server, "제목 없음");
   const description = server.description;
   const currentMembers = Number(server.currentCount) || 0;
@@ -101,8 +101,9 @@ const ServerCard = ({ server, onJoin }) => {
           ) : isFull ? (
             <button className="servers-btn btn-locked" disabled>FULL</button>
           ) : (
+            // ✅ 이미 멤버면 "입장", 아니면 "JOIN"
             <button className="servers-btn btn-join" onClick={() => onJoin(server)}>
-              JOIN
+              {isMember ? "입장" : "JOIN"}
             </button>
           )}
         </div>
@@ -114,7 +115,7 @@ const ServerCard = ({ server, onJoin }) => {
 const ExploreServers = () => {
   const navigate = useNavigate();
   const { logout, refreshToken, user } = useAuth();
-  const { clearJoinedServers, setActiveServerId, upsertJoinedServer, removeJoinedServer } = useServers();
+  const { clearJoinedServers, setActiveServerId, upsertJoinedServer, removeJoinedServer, joinedServers  } = useServers();
   const [servers, setServers] = useState([]);
   const [loading, setLoading] = useState(true); // ✅ 로딩 상태 추가
   const [searchQuery, setSearchQuery] = useState("");
@@ -170,11 +171,27 @@ const ExploreServers = () => {
     );
   });
 
+  // ✅ 이미 가입한 서버인지 확인
+  const isAlreadyMember = (server) => {
+    const sid = getServerId(server);
+    return joinedServers.some((s) => getServerId(s) === sid);
+  };
+
   const executeJoin = async (server, password = null) => {
     const sid = getServerId(server);
+
+    // ✅ 이미 멤버면 joinServer API 호출 없이 바로 이동
+    if (isAlreadyMember(server)) {
+      navigate(getServerPath(sid));
+      return;
+    }
+
     try {
-      await joinServer(sid, password);
-      upsertJoinedServer(normalizeServer(server));
+      const result = await joinServer(sid, password);
+       // ✅ 백엔드에서 alreadyMember 응답도 중복 카운트 방지
+      if (!result?.alreadyMember) {
+        upsertJoinedServer(normalizeServer(server));
+      }
       navigate(getServerPath(sid));
     } catch (error) {
       console.error("서버 참여 실패:", error);
@@ -183,6 +200,12 @@ const ExploreServers = () => {
   };
 
   const handleJoinClick = (server) => {
+    // ✅ 이미 멤버면 비밀번호 없이 바로 입장
+    if (isAlreadyMember(server)) {
+      executeJoin(server);
+      return;
+    }
+
     if (server.isPrivate) {
       setSelectedServer(server);
       setIsJoinModalOpen(true);
@@ -331,6 +354,7 @@ const ExploreServers = () => {
                 key={getServerId(server)}
                 server={server}
                 onJoin={handleJoinClick}
+                isMember={isAlreadyMember(server)}
               />
             ))
           )}
