@@ -232,13 +232,14 @@ async function sendMessage(event, body) {
   const apigw   = getApigwClient(domain, stage);
   const { serverId } = body;
 
-  const messageId = uuidv4();
-  const createdAt = new Date().toISOString();
+  const messageId = body.messageId || uuidv4();
+  const createdAt = body.createdAt || new Date().toISOString();
 
   const item = {
     serverId,
     channelId: body.channelId,
     messageId,
+    clientMessageId: body.clientMessageId || undefined,
     senderId:       body.senderId,
     senderNickname: body.senderNickname,
     messageType:    body.messageType,

@@ -4,6 +4,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { uploadFile, saveLink, deleteFile, deleteLink } from '../../lib/resources';
 import { analyzeResource } from '../../lib/ai';
 import { useAuth } from '../../contexts/AuthContext';
+import { useToast } from '../../contexts/ToastContext';
+import { UPLOAD_POLICY_LABEL, validateUploadFile } from '../../lib/uploadPolicy';
 
 import './ResourceHub.css';
 
@@ -56,11 +58,13 @@ const EmptyState = ({ icon, text }) => (
  */
 const ResourceHub = ({ serverResources, setCurrentServer, sendWsMessage, loading = false }) => {
   const { user } = useAuth();
+  const toast = useToast();
   const [activeHubTab, setActiveHubTab] = useState('Files');
   const { serverId } = useParams();
   const fileInputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
   const [analyzingFileId, setAnalyzingFileId] = useState(null);
+  const [uploadFeedback, setUploadFeedback] = useState('');
 
   const files = serverResources?.files || [];
   const links = serverResources?.links || [];
@@ -89,10 +93,15 @@ const ResourceHub = ({ serverResources, setCurrentServer, sendWsMessage, loading
   const handleFileSelect = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 10 * 1024 * 1024) {
-      alert('10MB 이하의 파일만 업로드 가능합니다.');
+
+    const validation = validateUploadFile(file);
+    if (!validation.ok) {
+      setUploadFeedback(validation.message);
+      toast.error('업로드 제한', validation.message);
       return;
     }
+
+    setUploadFeedback('');
     setUploading(true);
     try {
       const savedFile = await uploadFile(serverId, file);
@@ -109,7 +118,9 @@ const ResourceHub = ({ serverResources, setCurrentServer, sendWsMessage, loading
       }
     } catch (error) {
       console.error('업로드 실패:', error);
-      alert(error.message || '업로드 실패');
+      const message = error.message || '업로드 실패';
+      setUploadFeedback(message);
+      toast.error('업로드 실패', message);
     } finally {
       setUploading(false);
       e.target.value = '';
@@ -134,7 +145,7 @@ const ResourceHub = ({ serverResources, setCurrentServer, sendWsMessage, loading
       }
     } catch (error) {
       console.error('링크 저장 실패:', error);
-      alert(error.message || '링크 저장 실패');
+      toast.error('링크 저장 실패', error.message || '링크 저장 실패');
     }
   };
 
@@ -143,7 +154,7 @@ const ResourceHub = ({ serverResources, setCurrentServer, sendWsMessage, loading
     e.stopPropagation();
 
     if (analyzingFileId) {
-      alert('다른 파일을 분석 중입니다. 잠시 후 다시 시도해주세요.');
+      toast.info('분석 대기', '다른 파일을 분석 중입니다. 잠시 후 다시 시도해주세요.');
       return;
     }
 
@@ -183,6 +194,7 @@ const ResourceHub = ({ serverResources, setCurrentServer, sendWsMessage, loading
     } catch (error) {
       // API Gateway 29초 타임아웃은 정상 (Lambda는 백그라운드 실행 중)
       console.log('AI 분석 요청 진행 중:', error.message);
+      toast.info('분석 요청 접수', 'AI 분석이 백그라운드에서 진행 중입니다. 완료되면 채팅창에 표시됩니다.');
     } finally {
       setAnalyzingFileId(null);
     }
@@ -204,7 +216,7 @@ const ResourceHub = ({ serverResources, setCurrentServer, sendWsMessage, loading
       }
     } catch (error) {
       console.error('파일 삭제 실패:', error);
-      alert(error.message || '파일 삭제 실패');
+      toast.error('파일 삭제 실패', error.message || '파일 삭제 실패');
     }
   };
 
@@ -224,7 +236,7 @@ const ResourceHub = ({ serverResources, setCurrentServer, sendWsMessage, loading
       }
     } catch (error) {
       console.error('링크 삭제 실패:', error);
-      alert(error.message || '링크 삭제 실패');
+      toast.error('링크 삭제 실패', error.message || '링크 삭제 실패');
     }
   };
 
@@ -296,13 +308,19 @@ const ResourceHub = ({ serverResources, setCurrentServer, sendWsMessage, loading
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
               <p className="hub-section-label">최근 파일</p>
               <button
-                onClick={() => fileInputRef.current && fileInputRef.current.click()}
+                onClick={() => {
+                  setUploadFeedback('');
+                  if (fileInputRef.current) fileInputRef.current.click();
+                }}
                 disabled={uploading}
                 style={{ background: '#00ff66', color: '#000', border: 'none', borderRadius: '4px', padding: '4px 10px', fontSize: '11px', fontWeight: 700, cursor: uploading ? 'not-allowed' : 'pointer', opacity: uploading ? 0.6 : 1 }}
               >
                 {uploading ? '업로드 중...' : '+ 업로드'}
               </button>
               <input ref={fileInputRef} type="file" style={{ display: 'none' }} onChange={handleFileSelect} />
+            </div>
+            <div className={`hub-upload-policy ${uploadFeedback ? 'is-error' : ''}`}>
+              {uploadFeedback || `업로드 가능 형식: ${UPLOAD_POLICY_LABEL}`}
             </div>
             <div className="hub-file-list">
               {/* ✅ 로딩 중 → Skeleton / 파일 없음 → Empty State / 있음 → 목록 */}

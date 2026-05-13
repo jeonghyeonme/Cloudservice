@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PATHS } from "../../../constants/path";
+import { useToast } from "../../../contexts/ToastContext";
 import {
   createChannel,
   deleteChannel,
@@ -55,6 +56,7 @@ function useChatServerData({
   removeJoinedServer,
 }) {
   const navigate = useNavigate();
+  const toast = useToast();
   const [currentServer, setCurrentServer] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeChannel, setActiveChannel] = useState("");
@@ -198,7 +200,7 @@ function useChatServerData({
     const channelId = channel.chId || channel.id;
 
     if (channel.isDefault) {
-      alert("기본채널은 삭제가 불가합니다.");
+      toast.info("삭제 불가", "기본채널은 삭제가 불가합니다.");
       return;
     }
 
@@ -206,7 +208,7 @@ function useChatServerData({
       await deleteChannel(serverId, channelId);
     } catch (error) {
       if (error.message?.includes("기본채널")) {
-        alert("기본채널은 삭제가 불가합니다.");
+        toast.info("삭제 불가", "기본채널은 삭제가 불가합니다.");
         return;
       }
 

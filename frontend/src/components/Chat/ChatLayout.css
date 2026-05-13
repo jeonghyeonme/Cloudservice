@@ -192,6 +192,48 @@
   word-wrap: break-word;
 }
 
+.message-text-failed {
+  color: #fca5a5;
+}
+
+.message-pending {
+  opacity: 0.58;
+}
+
+.message-failed {
+  opacity: 0.92;
+}
+
+.message-status-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.message-status-text {
+  font-size: 11px;
+  color: #71717a;
+}
+
+.message-status-row.failed .message-status-text {
+  color: #fca5a5;
+}
+
+.message-retry-button {
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  background: rgba(127, 29, 29, 0.18);
+  color: #fecaca;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.message-retry-button:hover {
+  background: rgba(127, 29, 29, 0.32);
+}
+
 .message-edited {
   font-size: 10px;
   color: #71717a;
@@ -316,6 +358,16 @@
 .chat-input-area {
   padding: 0 16px 20px;
   flex-shrink: 0;
+}
+
+.chat-upload-policy {
+  margin: 0 0 10px;
+  font-size: 12px;
+  color: #71717a;
+}
+
+.chat-upload-policy.is-error {
+  color: #fca5a5;
 }
 
 .chat-pending-image {

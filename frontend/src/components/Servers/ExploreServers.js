@@ -8,6 +8,7 @@ import CreateServerModal from "./CreateServerModal";
 import { useAuth } from "../../contexts/AuthContext";
 import { PATHS } from "../../constants/path";
 import { useServers } from "../../contexts/ServerContext";
+import { useToast } from "../../contexts/ToastContext";
 import ContextMenu from "../common/ContextMenu";
 import ConfirmModal from "../common/ConfirmModal";
 import EntitySettingsModal from "../common/EntitySettingsModal";
@@ -114,6 +115,7 @@ const ServerCard = ({ server, onJoin, isMember }) => {
 
 const ExploreServers = () => {
   const navigate = useNavigate();
+  const toast = useToast();
   const { logout, refreshToken, user } = useAuth();
   const { clearJoinedServers, setActiveServerId, upsertJoinedServer, removeJoinedServer, joinedServers  } = useServers();
   const [servers, setServers] = useState([]);
@@ -161,6 +163,11 @@ const ExploreServers = () => {
       })
       .finally(() => setLoading(false)); // ✅ 로딩 완료
   }, [setActiveServerId]);
+
+  const refreshServers = async () => {
+    const data = await getServers();
+    setServers(normalizeServers(data.items || []));
+  };
 
   const filteredServers = servers.filter((server) => {
     const title = server.serverName || server.title || "";
@@ -216,7 +223,7 @@ const ExploreServers = () => {
 
   const handleDirectJoin = () => {
     if (!inviteCode.trim()) {
-      alert("코드 혹은 주소를 입력해주세요!");
+      toast.info("입력 필요", "코드 혹은 주소를 입력해주세요.");
       return;
     }
   };
@@ -371,7 +378,10 @@ const ExploreServers = () => {
       </div>
 
       {isModalOpen && (
-        <CreateServerModal onClose={() => setIsModalOpen(false)} />
+        <CreateServerModal
+          onClose={() => setIsModalOpen(false)}
+          onCreated={refreshServers}
+        />
       )}
 
       <ContextMenu

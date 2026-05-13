@@ -30,8 +30,10 @@ function useWebSocket({ serverId, userId, onMessage }) {
   const sendMessage = useCallback((action, payload) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({ action, ...payload }));
+      return true;
     } else {
       console.warn("WebSocket이 연결되지 않았습니다.");
+      return false;
     }
   }, []);
 

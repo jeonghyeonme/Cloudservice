@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { useAuth } from "../../contexts/AuthContext";
 import { useParams } from "react-router-dom";
 import { uploadFile } from "../../lib/resources";
+import { useToast } from "../../contexts/ToastContext";
+import { UPLOAD_POLICY_LABEL, validateUploadFile } from "../../lib/uploadPolicy";
 
 const IMAGE_MESSAGE_TYPES = new Set(["IMAGE", "image"]);
 const FILE_MESSAGE_TYPES = new Set(["FILE", "file"]);
@@ -9,11 +11,67 @@ const LINK_MESSAGE_TYPES = new Set(["LINK", "link"]);
 const AI_SUMMARY_MESSAGE_TYPES = new Set(["ai-summary", "AI_SUMMARY"]);
 const AI_PENDING_MESSAGE_TYPES = new Set(["ai-pending"]);
 const AI_FAILED_MESSAGE_TYPES = new Set(["ai-failed"]);
+const SEND_TIMEOUT_MS = 8000;
+const FAILED_MESSAGES_STORAGE_PREFIX = "chat-failed-messages";
+
+const createClientMessageKey = () =>
+  `client-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+const isPendingOrFailedMessage = (message) =>
+  message?.sendStatus === "sending" || message?.sendStatus === "failed";
+
+const getFailedMessagesStorageKey = (serverId) =>
+  `${FAILED_MESSAGES_STORAGE_PREFIX}:${serverId}`;
+
+const loadFailedMessages = (serverId) => {
+  if (!serverId) return {};
+
+  try {
+    const raw = localStorage.getItem(getFailedMessagesStorageKey(serverId));
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+};
+
+const persistFailedMessages = (serverId, messagesByChannel) => {
+  if (!serverId) return;
+
+  const entries = Object.entries(messagesByChannel || {}).filter(([, messages]) => messages?.length);
+
+  if (!entries.length) {
+    localStorage.removeItem(getFailedMessagesStorageKey(serverId));
+    return;
+  }
+
+  localStorage.setItem(getFailedMessagesStorageKey(serverId), JSON.stringify(Object.fromEntries(entries)));
+};
+
+const mergeMessages = (baseMessages = [], extraMessages = []) => {
+  const merged = [...baseMessages];
+
+  extraMessages.forEach((message) => {
+    const existingIndex = merged.findIndex((item) => isSameMessage(item, message));
+
+    if (existingIndex >= 0) {
+      merged[existingIndex] = {
+        ...merged[existingIndex],
+        ...message,
+      };
+      return;
+    }
+
+    merged.push(message);
+  });
+
+  return merged;
+};
 
 // Helper for deduplication
 const isSameMessage = (left, right) => {
   if (!left || !right) return false;
   if (left.messageId && right.messageId && left.messageId === right.messageId) return true;
+  if (left.clientMessageId && right.clientMessageId && left.clientMessageId === right.clientMessageId) return true;
 
   const leftFileSignature = [
     left.channelId,
@@ -55,6 +113,26 @@ const isSameMessage = (left, right) => {
   const rightContent = right.content || right.text || "";
 
   if (
+    left.channelId === right.channelId &&
+    left.senderId === right.senderId &&
+    leftType === rightType &&
+    (isPendingOrFailedMessage(left) || isPendingOrFailedMessage(right))
+  ) {
+    if ((leftType === "IMAGE" || leftType === "FILE") && leftUrl && rightUrl && leftUrl === rightUrl) {
+      return true;
+    }
+
+    if (leftType === "TEXT") {
+      const normalizedLeft = leftContent.trim();
+      const normalizedRight = rightContent.trim();
+
+      if (normalizedLeft && normalizedRight && normalizedLeft === normalizedRight) {
+        return true;
+      }
+    }
+  }
+
+  if (
     leftType === "TEXT" &&
     rightType === "TEXT" &&
     left.channelId === right.channelId &&
@@ -93,6 +171,7 @@ const isImageUpload = (file) => Boolean(file?.type?.startsWith("image/"));
  */
 const ChatWindow = ({ activeChannel, channels, sendWsMessage, isConnected, chatMessageHandlerRef }) => {
   const { user } = useAuth();
+  const toast = useToast();
   const { serverId } = useParams();
   const CURRENT_USER = user?.nickname || "";
 
@@ -102,10 +181,12 @@ const ChatWindow = ({ activeChannel, channels, sendWsMessage, isConnected, chatM
   const [isDragOver, setIsDragOver] = useState(false);
   const [isComposing, setIsComposing] = useState(false);
   const [pendingImage, setPendingImage] = useState(null);
+  const [uploadFeedback, setUploadFeedback] = useState("");
   const dragDepthRef = useRef(0);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const aiPendingTimeoutsRef = useRef(new Map()); // requestId → timeoutId
+  const messageSendTimeoutsRef = useRef(new Map()); // clientMessageId -> timeoutId
 
   const activeChannelRef = useRef(activeChannel);
   useEffect(() => {
@@ -123,15 +204,20 @@ const ChatWindow = ({ activeChannel, channels, sendWsMessage, isConnected, chatM
 
     setChannelMessages((prev) => {
       const updated = { ...prev };
+      const failedMessagesByChannel = loadFailedMessages(serverId);
+
       channels.forEach((ch) => {
         const channelId = ch.chId || ch.id;
-        if (!updated[channelId] && ch.messages?.length > 0) {
-          updated[channelId] = ch.messages;
+        if (!updated[channelId]) {
+          updated[channelId] = mergeMessages(
+            ch.messages || [],
+            failedMessagesByChannel[channelId] || [],
+          );
         }
       });
       return updated;
     });
-  }, [channels, activeChannel]);
+  }, [channels, activeChannel, serverId]);
 
   useEffect(() => {
     return () => {
@@ -169,25 +255,72 @@ const ChatWindow = ({ activeChannel, channels, sendWsMessage, isConnected, chatM
     });
   }, []);
 
-  const createOptimisticUploadMessage = useCallback((savedFile) => {
-    const imageType = savedFile.fileType?.startsWith("image/");
+  const clearMessageSendTimeout = useCallback((clientMessageId) => {
+    if (!clientMessageId) return;
+
+    const timeoutId = messageSendTimeoutsRef.current.get(clientMessageId);
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+      messageSendTimeoutsRef.current.delete(clientMessageId);
+    }
+  }, []);
+
+  const markMessageFailed = useCallback((channelId, clientMessageId, errorMessage = "메시지 전송에 실패했습니다.") => {
+    if (!channelId || !clientMessageId) return;
+
+    clearMessageSendTimeout(clientMessageId);
+
+    setChannelMessages((prev) => ({
+      ...prev,
+      [channelId]: (prev[channelId] || []).map((message) =>
+        message.clientMessageId === clientMessageId
+          ? {
+              ...message,
+              isOptimistic: false,
+              sendStatus: "failed",
+              sendError: errorMessage,
+              isRetrying: false,
+            }
+          : message,
+      ),
+    }));
+  }, [clearMessageSendTimeout]);
+
+  const scheduleMessageTimeout = useCallback((channelId, clientMessageId) => {
+    if (!channelId || !clientMessageId) return;
+
+    clearMessageSendTimeout(clientMessageId);
+
+    const timeoutId = window.setTimeout(() => {
+      markMessageFailed(channelId, clientMessageId, "전송 확인이 지연되고 있습니다. 재전송을 시도해주세요.");
+    }, SEND_TIMEOUT_MS);
+
+    messageSendTimeoutsRef.current.set(clientMessageId, timeoutId);
+  }, [clearMessageSendTimeout, markMessageFailed]);
+
+  const createOptimisticMessage = useCallback((payload) => {
+    const imageType = payload.messageType === "IMAGE";
 
     return {
-      messageId: `temp-upload-${savedFile.fileId || Date.now()}`,
+      messageId: payload.messageId || payload.clientMessageId || `temp-message-${Date.now()}`,
+      clientMessageId: payload.clientMessageId,
       serverId,
       channelId: activeChannel,
       senderId: user?.userId,
       senderNickname: user?.nickname,
-      messageType: imageType ? "IMAGE" : "FILE",
-      content: imageType ? "" : savedFile.fileName,
-      imageUrl: imageType ? savedFile.fileUrl : "",
-      fileUrl: savedFile.fileUrl,
-      fileName: savedFile.fileName,
-      fileType: savedFile.fileType,
-      fileId: savedFile.fileId,
-      s3ObjectKey: savedFile.s3ObjectKey,
-      createdAt: new Date().toISOString(),
+      messageType: payload.messageType,
+      content: payload.content || "",
+      imageUrl: imageType ? payload.imageUrl || payload.fileUrl || "" : "",
+      fileUrl: payload.fileUrl || "",
+      fileName: payload.fileName || "",
+      fileType: payload.fileType || "",
+      fileId: payload.fileId || "",
+      s3ObjectKey: payload.s3ObjectKey || "",
+      retryPayload: payload,
+      createdAt: payload.createdAt || new Date().toISOString(),
       isOptimistic: true,
+      sendStatus: "sending",
+      isRetrying: false,
     };
   }, [activeChannel, serverId, user?.nickname, user?.userId]);
 
@@ -197,6 +330,10 @@ const ChatWindow = ({ activeChannel, channels, sendWsMessage, isConnected, chatM
     const channelId = data?.channelId || activeChannelRef.current;
 
     if (action === "receiveMessage" && data) {
+      if (data.clientMessageId) {
+        clearMessageSendTimeout(data.clientMessageId);
+      }
+
       // ai-summary 도착 시: 같은 requestId의 ai-pending 제거 + 타이머 정리
       if (
         (AI_SUMMARY_MESSAGE_TYPES.has(data.messageType) || AI_SUMMARY_MESSAGE_TYPES.has(data.type)) &&
@@ -292,7 +429,7 @@ const ChatWindow = ({ activeChannel, channels, sendWsMessage, isConnected, chatM
 
       aiPendingTimeoutsRef.current.set(requestId, timeoutId);
     }
-  }, [appendMessageToChannel]);
+  }, [appendMessageToChannel, clearMessageSendTimeout]);
 
   // ✅ ChatLayout의 ref에 핸들러 등록
   useEffect(() => {
@@ -325,11 +462,71 @@ const ChatWindow = ({ activeChannel, channels, sendWsMessage, isConnected, chatM
     };
   }, []);
 
-  const broadcastUploadedFile = useCallback((savedFile, content = "") => {
-    if (!savedFile || !activeChannel || !isConnected) return;
+  useEffect(() => {
+    const timeoutsMap = messageSendTimeoutsRef.current;
+    return () => {
+      timeoutsMap.forEach((timeoutId) => clearTimeout(timeoutId));
+      timeoutsMap.clear();
+    };
+  }, []);
 
+  useEffect(() => {
+    if (!serverId) return;
+
+    const failedMessagesByChannel = Object.fromEntries(
+      Object.entries(channelMessages).map(([channelId, messages]) => [
+        channelId,
+        (messages || []).filter(
+          (message) =>
+            message.sendStatus === "failed" &&
+            message.clientMessageId &&
+            message.retryPayload,
+        ),
+      ]),
+    );
+
+    persistFailedMessages(serverId, failedMessagesByChannel);
+  }, [channelMessages, serverId]);
+
+  const sendOptimisticMessage = useCallback((payload) => {
+    if (!activeChannel || !serverId) {
+      toast.info("채널 선택 필요", "메시지를 보낼 채널을 먼저 선택해주세요.");
+      return false;
+    }
+
+    const optimisticMessage = createOptimisticMessage(payload);
+    appendMessageToChannel(activeChannel, optimisticMessage);
+
+    const sent = sendWsMessage?.("sendMessage", payload);
+
+    if (!sent) {
+      markMessageFailed(activeChannel, payload.clientMessageId, "웹소켓 연결이 끊겨 전송하지 못했습니다.");
+      toast.error("전송 실패", "연결이 복구되면 재전송 버튼으로 다시 보낼 수 있습니다.");
+      return false;
+    }
+
+    scheduleMessageTimeout(activeChannel, payload.clientMessageId);
+    return true;
+  }, [
+    activeChannel,
+    appendMessageToChannel,
+    createOptimisticMessage,
+    markMessageFailed,
+    scheduleMessageTimeout,
+    sendWsMessage,
+    serverId,
+    toast,
+  ]);
+
+  const createUploadPayload = useCallback((savedFile, content = "") => {
     const imageType = savedFile.fileType?.startsWith("image/");
-    sendWsMessage?.("sendMessage", {
+    const clientMessageId = createClientMessageKey();
+    const createdAt = new Date().toISOString();
+
+    return {
+      messageId: clientMessageId,
+      clientMessageId,
+      createdAt,
       serverId,
       channelId: activeChannel,
       senderId: user?.userId,
@@ -342,23 +539,32 @@ const ChatWindow = ({ activeChannel, channels, sendWsMessage, isConnected, chatM
       fileType: savedFile.fileType,
       fileId: savedFile.fileId,
       s3ObjectKey: savedFile.s3ObjectKey,
-    });
-  }, [activeChannel, isConnected, sendWsMessage, serverId, user?.nickname, user?.userId]);
+    };
+  }, [activeChannel, serverId, user?.nickname, user?.userId]);
 
   const handleUpload = useCallback(async (file) => {
     if (!file) return;
     if (!serverId || !activeChannel) {
-      alert("업로드할 채널을 먼저 선택해주세요.");
+      const message = "업로드할 채널을 먼저 선택해주세요.";
+      setUploadFeedback(message);
+      toast.info("채널 선택 필요", message);
       return;
     }
     if (!isConnected) {
-      alert("웹소켓 연결 후 다시 시도해주세요.");
+      const message = "웹소켓 연결 후 다시 시도해주세요.";
+      setUploadFeedback(message);
+      toast.info("연결 확인", message);
       return;
     }
-    if (file.size > 10 * 1024 * 1024) {
-      alert("10MB 이하의 파일만 업로드 가능합니다.");
+
+    const validation = validateUploadFile(file);
+    if (!validation.ok) {
+      setUploadFeedback(validation.message);
+      toast.error("업로드 제한", validation.message);
       return;
     }
+
+    setUploadFeedback("");
 
     if (isImageUpload(file)) {
       setPendingImage((prev) => {
@@ -377,15 +583,17 @@ const ChatWindow = ({ activeChannel, channels, sendWsMessage, isConnected, chatM
     setIsUploading(true);
     try {
       const savedFile = await uploadFile(serverId, file);
-      appendMessageToChannel(activeChannel, createOptimisticUploadMessage(savedFile));
-      broadcastUploadedFile(savedFile);
+      const payload = createUploadPayload(savedFile);
+      sendOptimisticMessage(payload);
     } catch (error) {
       console.error("채팅 파일 업로드 실패:", error);
-      alert(error.message || "파일 업로드에 실패했습니다.");
+      const message = error.message || "파일 업로드에 실패했습니다.";
+      setUploadFeedback(message);
+      toast.error("업로드 실패", message);
     } finally {
       setIsUploading(false);
     }
-  }, [activeChannel, appendMessageToChannel, broadcastUploadedFile, createOptimisticUploadMessage, isConnected, serverId]);
+  }, [activeChannel, createUploadPayload, isConnected, sendOptimisticMessage, serverId, toast]);
 
   const clearPendingImage = useCallback(() => {
     setPendingImage((prev) => {
@@ -399,23 +607,40 @@ const ChatWindow = ({ activeChannel, channels, sendWsMessage, isConnected, chatM
   const handleSend = useCallback(async () => {
     const trimmed = inputText.trim();
 
-    if ((!trimmed && !pendingImage) || !isConnected || !activeChannel) return;
+    if (!trimmed && !pendingImage) return;
+
+    if (!activeChannel) {
+      toast.info("채널 선택 필요", "메시지를 보낼 채널을 먼저 선택해주세요.");
+      return;
+    }
+
+    if (!isConnected) {
+      toast.info("연결 확인", "웹소켓 연결 후 다시 시도해주세요.");
+      return;
+    }
 
     if (pendingImage?.file) {
+      const validation = validateUploadFile(pendingImage.file);
+      if (!validation.ok) {
+        setUploadFeedback(validation.message);
+        toast.error("업로드 제한", validation.message);
+        return;
+      }
+
       setIsUploading(true);
       try {
         const savedFile = await uploadFile(serverId, pendingImage.file);
-        const optimisticMessage = createOptimisticUploadMessage(savedFile);
-        optimisticMessage.content = trimmed;
-        appendMessageToChannel(activeChannel, optimisticMessage);
-
-        broadcastUploadedFile(savedFile, trimmed);
+        const payload = createUploadPayload(savedFile, trimmed);
+        setUploadFeedback("");
+        sendOptimisticMessage(payload);
 
         setInputText("");
         clearPendingImage();
       } catch (error) {
         console.error("이미지 전송 실패:", error);
-        alert(error.message || "이미지 전송에 실패했습니다.");
+        const message = error.message || "이미지 전송에 실패했습니다.";
+        setUploadFeedback(message);
+        toast.error("이미지 전송 실패", message);
       } finally {
         setIsUploading(false);
       }
@@ -423,17 +648,35 @@ const ChatWindow = ({ activeChannel, channels, sendWsMessage, isConnected, chatM
       return;
     }
 
-    sendWsMessage?.("sendMessage", {
+    const payload = {
+      messageId: createClientMessageKey(),
+      createdAt: new Date().toISOString(),
       serverId,
       channelId: activeChannel,
       senderId: user?.userId,
       senderNickname: user?.nickname,
       messageType: "TEXT",
       content: trimmed,
-    });
+    };
+    payload.clientMessageId = payload.messageId;
+
+    setUploadFeedback("");
+    sendOptimisticMessage(payload);
 
     setInputText("");
-  }, [activeChannel, appendMessageToChannel, clearPendingImage, createOptimisticUploadMessage, broadcastUploadedFile, inputText, isConnected, pendingImage, sendWsMessage, serverId, user?.nickname, user?.userId]);
+  }, [
+    activeChannel,
+    clearPendingImage,
+    createUploadPayload,
+    inputText,
+    isConnected,
+    pendingImage,
+    sendOptimisticMessage,
+    serverId,
+    toast,
+    user?.nickname,
+    user?.userId,
+  ]);
 
   const handleKeyDown = (event) => {
     if (event.nativeEvent?.isComposing || isComposing || event.keyCode === 229) {
@@ -454,6 +697,7 @@ const ChatWindow = ({ activeChannel, channels, sendWsMessage, isConnected, chatM
 
   const handleOpenFilePicker = () => {
     if (isUploading) return;
+    setUploadFeedback("");
     fileInputRef.current?.click();
   };
 
@@ -490,6 +734,39 @@ const ChatWindow = ({ activeChannel, channels, sendWsMessage, isConnected, chatM
     await handleUpload(file);
   };
 
+  const handleRetryMessage = useCallback((message) => {
+    const payload = message?.retryPayload;
+
+    if (!payload) {
+      toast.error("재전송 실패", "다시 보낼 메시지 정보를 찾을 수 없습니다.");
+      return;
+    }
+
+    setChannelMessages((prev) => ({
+      ...prev,
+      [activeChannel]: (prev[activeChannel] || []).map((item) =>
+        item.clientMessageId === payload.clientMessageId
+          ? {
+              ...item,
+              sendStatus: "failed",
+              isRetrying: true,
+            }
+          : item,
+      ),
+    }));
+
+    const sent = sendWsMessage?.("sendMessage", payload);
+
+    if (!sent) {
+      markMessageFailed(activeChannel, payload.clientMessageId, "웹소켓 연결이 끊겨 전송하지 못했습니다.");
+      toast.error("재전송 실패", "연결 상태를 확인한 뒤 다시 시도해주세요.");
+      return;
+    }
+
+    scheduleMessageTimeout(activeChannel, payload.clientMessageId);
+    toast.info("재전송 중", "메시지를 다시 전송하고 있습니다.");
+  }, [activeChannel, markMessageFailed, scheduleMessageTimeout, sendWsMessage, toast]);
+
   const renderMessageBody = (msg) => {
     const messageType = msg.messageType || msg.type;
     const content = msg.content || msg.text || "";
@@ -510,7 +787,7 @@ const ChatWindow = ({ activeChannel, channels, sendWsMessage, isConnected, chatM
             />
           </a>
           {content && (
-            <p>
+            <p className={msg.sendStatus === "failed" ? "message-text message-text-failed" : "message-text"}>
               {content}
               {msg.isEdited && (
                 <span className="message-edited">(수정됨)</span>
@@ -524,7 +801,7 @@ const ChatWindow = ({ activeChannel, channels, sendWsMessage, isConnected, chatM
     return (
       <>
         {content && (
-          <p>
+          <p className={msg.sendStatus === "failed" ? "message-text message-text-failed" : "message-text"}>
             {content}
             {msg.isEdited && (
               <span className="message-edited">(수정됨)</span>
@@ -819,11 +1096,34 @@ const ChatWindow = ({ activeChannel, channels, sendWsMessage, isConnected, chatM
             }
 
             return (
-              <div key={key} className={`message-dummy ${isMine ? "message-mine" : ""}`}>
+              <div
+                key={key}
+                className={`message-dummy ${isMine ? "message-mine" : ""} ${msg.sendStatus === "sending" ? "message-pending" : ""} ${msg.sendStatus === "failed" ? "message-failed" : ""}`}
+              >
                 {!isMine && <div className="avatar">{avatarChar}</div>}
                 <div className={`message-content ${isMine ? "mine-content" : ""}`}>
                   <span className={`author ${isMine ? "mine-author" : ""}`}>{authorName}</span>
                   {renderMessageBody(msg)}
+                  {(msg.sendStatus === "sending" || msg.sendStatus === "failed") && (
+                    <div className={`message-status-row ${msg.sendStatus}`}>
+                      <span className="message-status-text">
+                        {msg.sendStatus === "sending"
+                          ? "전송 중..."
+                          : msg.isRetrying
+                            ? "재전송 중..."
+                          : msg.sendError || "전송 실패"}
+                      </span>
+                      {msg.sendStatus === "failed" && !msg.isRetrying && (
+                        <button
+                          type="button"
+                          className="message-retry-button"
+                          onClick={() => handleRetryMessage(msg)}
+                        >
+                          재전송
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
                 {isMine && <div className="avatar">{avatarChar}</div>}
               </div>
@@ -844,6 +1144,9 @@ const ChatWindow = ({ activeChannel, channels, sendWsMessage, isConnected, chatM
       )}
 
       <div className="chat-input-area">
+        <div className={`chat-upload-policy ${uploadFeedback ? "is-error" : ""}`}>
+          {uploadFeedback || `업로드 가능 형식: ${UPLOAD_POLICY_LABEL}`}
+        </div>
         {pendingImage && (
           <div className="chat-pending-image">
             <img
@@ -889,7 +1192,12 @@ const ChatWindow = ({ activeChannel, channels, sendWsMessage, isConnected, chatM
                 : "연결 중..."
             }
             value={inputText}
-            onChange={(event) => setInputText(event.target.value)}
+            onChange={(event) => {
+              setInputText(event.target.value);
+              if (uploadFeedback) {
+                setUploadFeedback("");
+              }
+            }}
             onCompositionStart={() => setIsComposing(true)}
             onCompositionEnd={() => setIsComposing(false)}
             onKeyDown={handleKeyDown}
