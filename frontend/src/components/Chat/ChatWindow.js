@@ -17,6 +17,7 @@ const FAILED_MESSAGES_STORAGE_PREFIX = "chat-failed-messages";
 const createClientMessageKey = () =>
   `client-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
+const parseContent = (content) => {
   try {
     return JSON.parse(content);
   } catch {
@@ -30,6 +31,7 @@ const getSummaryParagraphs = (summary) =>
     .map((item) => item.trim())
     .filter(Boolean);
 
+const SummaryParagraphs = ({ paragraphs }) => {
   return (
     <div className="ai-summary-prose">
       {paragraphs.map((paragraph, index) => (
