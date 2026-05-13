@@ -69,6 +69,7 @@
 
 .hub-upload-policy.is-error {
   color: #fca5a5;
+}
 /* ── Skeleton UI ── */
 .hub-skeleton-list {
   display: flex;
