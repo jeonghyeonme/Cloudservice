@@ -51,6 +51,17 @@ const ResourceHub = ({ serverResources, setCurrentServer, sendWsMessage }) => {
     });
   };
 
+  // ✅ 채팅 알림 메시지 자동 전송 헬퍼
+  const sendNotificationMessage = (content) => {
+    sendWsMessage?.('sendMessage', {
+      serverId,
+      senderId: user?.userId,
+      senderNickname: user?.nickname,
+      messageType: 'TEXT',
+      content,
+    });
+  };
+
   const handleFileSelect = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -68,6 +79,9 @@ const ResourceHub = ({ serverResources, setCurrentServer, sendWsMessage }) => {
         }));
         // ✅ 파일 업로드 완료 시 브로드캐스트
         broadcastResourceUpdate('file', 'add', savedFile);
+        
+        // ✅ 파일 업로드 알림 메시지 자동 전송
+        sendNotificationMessage(`📎 ${user?.nickname}님이 파일을 공유했습니다: ${savedFile.fileName || file.name}`);
       }
     } catch (error) {
       console.error('업로드 실패:', error);
@@ -90,6 +104,9 @@ const ResourceHub = ({ serverResources, setCurrentServer, sendWsMessage }) => {
         }));
         // ✅ 링크 저장 완료 시 브로드캐스트
         broadcastResourceUpdate('link', 'add', result.link);
+
+        // ✅ 링크 추가 알림 메시지 자동 전송
+        sendNotificationMessage(`🔗 ${user?.nickname}님이 링크를 공유했습니다: ${result.link.title || url}`);
       }
     } catch (error) {
       console.error('링크 저장 실패:', error);
