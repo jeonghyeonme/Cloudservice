@@ -145,6 +145,11 @@ const ExploreServers = () => {
       });
   }, [setActiveServerId]);
 
+  const refreshServers = async () => {
+    const data = await getServers();
+    setServers(normalizeServers(data.items || []));
+  };
+
   const filteredServers = servers.filter((server) => {
     const title = server.serverName || server.title || "";
     const description = server.description || "";
@@ -323,7 +328,10 @@ const ExploreServers = () => {
       </div>
 
       {isModalOpen && (
-        <CreateServerModal onClose={() => setIsModalOpen(false)} />
+        <CreateServerModal
+          onClose={() => setIsModalOpen(false)}
+          onCreated={refreshServers}
+        />
       )}
 
       <ContextMenu

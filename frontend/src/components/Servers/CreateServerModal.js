@@ -4,7 +4,7 @@ import { useToast } from "../../contexts/ToastContext";
 import FormModal from "../common/FormModal";
 import { createServerFields } from "../common/entityFormConfig";
 
-const CreateServerModal = ({ onClose }) => {
+const CreateServerModal = ({ onClose, onCreated }) => {
   const toast = useToast();
 
   const handleSubmit = async (values) => {
@@ -37,10 +37,10 @@ const CreateServerModal = ({ onClose }) => {
     };
 
     try {
-      await createServer(newServerData);
+      const createdServer = await createServer(newServerData);
+      await onCreated?.(createdServer);
       toast.success("서버 생성 완료", `${values.serverName} 서버가 생성되었습니다.`);
       onClose();
-      window.location.reload();
     } catch (error) {
       console.error("서버 생성 실패:", error);
       toast.error("서버 생성 실패", error.message || "서버 통신 중 오류가 발생했습니다.");
