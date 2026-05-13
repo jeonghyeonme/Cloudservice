@@ -25,12 +25,36 @@ const isAnalyzable = (fileName, fileType) => {
   return false;
 };
 
+// ✅ 파일/링크 목록 Skeleton UI
+const ResourceSkeleton = () => (
+  <div className="hub-skeleton-list">
+    {[...Array(4)].map((_, i) => (
+      <div key={i} className="hub-skeleton-item">
+        <div className="skeleton hub-skeleton-icon" />
+        <div className="hub-skeleton-info">
+          <div className="skeleton hub-skeleton-name" style={{ width: `${50 + i * 10}%` }} />
+          <div className="skeleton hub-skeleton-meta" style={{ width: `${30 + i * 8}%` }} />
+        </div>
+      </div>
+    ))}
+  </div>
+);
+
+// ✅ Empty State
+const EmptyState = ({ icon, text }) => (
+  <div className="hub-empty-state">
+    <span className="hub-empty-icon">{icon}</span>
+    <p className="hub-empty-text">{text}</p>
+  </div>
+);
+
 /**
  * @param {object} serverResources - 서버 상세 데이터
  * @param {function} setCurrentServer - 서버 state 업데이트 함수
  * @param {function} sendWsMessage - WebSocket 메시지 전송 함수 (ChatLayout에서 전달)
+ * @param {boolean} loading - 서버 데이터 로딩 상태
  */
-const ResourceHub = ({ serverResources, setCurrentServer, sendWsMessage }) => {
+const ResourceHub = ({ serverResources, setCurrentServer, sendWsMessage, loading = false }) => {
   const { user } = useAuth();
   const [activeHubTab, setActiveHubTab] = useState('Files');
   const { serverId } = useParams();
@@ -281,7 +305,13 @@ const ResourceHub = ({ serverResources, setCurrentServer, sendWsMessage }) => {
               <input ref={fileInputRef} type="file" style={{ display: 'none' }} onChange={handleFileSelect} />
             </div>
             <div className="hub-file-list">
-              {files.length > 0 ? files.map(renderFileItem) : <div className="empty-msg">공유된 파일이 없습니다.</div>}
+              {/* ✅ 로딩 중 → Skeleton / 파일 없음 → Empty State / 있음 → 목록 */}
+              {loading ? (
+                <ResourceSkeleton />
+              ) : files.length > 0 ? (files.map(renderFileItem)
+              ) : (
+                <EmptyState icon="📁" text="공유된 파일이 없습니다" />
+              )}
             </div>
           </div>
         )}
@@ -290,15 +320,23 @@ const ResourceHub = ({ serverResources, setCurrentServer, sendWsMessage }) => {
           <div className="hub-section">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
               <p className="hub-section-label">공유된 링크</p>
-              <button
-                onClick={handleLinkAdd}
-                style={{ background: '#00ff66', color: '#000', border: 'none', borderRadius: '4px', padding: '4px 10px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+              {!loading && (
+                <button
+                  onClick={handleLinkAdd}
+                  style={{ background: '#00ff66', color: '#000', border: 'none', borderRadius: '4px', padding: '4px 10px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
               >
                 + 링크 추가
-              </button>
+                </button>
+              )}
             </div>
             <div className="hub-file-list">
-              {links.length > 0 ? links.map(renderLinkItem) : <div className="empty-msg">공유된 링크가 없습니다.</div>}
+              {loading ? (
+                <ResourceSkeleton />
+              ) : links.length > 0 ? (
+                links.map(renderLinkItem)
+              ) : (
+                <EmptyState icon="🔗" text="공유된 링크가 없습니다" />
+              )}
             </div>
           </div>
         )}
