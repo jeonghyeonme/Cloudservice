@@ -26,7 +26,31 @@ import {
   normalizeServers,
 } from "../../lib/serverEntity";
 
-const ServerCard = ({ server, onJoin }) => {
+// ✅ 서버 카드 Skeleton UI
+const ServerCardSkeleton = () => (
+  <div className="servers-card skeleton-card">
+    <div className="skeleton skeleton-cover" />
+    <div className="servers-body">
+      <div className="skeleton skeleton-title" />
+      <div className="skeleton skeleton-desc" />
+      <div className="skeleton skeleton-desc short" />
+    </div>
+  </div>
+);
+
+// ✅ 검색 결과 없음 Empty State
+const EmptySearchState = ({ query }) => (
+  <div className="empty-state">
+    <div className="empty-state-icon">🔍</div>
+    <p className="empty-state-title">검색 결과가 없어요</p>
+    <p className="empty-state-sub">
+      <span className="empty-state-keyword">"{query}"</span>에 해당하는 서버를 찾을 수 없습니다.
+      <br />다른 검색어를 시도하거나 새 서버를 만들어보세요!
+    </p>
+  </div>
+);
+
+const ServerCard = ({ server, onJoin, isMember }) => {
   const name = getServerName(server, "제목 없음");
   const description = server.description;
   const currentMembers = Number(server.currentCount) || 0;
@@ -47,7 +71,6 @@ const ServerCard = ({ server, onJoin }) => {
         ) : (
           <div className="servers-cover-emoji">{emoji}</div>
         )}
-
         <span className={`servers-badge badge-${displayStatus.toLowerCase()}`}>
           {displayStatus}
         </span>
@@ -75,19 +98,13 @@ const ServerCard = ({ server, onJoin }) => {
           </div>
 
           {isLocked ? (
-            <button className="servers-btn btn-locked" disabled>
-              LOCKED
-            </button>
+            <button className="servers-btn btn-locked" disabled>LOCKED</button>
           ) : isFull ? (
-            <button className="servers-btn btn-locked" disabled>
-              FULL
-            </button>
+            <button className="servers-btn btn-locked" disabled>FULL</button>
           ) : (
-            <button
-              className="servers-btn btn-join"
-              onClick={() => onJoin(server)}
-            >
-              JOIN
+            // ✅ 이미 멤버면 "입장", 아니면 "JOIN"
+            <button className="servers-btn btn-join" onClick={() => onJoin(server)}>
+              {isMember ? "입장" : "JOIN"}
             </button>
           )}
         </div>
@@ -100,9 +117,9 @@ const ExploreServers = () => {
   const navigate = useNavigate();
   const toast = useToast();
   const { logout, refreshToken, user } = useAuth();
-  const { clearJoinedServers, setActiveServerId, upsertJoinedServer, removeJoinedServer } =
-    useServers();
+  const { clearJoinedServers, setActiveServerId, upsertJoinedServer, removeJoinedServer, joinedServers  } = useServers();
   const [servers, setServers] = useState([]);
+  const [loading, setLoading] = useState(true); // ✅ 로딩 상태 추가
   const [searchQuery, setSearchQuery] = useState("");
   const [inviteCode, setInviteCode] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -137,12 +154,14 @@ const ExploreServers = () => {
 
   useEffect(() => {
     setActiveServerId(null);
+    setLoading(true); // ✅ 로딩 시작
     getServers()
       .then((data) => setServers(normalizeServers(data.items || [])))
       .catch((err) => {
         console.error("데이터 로드 실패!", err);
         setServers([]);
-      });
+      })
+      .finally(() => setLoading(false)); // ✅ 로딩 완료
   }, [setActiveServerId]);
 
   const refreshServers = async () => {
@@ -159,11 +178,27 @@ const ExploreServers = () => {
     );
   });
 
+  // ✅ 이미 가입한 서버인지 확인
+  const isAlreadyMember = (server) => {
+    const sid = getServerId(server);
+    return joinedServers.some((s) => getServerId(s) === sid);
+  };
+
   const executeJoin = async (server, password = null) => {
     const sid = getServerId(server);
+
+    // ✅ 이미 멤버면 joinServer API 호출 없이 바로 이동
+    if (isAlreadyMember(server)) {
+      navigate(getServerPath(sid));
+      return;
+    }
+
     try {
-      await joinServer(sid, password);
-      upsertJoinedServer(normalizeServer(server));
+      const result = await joinServer(sid, password);
+       // ✅ 백엔드에서 alreadyMember 응답도 중복 카운트 방지
+      if (!result?.alreadyMember) {
+        upsertJoinedServer(normalizeServer(server));
+      }
       navigate(getServerPath(sid));
     } catch (error) {
       console.error("서버 참여 실패:", error);
@@ -172,6 +207,12 @@ const ExploreServers = () => {
   };
 
   const handleJoinClick = (server) => {
+    // ✅ 이미 멤버면 비밀번호 없이 바로 입장
+    if (isAlreadyMember(server)) {
+      executeJoin(server);
+      return;
+    }
+
     if (server.isPrivate) {
       setSelectedServer(server);
       setIsJoinModalOpen(true);
@@ -308,22 +349,31 @@ const ExploreServers = () => {
         </div>
 
         <div className="servers-grid">
-            {filteredServers.map((server) => (
+          {/* ✅ 로딩 중 → Skeleton 카드 표시 */}
+          {loading ? (
+            [...Array(4)].map((_, i) => <ServerCardSkeleton key={i} />)
+          ) : filteredServers.length === 0 && searchQuery ? (
+            // ✅ 검색 결과 없음 → Empty State
+            <EmptySearchState query={searchQuery} />
+          ) : ( 
+            filteredServers.map((server) => (
               <ServerCard
                 key={getServerId(server)}
                 server={server}
                 onJoin={handleJoinClick}
+                isMember={isAlreadyMember(server)}
               />
-          ))}
+            ))
+          )}
 
-          <div
-            className="servers-card create-card"
-            onClick={() => setIsModalOpen(true)}
-          >
+          {/* 방 만들기 카드 - 로딩 중이 아닐 때만 표시 */}
+          {!loading && (
+          <div className="servers-card create-card" onClick={() => setIsModalOpen(true)}>
             <div className="create-plus">+</div>
             <p className="create-label">서버 만들기</p>
             <p className="create-sub">새로운 학습 세션 시작하기</p>
           </div>
+          )}
         </div>
       </div>
 

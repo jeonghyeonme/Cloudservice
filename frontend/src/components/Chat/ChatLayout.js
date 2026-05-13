@@ -208,9 +208,9 @@ const ChatLayout = () => {
   const handleChannelSettingsSubmit = async (values) => { await saveChannelSettings(settingsModal?.channel, values); closeSettingsModal(); };
   const handleCreateChannel = async (values) => { await createChannelInServer(values); setIsChannelModalOpen(false); };
 
-  if (loading) return <div style={{ color: "white", padding: "20px" }}>서버 정보를 가져오는 중...</div>;
+  // if (loading) return <div style={{ color: "white", padding: "20px" }}>서버 정보를 가져오는 중...</div>;
 
-  if (!currentServer) {
+  if (!loading && !currentServer) {
     return (
       <div style={{ padding: "20px", color: "white" }}>
         <h3>서버를 찾을 수 없습니다. (ID: {serverId})</h3>
@@ -235,6 +235,7 @@ const ChatLayout = () => {
         }}
       />
 
+      {/* ✅ loading prop 전달 → 로딩 중엔 Skeleton 표시 */}
       <SidebarLeft
         serverName={getServerName(currentServer, "로딩 중...")}
         channels={currentServer?.channels || []}
@@ -246,6 +247,7 @@ const ChatLayout = () => {
         members={currentServer?.members || []}
         hostId={currentServer?.hostId}
         onlineUserIds={onlineUserIds}
+        loading={loading}
         onServerContextMenu={(event) =>
           openContextMenu(event, { type: "server", targetId: serverId, title: getServerName(currentServer), items: serverMenuItems })
         }
@@ -268,19 +270,41 @@ const ChatLayout = () => {
       />
 
       <main className="chat-content-wrapper" style={{ display: "flex", flex: 1, minWidth: 0 }}>
-        {/* ✅ ChatWindow에 sendWsMessage, isConnected, chatMessageHandlerRef 전달 */}
-        <ChatWindow
-          activeChannel={activeChannel}
-          channels={currentServer.channels}
-          sendWsMessage={sendWsMessage}
-          isConnected={isConnected}
-          chatMessageHandlerRef={chatMessageHandlerRef}
-        />
+        {loading ? (
+          // ✅ 로딩 중 채팅창 Skeleton
+          <div className="chat-main">
+            <div className="chat-header">
+              <div className="skeleton" style={{ width: 120, height: 16, borderRadius: 6 }} />
+            </div>
+            <div className="chat-messages" style={{ gap: 16 }}>
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="message-dummy">
+                  <div className="skeleton" style={{ width: 40, height: 40, borderRadius: '50%', flexShrink: 0 }} />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
+                    <div className="skeleton" style={{ width: 80, height: 12, borderRadius: 4 }} />
+                    <div className="skeleton" style={{ width: `${50 + i * 8}%`, height: 14, borderRadius: 4 }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          //✅ ChatWindow에 sendWsMessage, isConnected, chatMessageHandlerRef 전달
+          <ChatWindow 
+            activeChannel={activeChannel}
+            channels={currentServer.channels}
+            sendWsMessage={sendWsMessage}
+            isConnected={isConnected}
+            chatMessageHandlerRef={chatMessageHandlerRef}
+          />
+        )}
+
         {/* ✅ ResourceHub에 sendWsMessage 전달 */}
         <ResourceHub
           serverResources={currentServer}
           setCurrentServer={setCurrentServer}
           sendWsMessage={sendWsMessage}
+          loading={loading}
         />
       </main>
 

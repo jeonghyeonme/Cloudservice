@@ -2,6 +2,7 @@ const { GetCommand, PutCommand, UpdateCommand } = require("@aws-sdk/lib-dynamodb
 const dynamoDb = require("../dynamodbClient");
 const { verifyAccessToken } = require("../utils");
 const { HEADERS } = require("../utils/response");
+const { isUserBanned } = require("./serverAccess");
 
 exports.handler = async (event) => {
   try {
@@ -58,7 +59,16 @@ exports.handler = async (event) => {
       };
     }
 
-    // 3. 정원 초과 체크
+    // 3. 영구 차단 사용자 재입장 방지
+    if (isUserBanned(serverResult.Item, userId)) {
+      return {
+        statusCode: 403,
+        headers: HEADERS,
+        body: JSON.stringify({ message: "이 서버에서 차단된 사용자입니다." }),
+      };
+    }
+
+    // 4. 정원 초과 체크
     const currentCount = serverResult.Item.currentCount || 0;
     const maxCapacity = serverResult.Item.maxCapacity || 10;
     if (currentCount >= maxCapacity) {
@@ -69,7 +79,7 @@ exports.handler = async (event) => {
       };
     }
 
-    // 4. 비밀번호 검증 (비공개 서버)
+    // 5. 비밀번호 검증 (비공개 서버)
     if (serverResult.Item.serverPassword) {
       const body = JSON.parse(event.body || "{}");
 
@@ -82,21 +92,21 @@ exports.handler = async (event) => {
       }
     }
 
-    // 5. Users 테이블에서 nickname 조회
+    // 6. Users 테이블에서 nickname 조회
     const userResult = await dynamoDb.send(new GetCommand({
       TableName: process.env.USERS_TABLE,
       Key: { userId },
     }));
     const nickname = userResult.Item?.nickname || "Unknown";
 
-    // 6. ServerMembers 테이블에 멤버십 추가
+    // 7. ServerMembers 테이블에 멤버십 추가
     const joinedAt = new Date().toISOString();
     await dynamoDb.send(new PutCommand({
       TableName: process.env.SERVER_MEMBERS_TABLE,
       Item: { userId, serverId, nickname, role: "MEMBER", joinedAt },
     }));
 
-    // 7. Servers 테이블의 members 배열과 currentCount 업데이트
+    // 8. Servers 테이블의 members 배열과 currentCount 업데이트
     const currentMembers = Array.isArray(serverResult.Item.members) ? serverResult.Item.members : [];
     const newMembers = [...currentMembers, { userId, nickname, role: "MEMBER", joinedAt }];
 
