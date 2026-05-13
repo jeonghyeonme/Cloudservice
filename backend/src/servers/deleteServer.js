@@ -1,4 +1,4 @@
-const { GetCommand, DeleteCommand } = require("@aws-sdk/lib-dynamodb");
+const { GetCommand, DeleteCommand, QueryCommand, BatchWriteCommand } = require("@aws-sdk/lib-dynamodb");
 const dynamoDb = require("../dynamodbClient");
 const { verifyAccessToken } = require("../utils");
 const { HEADERS } = require("../utils/response");
@@ -44,6 +44,30 @@ exports.handler = async (event) => {
       Key: { serverId },
     }));
 
+    // Invites 테이블에서 해당 서버의 초대 코드 삭제
+    try {
+      const invites = await dynamoDb.send(new QueryCommand({
+        TableName: process.env.INVITES_TABLE,
+        IndexName: "serverId-createdAt-index",
+        KeyConditionExpression: "serverId = :sid",
+        ExpressionAttributeValues: { ":sid": serverId },
+      }));
+
+      if (invites.Items && invites.Items.length > 0) {
+        const deleteRequests = invites.Items.map(invite => ({
+          DeleteRequest: { Key: { inviteId: invite.inviteId } }
+        }));
+
+        for (let i = 0; i < deleteRequests.length; i += 25) {
+          await dynamoDb.send(new BatchWriteCommand({
+            RequestItems: { [process.env.INVITES_TABLE]: deleteRequests.slice(i, i + 25) }
+          }));
+        }
+      }
+    } catch (inviteErr) {
+      console.warn("초대 코드 삭제 중 경고 (무시 가능):", inviteErr);
+    }
+
     // ServerMembers 테이블에서 해당 서버의 모든 멤버 데이터 삭제
     try {
       const members = await dynamoDb.send(new QueryCommand({
@@ -59,9 +83,11 @@ exports.handler = async (event) => {
           DeleteRequest: { Key: { userId: member.userId, serverId: member.serverId } }
         }));
         
-        await dynamoDb.send(new BatchWriteCommand({
-          RequestItems: { [process.env.SERVER_MEMBERS_TABLE]: deleteRequests }
-        }));
+        for (let i = 0; i < deleteRequests.length; i += 25) {
+          await dynamoDb.send(new BatchWriteCommand({
+            RequestItems: { [process.env.SERVER_MEMBERS_TABLE]: deleteRequests.slice(i, i + 25) }
+          }));
+        }
       }
     } catch (memberErr) {
       console.warn("멤버 데이터 삭제 중 경고 (무시 가능):", memberErr);

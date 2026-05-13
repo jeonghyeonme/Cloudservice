@@ -61,10 +61,14 @@ exports.handler = async (event) => {
       updateExpressions.push("isPrivate = :ip");
       expressionValues[":ip"] = body.isPrivate;
     }
-    if (body.password !== undefined) {
-      updateExpressions.push("#pw = :pw");
-      expressionNames["#pw"] = "password";
-      expressionValues[":pw"] = body.password || null;
+    if (body.serverPassword !== undefined || body.password !== undefined) {
+      updateExpressions.push("serverPassword = :spw");
+      expressionValues[":spw"] = (body.serverPassword ?? body.password) || null;
+    }
+    if (body.rules !== undefined) {
+      updateExpressions.push("#rules = :rules");
+      expressionNames["#rules"] = "rules";
+      expressionValues[":rules"] = Array.isArray(body.rules) ? body.rules : [];
     }
 
     if (updateExpressions.length === 0) {
@@ -74,6 +78,9 @@ exports.handler = async (event) => {
         body: JSON.stringify({ message: "수정할 항목이 없습니다." }),
       };
     }
+
+    updateExpressions.push("updatedAt = :updatedAt");
+    expressionValues[":updatedAt"] = new Date().toISOString();
 
     await dynamoDb.send(new UpdateCommand({
       TableName: process.env.SERVERS_TABLE,
@@ -92,7 +99,7 @@ exports.handler = async (event) => {
     return {
       statusCode: 200,
       headers: HEADERS,
-      body: JSON.stringify({ message: "서버 설정 수정 완료", room: updated.Item }),
+      body: JSON.stringify({ message: "서버 설정 수정 완료", server: updated.Item, room: updated.Item }),
     };
   } catch (error) {
     console.error("updateServer Error:", error);

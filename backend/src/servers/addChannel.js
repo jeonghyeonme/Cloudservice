@@ -1,11 +1,15 @@
-const { GetCommand, UpdateCommand } = require("@aws-sdk/lib-dynamodb");
+const { UpdateCommand } = require("@aws-sdk/lib-dynamodb");
 const { v4: uuidv4 } = require("uuid");
 const dynamoDb = require("../dynamodbClient");
 const { HEADERS } = require("../utils/response");
+const { ROLE, requireServerRole } = require("./serverAccess");
 
 exports.handler = async (event) => {
   try {
     const serverId = event.pathParameters.serverId;
+    const access = await requireServerRole(event, serverId, ROLE.MODERATOR);
+    if (access.response) return access.response;
+
     const body = JSON.parse(event.body || "{}");
     const { name, label, topic } = body;
 
@@ -17,20 +21,7 @@ exports.handler = async (event) => {
       };
     }
 
-    const serverData = await dynamoDb.send(new GetCommand({
-      TableName: process.env.SERVERS_TABLE,
-      Key: { serverId },
-    }));
-
-    if (!serverData.Item) {
-      return {
-        statusCode: 404,
-        headers: HEADERS,
-        body: JSON.stringify({ message: "서버를 찾을 수 없습니다." }),
-      };
-    }
-
-    const currentChannels = serverData.Item.channels || [];
+    const currentChannels = access.server.channels || [];
     const newChannel = {
       chId: uuidv4(),
       name,
@@ -41,9 +32,10 @@ exports.handler = async (event) => {
     await dynamoDb.send(new UpdateCommand({
       TableName: process.env.SERVERS_TABLE,
       Key: { serverId },
-      UpdateExpression: "SET channels = :updatedChannels",
+      UpdateExpression: "SET channels = :updatedChannels, updatedAt = :updatedAt",
       ExpressionAttributeValues: {
         ":updatedChannels": [...currentChannels, newChannel],
+        ":updatedAt": new Date().toISOString(),
       },
     }));
 
@@ -55,6 +47,7 @@ exports.handler = async (event) => {
   } catch (error) {
     console.error(error);
     return {
+      statusCode: 500,
       headers: HEADERS,
       body: JSON.stringify({ message: "채널 추가 실패", error: error.message }),
     };

@@ -52,6 +52,7 @@ module.exports.handler = async (event) => {
         members: hostId
           ? [{ userId: hostId, nickname: hostNickname, role: "HOST", joinedAt: createdAt }]
           : [],
+        bannedMembers: [],
       },
     };
 
