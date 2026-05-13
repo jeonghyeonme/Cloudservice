@@ -17,30 +17,6 @@ const FAILED_MESSAGES_STORAGE_PREFIX = "chat-failed-messages";
 const createClientMessageKey = () =>
   `client-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
-const parseContent = (content) => {
-  try {
-    return JSON.parse(content);
-  } catch {
-    return {};
-  }
-};
-
-const getSummaryParagraphs = (summary) =>
-  String(summary || "")
-    .split(/\n{2,}/)
-    .map((item) => item.trim())
-    .filter(Boolean);
-
-const SummaryParagraphs = ({ paragraphs }) => {
-  return (
-    <div className="ai-summary-prose">
-      {paragraphs.map((paragraph, index) => (
-        <p key={`${paragraph}-${index}`}>{paragraph}</p>
-      ))}
-    </div>
-  );
-};
-
 const isPendingOrFailedMessage = (message) =>
   message?.sendStatus === "sending" || message?.sendStatus === "failed";
 
