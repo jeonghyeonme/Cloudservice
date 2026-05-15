@@ -7,7 +7,6 @@ const { PutCommand, QueryCommand } = require("@aws-sdk/lib-dynamodb");
 const { ApiGatewayManagementApiClient, PostToConnectionCommand } = require("@aws-sdk/client-apigatewaymanagementapi");
 const { v4: uuidv4 } = require("uuid");
 const dynamoDb = require("../dynamodbClient");
-const { HEADERS } = require("../utils/response");
 
 const REGION = process.env.REGION || "us-east-1";
 const RESOURCES_BUCKET = process.env.RESOURCES_BUCKET;
@@ -15,7 +14,7 @@ const RESOURCES_BUCKET = process.env.RESOURCES_BUCKET;
 // DB 테이블명 및 웹소켓 엔드포인트 환경변수
 const MESSAGES_TABLE = process.env.MESSAGES_TABLE;
 const CONNECTIONS_TABLE = process.env.CONNECTIONS_TABLE;
-const WSS_ENDPOINT = process.env.WSS_ENDPOINT; // HTTP 핸들러이므로 환경변수로 주입받아야 합니다.
+const WSS_ENDPOINT = process.env.WSS_ENDPOINT;
 
 const textract    = new TextractClient({ region: REGION });
 const rekognition = new RekognitionClient({ region: REGION });
@@ -57,146 +56,155 @@ async function summarizeWithBedrock(text) {
   return responseBody.content[0].text;
 }
 
+// =========================
+// SQS 트리거 핸들러
+// =========================
 exports.handler = async (event) => {
-  try {
-    const body = JSON.parse(event.body || "{}");
-    const { s3ObjectKey, fileType, serverId, fileName, requestId } = body;
+  const records = event.Records || [];
 
-    if (!s3ObjectKey || !fileType) {
-      return {
-        statusCode: 400,
-        headers: HEADERS,
-        body: JSON.stringify({ message: "s3ObjectKey, fileType은 필수입니다." }),
-      };
+  if (records.length === 0) {
+    console.warn("aiRouter: 처리할 SQS 메시지가 없습니다.");
+    return { statusCode: 200 };
+  }
+
+  // BatchSize=1로 설정 예정이지만, 혹시 모르니 루프 처리
+  for (const record of records) {
+    try {
+      const body = JSON.parse(record.body || "{}");
+      await processAiAnalysis(body);
+    } catch (error) {
+      console.error("aiRouter 메시지 처리 실패:", error);
+      // throw하면 SQS가 VisibilityTimeout 후 재시도 (maxReceiveCount까지)
+      throw error;
     }
+  }
 
-    let result = {};
+  return { statusCode: 200 };
+};
 
-    // ── 1. PDF/문서 → Textract + Bedrock 요약 ──
-    if (fileType.includes("pdf") || fileType.includes("document")) {
-      const textractResponse = await textract.send(new StartDocumentTextDetectionCommand({
-        DocumentLocation: { S3Object: { Bucket: RESOURCES_BUCKET, Name: s3ObjectKey } },
-      }));
-      const extractedText = await waitForTextract(textractResponse.JobId);
-      const summary = await summarizeWithBedrock(extractedText);
+// =========================
+// AI 분석 메인 로직
+// =========================
+async function processAiAnalysis(body) {
+  const { s3ObjectKey, fileType, serverId, fileName, requestId } = body;
 
-      result = {
-        type: "document",
-        status: "COMPLETE",
-        fileName: fileName || s3ObjectKey.split("/").pop(),
-        extractedText: extractedText.slice(0, 2000),
-        summary,
-      };
-    }
-    // ── 2. 이미지 → Rekognition + Translate ──
-    else if (fileType.startsWith("image/")) {
-      const labelsResponse = await rekognition.send(new DetectLabelsCommand({
-        Image: { S3Object: { Bucket: RESOURCES_BUCKET, Name: s3ObjectKey } },
-        MaxLabels: 10,
-        MinConfidence: 70,
-      }));
-      const labels = labelsResponse.Labels.map(l => ({ name: l.Name, confidence: Math.round(l.Confidence) }));
+  // 검증 실패는 재시도 의미 없음. 로그만 남기고 종료.
+  if (!s3ObjectKey || !fileType) {
+    console.warn("aiRouter 필수 파라미터 누락:", { s3ObjectKey, fileType });
+    return;
+  }
 
-      const textResponse = await rekognition.send(new DetectTextCommand({
-        Image: { S3Object: { Bucket: RESOURCES_BUCKET, Name: s3ObjectKey } },
-      }));
-      const detectedTexts = textResponse.TextDetections.filter(t => t.Type === "LINE").map(t => t.DetectedText);
+  console.log("aiRouter 분석 시작:", { s3ObjectKey, fileType, serverId, requestId });
 
-      const labelNames = labels.map(l => l.name).join(", ");
-      let labelsKo = [];
-      if (labelNames) {
-        const translateResponse = await translate.send(new TranslateTextCommand({
-          Text: labelNames, SourceLanguageCode: "en", TargetLanguageCode: "ko",
-        }));
-        labelsKo = translateResponse.TranslatedText.split(", ");
-      }
+  let result = {};
 
-      result = {
-        type: "image",
-        status: "COMPLETE",
-        fileName: fileName || s3ObjectKey.split("/").pop(),
-        labels, labelsKo, detectedTexts,
-      };
-    } else {
-      result = {
-        type: "unsupported",
-        status: "SKIPPED",
-        message: "지원하지 않는 파일 형식입니다. (PDF, 이미지만 분석 가능)",
-      };
-    }
+  // ── 1. PDF/문서 → Textract + Bedrock 요약 ──
+  if (fileType.includes("pdf") || fileType.includes("document")) {
+    const textractResponse = await textract.send(new StartDocumentTextDetectionCommand({
+      DocumentLocation: { S3Object: { Bucket: RESOURCES_BUCKET, Name: s3ObjectKey } },
+    }));
+    const extractedText = await waitForTextract(textractResponse.JobId);
+    const summary = await summarizeWithBedrock(extractedText);
 
-    // ── [추가된 로직] DB에 메시지 저장 및 브로드캐스트 ──
-    if (serverId && result.status === "COMPLETE") {
-      const messageId = uuidv4();
-      const createdAt = new Date().toISOString();
-
-      // 프론트엔드 ChatWindow에 맞게 데이터 구조화
-      const messageItem = {
-        serverId,
-        messageId,
-        senderId: "system-ai",         // 고정된 AI ID
-        senderNickname: "AI 스터디 조교", // 대화창에 표시될 이름
-        messageType: "ai-summary",     // 프론트엔드 CSS 트리거용 타입
-        content: JSON.stringify(result), // 결과 객체를 문자열로 담음 (프론트에서 JSON.parse)
-        createdAt,
-        ...(requestId && { aiRequestId: requestId }),
-      };
-
-      // 1. Messages 테이블에 저장
-      await dynamoDb.send(new PutCommand({
-        TableName: MESSAGES_TABLE,
-        Item: messageItem,
-      }));
-
-      // 2. 같은 방(serverId) 접속자에게 실시간 브로드캐스트
-      if (WSS_ENDPOINT) {
-        const apigw = new ApiGatewayManagementApiClient({ endpoint: WSS_ENDPOINT });
-        
-        const response = await dynamoDb.send(new QueryCommand({
-          TableName: CONNECTIONS_TABLE,
-          IndexName: "serverId-index",
-          KeyConditionExpression: "serverId = :serverId",
-          ExpressionAttributeValues: { ":serverId": serverId },
-        }));
-
-        const connections = response.Items || [];
-
-        await Promise.all(
-          connections.map(async (conn) => {
-            try {
-              await apigw.send(new PostToConnectionCommand({
-                ConnectionId: conn.connectionId,
-                Data: Buffer.from(JSON.stringify({
-                  action: "receiveMessage",
-                  data: messageItem
-                })),
-              }));
-            } catch (err) {
-              console.log(`Failed to send AI summary to connection: ${conn.connectionId}`);
-              // 연결이 끊겼거나 문제가 생긴 커넥션은 무시 (chatHandler와 동일 로직)
-            }
-          })
-        );
-      } else {
-        console.warn("WSS_ENDPOINT가 설정되지 않아 브로드캐스트를 생략합니다.");
-      }
-    }
-
-    return {
-      statusCode: 200,
-      headers: HEADERS,
-      body: JSON.stringify({
-        message: "AI 분석 완료 및 채팅방 전송 성공",
-        serverId: serverId || null,
-        s3ObjectKey,
-      }),
-    };
-  } catch (error) {
-    console.error("AI Router Error:", error);
-    return {
-      statusCode: 500,
-      headers: HEADERS,
-      body: JSON.stringify({ message: "AI 분석 실패", error: error.message }),
+    result = {
+      type: "document",
+      status: "COMPLETE",
+      fileName: fileName || s3ObjectKey.split("/").pop(),
+      extractedText: extractedText.slice(0, 2000),
+      summary,
     };
   }
-};
+  // ── 2. 이미지 → Rekognition + Translate ──
+  else if (fileType.startsWith("image/")) {
+    const labelsResponse = await rekognition.send(new DetectLabelsCommand({
+      Image: { S3Object: { Bucket: RESOURCES_BUCKET, Name: s3ObjectKey } },
+      MaxLabels: 10,
+      MinConfidence: 70,
+    }));
+    const labels = labelsResponse.Labels.map(l => ({ name: l.Name, confidence: Math.round(l.Confidence) }));
+
+    const textResponse = await rekognition.send(new DetectTextCommand({
+      Image: { S3Object: { Bucket: RESOURCES_BUCKET, Name: s3ObjectKey } },
+    }));
+    const detectedTexts = textResponse.TextDetections.filter(t => t.Type === "LINE").map(t => t.DetectedText);
+
+    const labelNames = labels.map(l => l.name).join(", ");
+    let labelsKo = [];
+    if (labelNames) {
+      const translateResponse = await translate.send(new TranslateTextCommand({
+        Text: labelNames, SourceLanguageCode: "en", TargetLanguageCode: "ko",
+      }));
+      labelsKo = translateResponse.TranslatedText.split(", ");
+    }
+
+    result = {
+      type: "image",
+      status: "COMPLETE",
+      fileName: fileName || s3ObjectKey.split("/").pop(),
+      labels, labelsKo, detectedTexts,
+    };
+  } else {
+    result = {
+      type: "unsupported",
+      status: "SKIPPED",
+      message: "지원하지 않는 파일 형식입니다. (PDF, 이미지만 분석 가능)",
+    };
+  }
+
+  // ── DB에 메시지 저장 및 브로드캐스트 ──
+  if (serverId && result.status === "COMPLETE") {
+    const messageId = uuidv4();
+    const createdAt = new Date().toISOString();
+
+    const messageItem = {
+      serverId,
+      messageId,
+      senderId: "system-ai",
+      senderNickname: "AI 스터디 조교",
+      messageType: "ai-summary",
+      content: JSON.stringify(result),
+      createdAt,
+      ...(requestId && { aiRequestId: requestId }),
+    };
+
+    // 1. Messages 테이블에 저장
+    await dynamoDb.send(new PutCommand({
+      TableName: MESSAGES_TABLE,
+      Item: messageItem,
+    }));
+
+    // 2. 같은 서버 접속자에게 실시간 브로드캐스트
+    if (WSS_ENDPOINT) {
+      const apigw = new ApiGatewayManagementApiClient({ endpoint: WSS_ENDPOINT });
+
+      const response = await dynamoDb.send(new QueryCommand({
+        TableName: CONNECTIONS_TABLE,
+        IndexName: "serverId-index",
+        KeyConditionExpression: "serverId = :serverId",
+        ExpressionAttributeValues: { ":serverId": serverId },
+      }));
+
+      const connections = response.Items || [];
+
+      await Promise.all(
+        connections.map(async (conn) => {
+          try {
+            await apigw.send(new PostToConnectionCommand({
+              ConnectionId: conn.connectionId,
+              Data: Buffer.from(JSON.stringify({
+                action: "receiveMessage",
+                data: messageItem,
+              })),
+            }));
+          } catch (err) {
+            console.log(`AI 결과 전송 실패 (정상): ${conn.connectionId}`);
+          }
+        })
+      );
+    } else {
+      console.warn("WSS_ENDPOINT가 설정되지 않아 브로드캐스트를 생략합니다.");
+    }
+
+    console.log("aiRouter 분석 완료:", { messageId, serverId, requestId });
+  }
+}
