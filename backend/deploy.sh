@@ -68,6 +68,12 @@ FUNCTIONS=(
   "${PREFIX}-${STAGE}-unbanMember|src/moderation/unbanMember.handler"
   "${PREFIX}-${STAGE}-updateMemberRole|src/moderation/updateMemberRole.handler"
   "${PREFIX}-${STAGE}-transferOwnership|src/moderation/transferOwnership.handler"
+  "${PREFIX}-${STAGE}-createInvite|src/invites/createInvite.handler"
+  "${PREFIX}-${STAGE}-listInvites|src/invites/listInvites.handler"
+  "${PREFIX}-${STAGE}-deleteInvite|src/invites/deleteInvite.handler"
+  "${PREFIX}-${STAGE}-resetInvites|src/invites/resetInvites.handler"
+  "${PREFIX}-${STAGE}-validateInvite|src/invites/validateInvite.handler"
+  "${PREFIX}-${STAGE}-joinByInvite|src/invites/joinByInvite.handler"
 )
 
 # ── 1단계: 코드 패키징 + S3 업로드 ────────────────────────
