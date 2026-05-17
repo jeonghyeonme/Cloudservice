@@ -36,6 +36,7 @@ ENV_VARS="{
     \"SALT\":                 \"PLACEHOLDER\",
     \"WSS_ENDPOINT\":         \"${WSS_ENDPOINT}\",
     \"AI_QUEUE_URL\":         \"${AI_QUEUE_URL}\"
+    \"INVITES_TABLE\":        \"${PREFIX}-Invites\"
   }
 }"
 
@@ -61,6 +62,12 @@ FUNCTIONS=(
   "${PREFIX}-${STAGE}-getMyServers|src/servers/getMyServers.handler"
   "${PREFIX}-${STAGE}-updateChannel|src/servers/updateChannel.handler"
   "${PREFIX}-${STAGE}-aiSubmit|src/ai/aiSubmit.handler"
+  "${PREFIX}-${STAGE}-listMembers|src/moderation/listMembers.handler"
+  "${PREFIX}-${STAGE}-kickMember|src/moderation/kickMember.handler"
+  "${PREFIX}-${STAGE}-banMember|src/moderation/banMember.handler"
+  "${PREFIX}-${STAGE}-unbanMember|src/moderation/unbanMember.handler"
+  "${PREFIX}-${STAGE}-updateMemberRole|src/moderation/updateMemberRole.handler"
+  "${PREFIX}-${STAGE}-transferOwnership|src/moderation/transferOwnership.handler"
 )
 
 # ── 1단계: 코드 패키징 + S3 업로드 ────────────────────────
