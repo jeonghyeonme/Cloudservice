@@ -4,6 +4,7 @@ import { useParams } from "react-router-dom";
 import { uploadFile } from "../../lib/resources";
 import { useToast } from "../../contexts/ToastContext";
 import { UPLOAD_POLICY_LABEL, validateUploadFile } from "../../lib/uploadPolicy";
+import { getServerMessages } from "../../lib/servers";
 
 const IMAGE_MESSAGE_TYPES = new Set(["IMAGE", "image"]);
 const FILE_MESSAGE_TYPES = new Set(["FILE", "file"]);
@@ -182,6 +183,14 @@ const ChatWindow = ({ activeChannel, channels, sendWsMessage, isConnected, chatM
   const [isComposing, setIsComposing] = useState(false);
   const [pendingImage, setPendingImage] = useState(null);
   const [uploadFeedback, setUploadFeedback] = useState("");
+  // ✅ 검색 관련 state
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState(null);
+  const [isSearching, setIsSearching] = useState(false);
+  const searchInputRef = useRef(null);
+  const searchTimerRef = useRef(null);
+
   const dragDepthRef = useRef(0);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -678,6 +687,55 @@ const ChatWindow = ({ activeChannel, channels, sendWsMessage, isConnected, chatM
     user?.userId,
   ]);
 
+  // ✅ 검색 실행
+  const handleSearch = useCallback(async (keyword) => {
+    if (!keyword.trim()) {
+      setSearchResults(null);
+      return;
+    }
+    setIsSearching(true);
+    try {
+      const results = await getServerMessages(serverId, keyword);
+      setSearchResults(Array.isArray(results) ? results : []);
+    } catch (error) {
+      console.error("검색 실패:", error);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  }, [serverId]);
+ 
+  // ✅ 검색창 토글
+  const handleToggleSearch = useCallback(() => {
+    setIsSearchOpen((prev) => {
+      if (prev) {
+        setSearchQuery("");
+        setSearchResults(null);
+      }
+      return !prev;
+    });
+  }, []);
+ 
+  // ✅ 검색 입력 처리 (400ms 디바운스)
+  const handleSearchInput = useCallback((value) => {
+    setSearchQuery(value);
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    if (!value.trim()) {
+      setSearchResults(null);
+      return;
+    }
+    searchTimerRef.current = setTimeout(() => {
+      handleSearch(value);
+    }, 400);
+  }, [handleSearch]);
+ 
+  // ✅ 검색창 열릴 때 포커스
+  useEffect(() => {
+    if (isSearchOpen && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [isSearchOpen]);
+
   const handleKeyDown = (event) => {
     if (event.nativeEvent?.isComposing || isComposing || event.keyCode === 229) {
       return;
@@ -874,20 +932,84 @@ const ChatWindow = ({ activeChannel, channels, sendWsMessage, isConnected, chatM
           {currentChannel ? currentChannel.name || currentChannel.label : "채널 선택 중..."}
         </h3>
         <p className="topic">{currentChannel?.topic}</p>
-        <span
-          style={{
-            marginLeft: "auto",
-            fontSize: "11px",
-            color: isConnected ? "#00ff66" : "#71717a",
-            display: "flex",
-            alignItems: "center",
-            gap: "4px",
-          }}
-        >
-          <span style={{ fontSize: "8px" }}>●</span>
-          {isConnected ? "연결됨" : "연결 중..."}
-        </span>
+        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "8px" }}>
+          {/* ✅ 검색창 */}
+          {isSearchOpen && (
+            <div className="chat-search-bar">
+              <span className="chat-search-icon">🔍</span>
+              <input
+                ref={searchInputRef}
+                type="text"
+                className="chat-search-input"
+                placeholder="메시지 검색..."
+                value={searchQuery}
+                onChange={(e) => handleSearchInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") handleToggleSearch();
+                  if (e.key === "Enter") handleSearch(searchQuery);
+                }}
+              />
+              {searchQuery && (
+                <button
+                  className="chat-search-clear"
+                  onClick={() => { setSearchQuery(""); setSearchResults(null); }}
+                >
+                  ×
+                </button>
+              )}
+            </div>
+          )}
+          {/* ✅ 검색 토글 버튼 */}
+          <button
+            className={`chat-search-toggle ${isSearchOpen ? "active" : ""}`}
+            onClick={handleToggleSearch}
+            title="메시지 검색"
+          >
+            🔍
+          </button>
+          <span
+            style={{
+              // marginLeft: "auto",
+              fontSize: "11px",
+              color: isConnected ? "#00ff66" : "#71717a",
+              display: "flex",
+              alignItems: "center",
+              gap: "4px",
+            }}
+          >
+            <span style={{ fontSize: "8px" }}>●</span>
+            {isConnected ? "연결됨" : "연결 중..."}
+          </span>
+        </div>
       </header>
+      {/* ✅ 검색 결과 패널 */}
+      {isSearchOpen && (
+        <div className="chat-search-results">
+          {isSearching ? (
+            <div className="chat-search-status">검색 중...</div>
+          ) : searchResults === null ? (
+            <div className="chat-search-status">검색어를 입력하세요</div>
+          ) : searchResults.length === 0 ? (
+            <div className="chat-search-empty">
+              <span>🔍</span>
+              <p>"{searchQuery}"에 대한 검색 결과가 없습니다</p>
+            </div>
+          ) : (
+            <div className="chat-search-list">
+              <div className="chat-search-count">{searchResults.length}개의 결과</div>
+              {searchResults.map((msg, idx) => (
+                <div key={msg.messageId || idx} className="chat-search-item">
+                  <div className="chat-search-item-author">{msg.senderNickname || "알 수 없음"}</div>
+                  <div className="chat-search-item-content">{msg.content}</div>
+                  <div className="chat-search-item-date">
+                    {msg.createdAt ? new Date(msg.createdAt).toLocaleString("ko-KR") : ""}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="chat-messages">
         {currentMessages.length === 0 ? (

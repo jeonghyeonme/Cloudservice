@@ -2,15 +2,11 @@ import { ENDPOINTS } from "../constants/endpoint";
 import { request } from "./request";
 
 export function getServers() {
-  return request(ENDPOINTS.servers.list, {
-    method: "GET",
-  });
+  return request(ENDPOINTS.servers.list, { method: "GET", });
 }
 
 export function getMyServers() {
-  return request(ENDPOINTS.servers.mine, {
-    method: "GET",
-  });
+  return request(ENDPOINTS.servers.mine, { method: "GET", });
 }
 
 export function createServer(payload) {
@@ -21,9 +17,7 @@ export function createServer(payload) {
 }
 
 export function getServerDetail(serverId) {
-  return request(`${ENDPOINTS.servers.list}/${serverId}`, {
-    method: "GET",
-  });
+  return request(`${ENDPOINTS.servers.list}/${serverId}`, { method: "GET", });
 }
 
 export function updateServer(serverId, payload) {
@@ -34,21 +28,19 @@ export function updateServer(serverId, payload) {
 }
 
 export function deleteServer(serverId) {
-  return request(`${ENDPOINTS.servers.list}/${serverId}`, {
-    method: "DELETE",
-  });
+  return request(`${ENDPOINTS.servers.list}/${serverId}`, { method: "DELETE", });
 }
 
 export function leaveServer(serverId) {
-  return request(`${ENDPOINTS.servers.list}/${serverId}/leave`, {
-    method: "POST",
-  });
+  return request(`${ENDPOINTS.servers.list}/${serverId}/leave`, { method: "POST", });
 }
 
-export function getServerMessages(serverId) {
-  return request(`${ENDPOINTS.servers.list}/${serverId}/messages`, {
-    method: "GET",
-  });
+// ✅ keyword 파라미터 추가
+export function getServerMessages(serverId, keyword) {
+  const url = keyword?.trim()
+    ? `${ENDPOINTS.servers.list}/${serverId}/messages?keyword=${encodeURIComponent(keyword.trim())}`
+    : `${ENDPOINTS.servers.list}/${serverId}/messages`;
+  return request(url, { method: "GET" });
 }
 
 export function joinServer(serverId, password) {
