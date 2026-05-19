@@ -35,7 +35,6 @@ export function leaveServer(serverId) {
   return request(`${ENDPOINTS.servers.list}/${serverId}/leave`, { method: "POST", });
 }
 
-// ✅ keyword 파라미터 추가
 export function getServerMessages(serverId, keyword) {
   const url = keyword?.trim()
     ? `${ENDPOINTS.servers.list}/${serverId}/messages?keyword=${encodeURIComponent(keyword.trim())}`
@@ -44,9 +43,7 @@ export function getServerMessages(serverId, keyword) {
 }
 
 export function joinServer(serverId, password) {
-  const options = {
-    method: "POST",
-  };
+  const options = { method: "POST", };
   if (password) {
     options.body = JSON.stringify({ serverPassword: password });
   }
@@ -75,3 +72,39 @@ export const updateChannel = async (serverId, chId, data) => {
     }),
   });
 };
+
+// ✅ 초대 코드 API
+export function listInvites(serverId) {
+  return request(`${ENDPOINTS.servers.list}/${serverId}/invites`, { method: "GET" });
+}
+ 
+export function createInvite(serverId, options = {}) {
+  return request(`${ENDPOINTS.servers.list}/${serverId}/invites`, {
+    method: "POST",
+    body: JSON.stringify(options),
+  });
+}
+ 
+export function deleteInvite(serverId, inviteId) {
+  return request(`${ENDPOINTS.servers.list}/${serverId}/invites/${inviteId}`, {
+    method: "DELETE",
+  });
+}
+ 
+export function resetInvites(serverId) {
+  return request(`${ENDPOINTS.servers.list}/${serverId}/invites/reset`, {
+    method: "POST",
+  });
+}
+ 
+export function validateInvite(inviteCode) {
+  return request(`/invites/${encodeURIComponent(inviteCode.trim().toUpperCase())}`, {
+    method: "GET",
+  });
+}
+ 
+export function joinByInvite(inviteCode) {
+  return request(`/invites/${encodeURIComponent(inviteCode.trim().toUpperCase())}/join`, {
+    method: "POST",
+  });
+}
