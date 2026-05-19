@@ -52,10 +52,14 @@ function ContextMenu({ open, position, title, items = [], onClose }) {
           type="button"
           className={`context-menu__item ${item.danger ? "context-menu__item--danger" : ""}`}
           onClick={() => {
+            if (item.disabled) {
+              return;
+            }
             item.onClick?.();
             onClose();
           }}
           role="menuitem"
+          disabled={Boolean(item.disabled)}
         >
           {item.icon ? (
             <span className="context-menu__icon" aria-hidden="true">
