@@ -19,6 +19,8 @@ MEMORY=512
 # ── 공통 환경 변수 ─────────────────────────────────────
 WSS_ENDPOINT="https://hxdwy4fqsg.execute-api.${REGION}.amazonaws.com/${STAGE}"
 
+AI_QUEUE_URL="https://sqs.${REGION}.amazonaws.com/269578498605/${PREFIX}-ai-analysis-queue"
+
 ENV_VARS="{
   \"Variables\": {
     \"REGION\":               \"${REGION}\",
@@ -32,7 +34,9 @@ ENV_VARS="{
     \"S3_BUCKET\":            \"inhatc-team3-2-resources\",
     \"JWT_SECRET_KEY\":       \"PLACEHOLDER\",
     \"SALT\":                 \"PLACEHOLDER\",
-    \"WSS_ENDPOINT\":         \"${WSS_ENDPOINT}\"
+    \"WSS_ENDPOINT\":         \"${WSS_ENDPOINT}\",
+    \"AI_QUEUE_URL\":         \"${AI_QUEUE_URL}\"
+    \"INVITES_TABLE\":        \"${PREFIX}-Invites\"
   }
 }"
 
@@ -57,6 +61,19 @@ FUNCTIONS=(
   "${PREFIX}-${STAGE}-joinServer|src/servers/joinServer.handler"
   "${PREFIX}-${STAGE}-getMyServers|src/servers/getMyServers.handler"
   "${PREFIX}-${STAGE}-updateChannel|src/servers/updateChannel.handler"
+  "${PREFIX}-${STAGE}-aiSubmit|src/ai/aiSubmit.handler"
+  "${PREFIX}-${STAGE}-listMembers|src/moderation/listMembers.handler"
+  "${PREFIX}-${STAGE}-kickMember|src/moderation/kickMember.handler"
+  "${PREFIX}-${STAGE}-banMember|src/moderation/banMember.handler"
+  "${PREFIX}-${STAGE}-unbanMember|src/moderation/unbanMember.handler"
+  "${PREFIX}-${STAGE}-updateMemberRole|src/moderation/updateMemberRole.handler"
+  "${PREFIX}-${STAGE}-transferOwnership|src/moderation/transferOwnership.handler"
+  "${PREFIX}-${STAGE}-createInvite|src/invites/createInvite.handler"
+  "${PREFIX}-${STAGE}-listInvites|src/invites/listInvites.handler"
+  "${PREFIX}-${STAGE}-deleteInvite|src/invites/deleteInvite.handler"
+  "${PREFIX}-${STAGE}-resetInvites|src/invites/resetInvites.handler"
+  "${PREFIX}-${STAGE}-validateInvite|src/invites/validateInvite.handler"
+  "${PREFIX}-${STAGE}-joinByInvite|src/invites/joinByInvite.handler"
 )
 
 # ── 1단계: 코드 패키징 + S3 업로드 ────────────────────────
