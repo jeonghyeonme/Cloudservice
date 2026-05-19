@@ -39,6 +39,7 @@ const SidebarLeft = ({
   onAddChannelClick,
   onServerContextMenu,
   onChannelContextMenu,
+  onMemberContextMenu,
   contextMenuTargetId,
   contextMenuType,
   members = [],
@@ -124,7 +125,14 @@ const SidebarLeft = ({
         </div>
         <div className="member-list">
           {onlineMembers.map((m) => (
-            <div key={m.userId} className="member online">
+            <div
+              key={m.userId}
+              className={`member online ${contextMenuType === "member" && contextMenuTargetId === m.userId ? "context-open" : ""}`}
+              onMouseDown={(event) => {
+                if (event.button === 2) handleRightClick(event, onMemberContextMenu, m);
+              }}
+              onContextMenu={(event) => handleRightClick(event, onMemberContextMenu, m)}
+            >
               <div className="avatar-wrapper">
                 <div className="avatar">{m.nickname?.charAt(0).toUpperCase()}</div>
                 <div className="status-dot"></div>
@@ -144,7 +152,14 @@ const SidebarLeft = ({
                 오프라인 — {offlineMembers.length}명
               </div>
               {offlineMembers.map((m) => (
-                <div key={m.userId} className="member offline">
+                <div
+                  key={m.userId}
+                  className={`member offline ${contextMenuType === "member" && contextMenuTargetId === m.userId ? "context-open" : ""}`}
+                  onMouseDown={(event) => {
+                    if (event.button === 2) handleRightClick(event, onMemberContextMenu, m);
+                  }}
+                  onContextMenu={(event) => handleRightClick(event, onMemberContextMenu, m)}
+                >
                   <div className="avatar-wrapper">
                     <div className="avatar">{m.nickname?.charAt(0).toUpperCase()}</div>
                   </div>

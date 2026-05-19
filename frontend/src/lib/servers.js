@@ -83,3 +83,41 @@ export const updateChannel = async (serverId, chId, data) => {
     }),
   });
 };
+
+export function listMembers(serverId) {
+  return request(ENDPOINTS.moderation.members(serverId), {
+    method: "GET",
+  });
+}
+
+export function updateMemberRole(serverId, targetUserId, role) {
+  return request(ENDPOINTS.moderation.updateMemberRole(serverId, targetUserId), {
+    method: "PATCH",
+    body: JSON.stringify({ role }),
+  });
+}
+
+export function kickMember(serverId, targetUserId) {
+  return request(ENDPOINTS.moderation.kickMember(serverId, targetUserId), {
+    method: "POST",
+  });
+}
+
+export function banMember(serverId, targetUserId) {
+  return request(ENDPOINTS.moderation.banMember(serverId, targetUserId), {
+    method: "POST",
+  });
+}
+
+export function unbanMember(serverId, targetUserId) {
+  return request(ENDPOINTS.moderation.unbanMember(serverId, targetUserId), {
+    method: "DELETE",
+  });
+}
+
+export function transferOwnership(serverId, targetUserId) {
+  return request(ENDPOINTS.moderation.transferOwnership(serverId), {
+    method: "POST",
+    body: JSON.stringify({ targetUserId }),
+  });
+}

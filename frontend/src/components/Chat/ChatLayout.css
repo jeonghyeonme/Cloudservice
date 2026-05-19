@@ -599,6 +599,7 @@
   transition: background 0.15s;
 }
 .member:hover { background-color: #27272a; }
+.member.context-open { background-color: rgba(255, 255, 255, 0.08); opacity: 1; }
 .name { font-size: 14px; color: #d4d4d8; }
 .green-text { color: #00ff66; font-weight: 500; }
 
