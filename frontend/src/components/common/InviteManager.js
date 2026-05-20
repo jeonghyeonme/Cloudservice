@@ -23,14 +23,29 @@ function formatExpiry(expiresAt) {
 }
 
 function copyToClipboard(text) {
-  navigator.clipboard?.writeText(text).catch(() => {
-    const el = document.createElement("textarea");
-    el.value = text;
-    document.body.appendChild(el);
-    el.select();
+  // [향후 HTTPS 도입 시 사용]
+  // navigator.clipboard?.writeText(text).catch((err) => { console.error(err); });
+
+  // 범용 복사 방식 (HTTP/HTTPS 모두 지원)
+  const textArea = document.createElement("textarea");
+  textArea.value = text;
+
+  // 요소를 화면 밖으로 숨김
+  textArea.style.position = "fixed";
+  textArea.style.left = "-9999px";
+  textArea.style.top = "0";
+  document.body.appendChild(textArea);
+
+  textArea.focus();
+  textArea.select();
+
+  try {
     document.execCommand("copy");
-    document.body.removeChild(el);
-  });
+  } catch (err) {
+    console.error("복사 실패:", err);
+  }
+
+  document.body.removeChild(textArea);
 }
 
 const InviteManager = ({ serverId }) => {
