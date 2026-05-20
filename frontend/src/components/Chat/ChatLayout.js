@@ -332,6 +332,8 @@ const ChatLayout = () => {
         fields={createServerFields(createServerDefaultValues(currentServer || {}))}
         onClose={closeSettingsModal}
         onSubmit={handleServerSettingsSubmit}
+        serverId={serverId}
+        isHost={isCurrentUserHost}
       />
 
       <EntitySettingsModal
